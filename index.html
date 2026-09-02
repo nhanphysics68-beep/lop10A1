@@ -158,6 +158,46 @@
   .swap-tool{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
   .swap-tool select{padding:8px; border:1.5px solid var(--line); border-radius:8px; font-size:12.5px; font-family:inherit;}
 
+  /* ---------- Danh sách nhận hỗ trợ ---------- */
+  .rieng-tu{background:#fff7ea; border:1.5px solid var(--clay); border-radius:10px;
+    padding:12px 16px; font-size:13px; color:#8a5200; margin-bottom:16px; line-height:1.7;}
+  .rieng-tu b{color:#6b3f00;}
+  .field textarea{width:100%; padding:10px 12px; border:1.5px solid var(--line); border-radius:9px;
+    font-family:inherit; font-size:14px; background:#fff; color:var(--ink); resize:vertical; min-height:80px;}
+  .field textarea:focus{outline:none; border-color:var(--leaf); box-shadow:0 0 0 3px #cdeadb;}
+  .the-cua-toi{background:#f4fbf6; border:1.5px solid var(--leaf); border-radius:12px; padding:16px;}
+  .the-cua-toi dl{margin:0; display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:13.5px;}
+  .the-cua-toi dt{font-weight:700; color:var(--leaf-dark);}
+  .the-cua-toi dd{margin:0;}
+
+  /* ---------- Bảng tin ---------- */
+  .bai{background:#fff; border:1.5px solid var(--line); border-radius:12px;
+    padding:16px 18px; margin-bottom:14px;}
+  .bai.cua-toi{border-color:var(--clay); background:#fffdf8;}
+  .bai h3{margin:0 0 6px; font-size:16.5px; color:var(--leaf-dark); line-height:1.35;}
+  .bai .meta{font-size:12.5px; color:var(--ink-soft); margin-bottom:10px;
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+  .bai .noi-dung{font-size:14px; line-height:1.75; white-space:pre-wrap; word-break:break-word;}
+  .bai .anh-hang{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
+  .bai .anh-hang img{width:130px; height:130px; object-fit:cover; border-radius:9px;
+    border:1px solid var(--line); cursor:zoom-in; transition:transform .12s;}
+  .bai .anh-hang img:hover{transform:scale(1.04);}
+  .bai .thao-tac{margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;}
+  .xem-truoc{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+  .xem-truoc .o{position:relative;}
+  .xem-truoc img{width:96px; height:96px; object-fit:cover; border-radius:8px; border:1px solid var(--line);}
+  .xem-truoc .bo{position:absolute; top:-7px; right:-7px; background:var(--red); color:#fff;
+    border:none; border-radius:50%; width:22px; height:22px; cursor:pointer; font-weight:800; line-height:1;}
+  .nut-chon-anh{display:inline-block; background:#fff; border:1.5px dashed var(--line);
+    border-radius:9px; padding:10px 18px; cursor:pointer; font-size:13.5px; font-weight:700; color:var(--ink-soft);}
+  .nut-chon-anh:hover{border-color:var(--leaf); color:var(--leaf-dark);}
+  .den-anh{display:none; position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:70;
+    align-items:center; justify-content:center; padding:20px;}
+  .den-anh.show{display:flex;}
+  .den-anh img{max-width:100%; max-height:92vh; border-radius:8px;}
+  .den-anh .dong{position:absolute; top:16px; right:22px; color:#fff; font-size:34px;
+    cursor:pointer; line-height:1; background:none; border:none;}
+
   /* ---------- Modal ---------- */
   .modal-bg{display:none; position:fixed; inset:0; background:rgba(20,30,20,.45);
     align-items:center; justify-content:center; z-index:60; padding:16px; overflow-y:auto;}
@@ -189,6 +229,8 @@
     <button class="tab active" data-tab="sodo"><span class="ico">📍</span>Sơ đồ lớp</button>
     <button class="tab" data-tab="laodong"><span class="ico">🧹</span>Đăng ký lao động</button>
     <button class="tab" data-tab="khaigiang"><span class="ico">📺</span>Chuẩn bị khai giảng</button>
+    <button class="tab" data-tab="hotro"><span class="ico">🤝</span>Nhận hỗ trợ</button>
+    <button class="tab" data-tab="bangtin"><span class="ico">📰</span>Bảng tin lớp</button>
   </div>
 
   <!-- ============ THẺ 1: SƠ ĐỒ LỚP ============ -->
@@ -308,6 +350,120 @@
     </div>
   </div>
 
+  <!-- ============ THẺ 4: DANH SÁCH NHẬN HỖ TRỢ ============ -->
+  <div class="panel" id="panel-hotro">
+    <div class="card">
+      <h2>Đăng ký nhận hỗ trợ</h2>
+
+      <div class="rieng-tu">
+        🔒 <b>Mục này là riêng tư.</b> Chỉ mình em và thầy chủ nhiệm đọc được nội dung em điền.
+        Các bạn khác trong lớp <b>không nhìn thấy</b> đăng ký của em, và trang này cũng không hiện
+        danh sách chung cho ai cả. Em cứ ghi thật để thầy nắm được hoàn cảnh và đề xuất hỗ trợ đúng người.
+      </div>
+
+      <form id="htForm">
+        <div class="field">
+          <label for="htName">Họ và tên học sinh</label>
+          <input type="text" id="htName" placeholder="Nguyễn Văn A" maxlength="60">
+        </div>
+
+        <div class="field">
+          <label for="htLoai">Loại hỗ trợ cần</label>
+          <select id="htLoai">
+            <option value="">-- Chọn loại hỗ trợ --</option>
+            <option>Học bổng</option>
+            <option>Miễn giảm học phí</option>
+            <option>Quà Tết</option>
+            <option>Đồ dùng học tập, sách vở</option>
+            <option>Quần áo, đồng phục</option>
+            <option>Xe đạp đến trường</option>
+            <option>Bảo hiểm y tế</option>
+            <option>Hỗ trợ khác</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="htHoanCanh">Hoàn cảnh gia đình</label>
+          <select id="htHoanCanh">
+            <option value="">-- Chọn hoàn cảnh --</option>
+            <option>Hộ nghèo</option>
+            <option>Hộ cận nghèo</option>
+            <option>Mồ côi cha hoặc mẹ</option>
+            <option>Mồ côi cả cha và mẹ</option>
+            <option>Cha mẹ đi làm xa, ở với ông bà</option>
+            <option>Gia đình có người bệnh nặng</option>
+            <option>Khó khăn đột xuất</option>
+            <option>Hoàn cảnh khác</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="htMoTa">Mô tả thêm (nếu em muốn nói rõ hơn)</label>
+          <textarea id="htMoTa" maxlength="500" placeholder="Ví dụ: nhà em cách trường 8km, em đi bộ đi học..."></textarea>
+        </div>
+
+        <div class="field">
+          <label for="htDienThoai">Số điện thoại liên hệ</label>
+          <input type="text" id="htDienThoai" placeholder="0912345678" maxlength="15">
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="htSubmit">Gửi đăng ký</button>
+        <div id="htMsg" class="msg"></div>
+      </form>
+    </div>
+
+    <div class="card" id="htCuaToiCard" style="display:none;">
+      <h2>Đăng ký của em</h2>
+      <p class="section-note">Chỉ em và thầy chủ nhiệm nhìn thấy nội dung này.</p>
+      <div class="the-cua-toi" id="htCuaToi"></div>
+      <div style="margin-top:14px; display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-blue btn-sm" id="htSuaBtn">Sửa lại</button>
+        <button class="btn btn-ghost btn-sm" id="htXoaBtn">Rút đăng ký</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ THẺ 5: BẢNG TIN LỚP HỌC ============ -->
+  <div class="panel" id="panel-bangtin">
+    <div class="card">
+      <h2>Viết bài đăng mới</h2>
+      <p class="section-note">
+        Bài đăng hiện lên bảng tin ngay sau khi gửi, cả lớp đọc được.
+        Chỉ người viết và thầy chủ nhiệm mới sửa hoặc xóa được bài của mình.
+      </p>
+
+      <form id="btForm">
+        <div class="field">
+          <label for="btAuthor">Người đăng</label>
+          <input type="text" id="btAuthor" placeholder="Nguyễn Văn A" maxlength="60">
+        </div>
+        <div class="field">
+          <label for="btTitle">Tiêu đề</label>
+          <input type="text" id="btTitle" placeholder="VD: Thông báo lịch trực nhật tuần này" maxlength="120">
+        </div>
+        <div class="field">
+          <label for="btContent">Nội dung</label>
+          <textarea id="btContent" maxlength="3000" style="min-height:150px;"
+            placeholder="Nhập nội dung bài đăng..."></textarea>
+        </div>
+        <div class="field">
+          <label>Ảnh đính kèm (tối đa 3 ảnh)</label>
+          <label class="nut-chon-anh" for="btFiles">📷 Chọn ảnh từ máy</label>
+          <input type="file" id="btFiles" accept="image/*" multiple hidden>
+          <div class="xem-truoc" id="btPreview"></div>
+        </div>
+        <button type="submit" class="btn btn-primary" id="btSubmit">Đăng bài</button>
+        <div id="btMsg" class="msg"></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Bảng tin <span class="count-badge" id="btCountBadge">0</span></h2>
+      <div id="btFeed"></div>
+      <div id="btEmpty" class="empty" style="display:none;">Chưa có bài đăng nào. Hãy là người đầu tiên! 📰</div>
+    </div>
+  </div>
+
   <!-- ============ KHU VỰC GIÁO VIÊN ============ -->
   <details class="admin" id="adminDetails">
     <summary>🔒 Khu vực giáo viên / quản trị</summary>
@@ -348,10 +504,17 @@
       <div class="section-title">Đăng ký lao động — đối chiếu ai chưa nộp</div>
       <div class="scroll-x"><table id="ldMissingTable"></table></div>
 
+      <div class="section-title">🔒 Danh sách nhận hỗ trợ <span class="count-badge" id="htCountBadge">0</span></div>
+      <p class="section-note" style="margin:0 0 6px;">
+        Dữ liệu nhạy cảm — chỉ tài khoản giáo viên đọc được. Không chia sẻ bảng này ra ngoài.
+      </p>
+      <div class="scroll-x"><table id="htAdminTable"></table></div>
+
       <div class="section-title">Công cụ</div>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <button class="btn btn-clay btn-sm" id="exportWordBtn">📄 Xuất sơ đồ ra Word</button>
         <button class="btn btn-clay btn-sm" id="exportLdBtn">📄 Xuất danh sách lao động (CSV)</button>
+        <button class="btn btn-clay btn-sm" id="exportHtBtn">📄 Xuất danh sách hỗ trợ (CSV)</button>
         <button class="btn btn-ghost btn-sm" id="resetSeatsBtn">🗑️ Xóa toàn bộ sơ đồ</button>
         <button class="btn btn-ghost btn-sm" id="resetLdBtn">🗑️ Xóa toàn bộ đăng ký lao động</button>
       </div>
@@ -364,6 +527,11 @@
 
 <div class="modal-bg" id="seatModal"><div class="modal" id="seatModalBody"></div></div>
 <div class="modal-bg" id="genModal"><div class="modal" id="genModalBody"></div></div>
+
+<div class="den-anh" id="denAnh">
+  <button class="dong" id="denAnhDong">&times;</button>
+  <img id="denAnhImg" alt="Ảnh bài đăng">
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -391,18 +559,42 @@ const auth = firebase.auth();
 
 const ADMIN_UID = "3eMkknzDuNVFyrpmB1ceIBViTDD2";
 
+/* ---------------------------------------------------------------
+   KHO ẢNH GOOGLE DRIVE
+   Dán địa chỉ Web App của Apps Script vào DRIVE_URL (xem HUONG-DAN-DRIVE.md).
+   Để trống thì trang vẫn chạy bình thường, ảnh lưu thẳng vào Firebase như cũ.
+   --------------------------------------------------------------- */
+const DRIVE_URL = 'https://script.google.com/macros/s/AKfycbzrTD1FwIXqdQBAlWPhusRET--6VDKVf3nlGJqC4aLmIIIzPWf2qA3RyMtpHeSOT5TH/exec';   // https://script.google.com/macros/s/..../exec
+const MA_DRIVE  = 'hoathuan2026';        // phải trùng MA_BAO_VE trong drive-upload.gs
+
+const dungDrive = () => !!DRIVE_URL;
+const anhDriveNho = id => `https://drive.google.com/thumbnail?id=${id}&sz=w400`;
+const anhDriveLon = id => `https://lh3.googleusercontent.com/d/${id}=w1600`;
+
 /* Giữ nguyên đường dẫn cũ để không mất dữ liệu đã có */
 const seatsRef  = db.ref('lop10a1/seats');
 const swapsRef  = db.ref('lop10a1/swaps');
 const rosterRef = db.ref('lop10a1/roster');
 const regsRef   = db.ref('laodong2026/registrations');
 const tvRef     = db.ref('khaigiang2026/tivi');
+const htRef     = db.ref('hotro2026/dangky');      // riêng tư: khóa theo uid, chỉ chủ nhân và giáo viên đọc
+const btRef     = db.ref('bangtin2026/baiviet');   // bài đăng, ảnh nhỏ nằm kèm
+const btAnhRef  = db.ref('bangtin2026/anh');       // ảnh cỡ lớn, chỉ tải khi bấm xem
 
 const LANES     = [ {id:1,desks:7}, {id:2,desks:6}, {id:3,desks:6}, {id:4,desks:6} ];
 const TV_SLOTS  = [1,2,3];
 const TV_CAPACITY = 3;
 
+/* Giới hạn ảnh: nén trên máy học sinh trước khi gửi, tránh làm nặng cơ sở dữ liệu */
+const ANH_TOI_DA   = 3;      // số ảnh mỗi bài
+const ANH_NHO_PX   = 360;    // cạnh dài ảnh xem trước (hiển thị 130px nên 360 là dư)
+const ANH_LON_PX   = 1280;   // cạnh dài ảnh phóng to
+const ANH_CHAT_NHO = 0.55;
+const ANH_CHAT_LON = 0.75;
+const BAI_TOI_DA   = 25;     // số bài hiển thị trên bảng tin, giữ trang nhẹ cho điện thoại
+
 let seats={}, swaps=[], roster=[], regs=[], tv={};
+let htCuaToi=null, htTatCa=[], baiViet=[], anhDangChon=[];
 let myUid=null, isAdmin=false;
 
 /* -------------------- TIỆN ÍCH -------------------- */
@@ -482,10 +674,12 @@ auth.onAuthStateChanged(async user=>{
   if(isAdmin){
     $('adminWho').textContent = 'Đang đăng nhập: ' + (user.email || user.uid);
     await loadRoster();
+    await napHoTroTatCa();
     renderAdmin();
-  } else { roster = []; }
+  } else { roster = []; htTatCa = []; }
 
-  renderSeats(); renderRegs(); renderTv();
+  await napHoTroCuaToi();
+  renderSeats(); renderRegs(); renderTv(); renderBaiViet();
 });
 
 $('adminUnlockBtn').onclick = async ()=>{
@@ -814,8 +1008,318 @@ $('tvForm').onsubmit = async e=>{
 };
 
 /* ================================================================
+   THẺ 4 — DANH SÁCH NHẬN HỖ TRỢ (riêng tư)
+   Mỗi bản ghi nằm ở hotro2026/dangky/<uid>. Security Rules cho phép
+   đúng chủ nhân đọc bản ghi của mình, và giáo viên đọc toàn bộ nhánh.
+   ================================================================ */
+async function napHoTroCuaToi(){
+  if(!myUid) return;
+  try{
+    htCuaToi = (await htRef.child(myUid).once('value')).val();
+  }catch(e){ htCuaToi = null; }
+  renderHoTro();
+}
+
+function renderHoTro(){
+  const card = $('htCuaToiCard');
+  if(!htCuaToi){ card.style.display='none'; return; }
+  card.style.display='block';
+  $('htCuaToi').innerHTML = `<dl>
+    <dt>Họ và tên</dt><dd>${esc(htCuaToi.name)}</dd>
+    <dt>Loại hỗ trợ</dt><dd>${esc(htCuaToi.loai)}</dd>
+    <dt>Hoàn cảnh</dt><dd>${esc(htCuaToi.hoanCanh)}</dd>
+    <dt>Mô tả</dt><dd>${esc(htCuaToi.moTa) || '<i>(không ghi)</i>'}</dd>
+    <dt>Điện thoại</dt><dd>${esc(htCuaToi.dienThoai) || '<i>(không ghi)</i>'}</dd>
+    <dt>Gửi lúc</dt><dd>${esc(htCuaToi.time)}</dd>
+  </dl>`;
+}
+
+$('htForm').onsubmit = async e=>{
+  e.preventDefault();
+  if(!myUid){ showMsg($('htMsg'),'Đang kết nối, thử lại sau vài giây.','info'); return; }
+  const name = $('htName').value.trim();
+  const loai = $('htLoai').value;
+  const hc   = $('htHoanCanh').value;
+  const moTa = $('htMoTa').value.trim();
+  const dt   = $('htDienThoai').value.trim();
+
+  if(!name){ showMsg($('htMsg'),'Vui lòng nhập họ tên.','err'); return; }
+  if(!loai){ showMsg($('htMsg'),'Vui lòng chọn loại hỗ trợ cần.','err'); return; }
+  if(!hc){ showMsg($('htMsg'),'Vui lòng chọn hoàn cảnh gia đình.','err'); return; }
+  if(dt && !/^0\d{9}$/.test(dt)){ showMsg($('htMsg'),'Số điện thoại phải có 10 chữ số, bắt đầu bằng 0.','err'); return; }
+
+  try{
+    const banGhi = { name, loai, hoanCanh: hc, moTa, dienThoai: dt, uid: myUid,
+                     time: new Date().toLocaleString('vi-VN') };
+    await htRef.child(myUid).set(banGhi);
+    htCuaToi = banGhi;
+    $('htForm').reset();
+    renderHoTro();
+    showMsg($('htMsg'),'Đã gửi. Thầy chủ nhiệm sẽ xem và liên hệ với em.','ok');
+  }catch(err){ showMsg($('htMsg'), baoLoi(err),'err'); }
+};
+
+$('htSuaBtn').onclick = ()=>{
+  if(!htCuaToi) return;
+  $('htName').value = htCuaToi.name || '';
+  $('htLoai').value = htCuaToi.loai || '';
+  $('htHoanCanh').value = htCuaToi.hoanCanh || '';
+  $('htMoTa').value = htCuaToi.moTa || '';
+  $('htDienThoai').value = htCuaToi.dienThoai || '';
+  $('htName').scrollIntoView({behavior:'smooth', block:'center'});
+  showMsg($('htMsg'),'Sửa nội dung rồi bấm Gửi đăng ký để lưu đè.','info');
+};
+
+$('htXoaBtn').onclick = async ()=>{
+  if(!confirm('Rút đăng ký nhận hỗ trợ?')) return;
+  try{
+    await htRef.child(myUid).remove();
+    htCuaToi = null; renderHoTro();
+    showMsg($('htMsg'),'Đã rút đăng ký.','ok');
+  }catch(e){ showMsg($('htMsg'), baoLoi(e),'err'); }
+};
+
+/* ================================================================
+   THẺ 5 — BẢNG TIN LỚP HỌC
+   Ảnh được nén ngay trên máy học sinh rồi lưu dạng chuỗi trong cơ sở dữ liệu.
+   Ảnh nhỏ nằm cùng bài để bảng tin nhẹ; ảnh lớn tách riêng, bấm mới tải.
+   ================================================================ */
+function nenAnh(file, canhDai, chatLuong){
+  return new Promise((resolve, reject)=>{
+    const doc = new FileReader();
+    doc.onerror = ()=> reject(new Error('Không đọc được tệp ảnh.'));
+    doc.onload = ()=>{
+      const img = new Image();
+      img.onerror = ()=> reject(new Error('Tệp này không phải ảnh hợp lệ.'));
+      img.onload = ()=>{
+        let {width:w, height:h} = img;
+        const tyLe = Math.min(1, canhDai / Math.max(w,h));
+        w = Math.round(w*tyLe); h = Math.round(h*tyLe);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0,0,w,h);   // nền trắng cho ảnh PNG trong suốt
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', chatLuong));
+      };
+      img.src = doc.result;
+    };
+    doc.readAsDataURL(file);
+  });
+}
+
+$('btFiles').onchange = async e=>{
+  const files = Array.from(e.target.files || []);
+  e.target.value = '';
+  if(!files.length) return;
+  const conLai = ANH_TOI_DA - anhDangChon.length;
+  if(conLai <= 0){ showMsg($('btMsg'), `Mỗi bài chỉ đính kèm tối đa ${ANH_TOI_DA} ảnh.`, 'err'); return; }
+
+  showMsg($('btMsg'),'Đang xử lý ảnh...','info');
+  for(const f of files.slice(0, conLai)){
+    if(!/^image\//.test(f.type)){ showMsg($('btMsg'), `"${f.name}" không phải ảnh.`, 'err'); continue; }
+    try{
+      const nho = await nenAnh(f, ANH_NHO_PX, ANH_CHAT_NHO);
+      const lon = await nenAnh(f, ANH_LON_PX, ANH_CHAT_LON);
+      anhDangChon.push({ nho, lon });
+    }catch(err){ showMsg($('btMsg'), err.message, 'err'); }
+  }
+  renderXemTruoc();
+};
+
+function renderXemTruoc(){
+  const box = $('btPreview');
+  box.innerHTML = '';
+  anhDangChon.forEach((a,i)=>{
+    const o = document.createElement('div');
+    o.className = 'o';
+    o.innerHTML = `<img src="${a.nho}" alt="Ảnh ${i+1}"><button type="button" class="bo" data-boanh="${i}" title="Bỏ ảnh">&times;</button>`;
+    box.appendChild(o);
+  });
+  box.querySelectorAll('[data-boanh]').forEach(b=> b.onclick = ()=>{
+    anhDangChon.splice(Number(b.getAttribute('data-boanh')), 1);
+    renderXemTruoc();
+  });
+}
+
+$('btForm').onsubmit = async e=>{
+  e.preventDefault();
+  if(!myUid){ showMsg($('btMsg'),'Đang kết nối, thử lại sau vài giây.','info'); return; }
+  const author  = $('btAuthor').value.trim();
+  const title   = $('btTitle').value.trim();
+  const content = $('btContent').value.trim();
+
+  if(!author){ showMsg($('btMsg'),'Vui lòng nhập tên người đăng.','err'); return; }
+  if(!title){ showMsg($('btMsg'),'Vui lòng nhập tiêu đề.','err'); return; }
+  if(!content && !anhDangChon.length){ showMsg($('btMsg'),'Bài đăng cần có nội dung hoặc ít nhất một ảnh.','err'); return; }
+
+  const nut = $('btSubmit');
+  nut.disabled = true; nut.textContent = 'Đang đăng...';
+  try{
+    const ref = btRef.push();
+    const bai = { title, content, author, uid: myUid,
+                  soAnh: anhDangChon.length, luc: Date.now(),
+                  time: new Date().toLocaleString('vi-VN') };
+
+    if(anhDangChon.length && dungDrive()){
+      /* Gửi ảnh lên Google Drive, chỉ lưu mã tệp vào Firebase */
+      nut.textContent = 'Đang tải ảnh lên Drive...';
+      const ids = [];
+      for(let i=0;i<anhDangChon.length;i++){
+        nut.textContent = `Đang tải ảnh ${i+1}/${anhDangChon.length}...`;
+        ids.push(await guiAnhLenDrive(anhDangChon[i].lon, author));
+      }
+      bai.anhIds = ids;
+      await ref.set(bai);
+    } else {
+      /* Chưa cấu hình Drive: lưu thẳng vào Firebase như trước */
+      bai.anhNho = anhDangChon.map(a=>a.nho);
+      await ref.set(bai);
+      if(anhDangChon.length){
+        await btAnhRef.child(ref.key).set({ uid: myUid, anh: anhDangChon.map(a=>a.lon) });
+      }
+    }
+
+    $('btForm').reset();
+    anhDangChon = []; renderXemTruoc();
+    showMsg($('btMsg'),'Đã đăng bài. Cả lớp xem được ngay. 📰','ok');
+  }catch(err){
+    showMsg($('btMsg'), /too large|max size/i.test(String(err.message))
+      ? 'Ảnh quá lớn. Hãy chọn ảnh nhỏ hơn hoặc bớt số ảnh.' : baoLoi(err), 'err');
+  }
+  nut.disabled = false; nut.textContent = 'Đăng bài';
+};
+
+/* Gửi một ảnh lên Apps Script, nhận về mã tệp Drive */
+async function guiAnhLenDrive(duLieuAnh, tenNguoiDang){
+  const res = await fetch(DRIVE_URL, {
+    method: 'POST',
+    body: JSON.stringify({ ma: MA_DRIVE, hanhDong: 'upload',
+                           duLieu: duLieuAnh, ten: tenNguoiDang })
+  });
+  const kq = await res.json();
+  if(!kq.ok) throw new Error(kq.loi || 'Không tải được ảnh lên Drive.');
+  return kq.id;
+}
+
+/* Xóa ảnh khỏi Drive khi xóa bài (đưa vào Thùng rác, không mất hẳn) */
+async function xoaAnhTrenDrive(ids){
+  if(!dungDrive() || !ids || !ids.length) return;
+  for(const id of ids){
+    try{
+      await fetch(DRIVE_URL, { method:'POST',
+        body: JSON.stringify({ ma: MA_DRIVE, hanhDong: 'xoa', id }) });
+    }catch(e){ /* xóa ảnh thất bại thì bỏ qua, bài vẫn được xóa */ }
+  }
+}
+
+function renderBaiViet(){
+  const feed = $('btFeed');
+  feed.innerHTML = '';
+  $('btCountBadge').textContent = baiViet.length;
+  $('btEmpty').style.display = baiViet.length ? 'none' : 'block';
+
+  baiViet.forEach(b=>{
+    const cuaToi = (b.uid === myUid);
+    const suaDuoc = cuaToi || isAdmin;
+    const div = document.createElement('div');
+    div.className = 'bai' + (cuaToi ? ' cua-toi' : '');
+    /* Bài mới dùng ảnh trên Drive, bài cũ dùng ảnh lưu trong Firebase */
+    const nguonAnh = (b.anhIds && b.anhIds.length)
+      ? b.anhIds.map(id=> anhDriveNho(id))
+      : (b.anhNho || []);
+    const anh = nguonAnh.map((src,i)=>
+      `<img src="${src}" alt="Ảnh ${i+1}" loading="lazy" data-xemanh="${b.id}|${i}">`).join('');
+    div.innerHTML = `
+      <h3>${esc(b.title)}</h3>
+      <div class="meta">
+        <span>✍️ <b>${esc(b.author)}</b>${cuaToi?' (em)':''}</span>
+        <span>🕒 ${esc(b.time)}</span>
+        ${b.soAnh ? `<span>📷 ${b.soAnh} ảnh</span>` : ''}
+      </div>
+      ${b.content ? `<div class="noi-dung">${esc(b.content)}</div>` : ''}
+      ${anh ? `<div class="anh-hang">${anh}</div>` : ''}
+      ${suaDuoc ? `<div class="thao-tac">
+        <button class="btn btn-blue btn-sm" data-suabai="${b.id}">Sửa</button>
+        <button class="btn btn-ghost btn-sm" data-xoabai="${b.id}">Xóa</button></div>` : ''}`;
+    feed.appendChild(div);
+  });
+
+  feed.querySelectorAll('[data-xemanh]').forEach(im=> im.onclick = ()=> moAnhLon(im.getAttribute('data-xemanh')));
+  feed.querySelectorAll('[data-suabai]').forEach(b=> b.onclick = ()=> modalSuaBai(b.getAttribute('data-suabai')));
+  feed.querySelectorAll('[data-xoabai]').forEach(b=> b.onclick = async ()=>{
+    if(!confirm('Xóa bài đăng này?')) return;
+    const id = b.getAttribute('data-xoabai');
+    const bai = baiViet.find(x=> x.id===id);
+    try{
+      await btRef.child(id).remove();
+      try{ await btAnhRef.child(id).remove(); }catch(e){}
+      if(bai && bai.anhIds) xoaAnhTrenDrive(bai.anhIds);
+    }catch(e){ showMsg($('btMsg'), baoLoi(e),'err'); }
+  });
+}
+
+async function moAnhLon(khoa){
+  const [id, i] = khoa.split('|');
+  const bai = baiViet.find(b=> b.id===id);
+  if(!bai) return;
+  $('denAnh').classList.add('show');
+
+  if(bai.anhIds && bai.anhIds[i]){
+    /* Ảnh trên Drive: hiện bản nhỏ trước cho nhanh, rồi thay bằng bản lớn */
+    $('denAnhImg').src = anhDriveNho(bai.anhIds[i]);
+    const lon = new Image();
+    lon.onload = ()=> { $('denAnhImg').src = lon.src; };
+    lon.src = anhDriveLon(bai.anhIds[i]);
+    return;
+  }
+
+  $('denAnhImg').src = (bai.anhNho && bai.anhNho[i]) || '';
+  try{
+    const v = (await btAnhRef.child(id).child('anh').child(i).once('value')).val();
+    if(v) $('denAnhImg').src = v;
+  }catch(e){ /* không tải được ảnh lớn thì giữ ảnh nhỏ */ }
+}
+$('denAnhDong').onclick = ()=> $('denAnh').classList.remove('show');
+$('denAnh').onclick = e=>{ if(e.target.id==='denAnh') $('denAnh').classList.remove('show'); };
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') $('denAnh').classList.remove('show'); });
+
+function modalSuaBai(id){
+  const b = baiViet.find(x=> x.id===id);
+  if(!b) return;
+  openModal(`<h3>Sửa bài đăng</h3>
+    <label style="font-size:12.5px;font-weight:700;">Tiêu đề</label>
+    <input type="text" id="sTitle" value="${esc(b.title)}" maxlength="120">
+    <label style="font-size:12.5px;font-weight:700;">Nội dung</label>
+    <textarea id="sContent" maxlength="3000" style="width:100%;min-height:130px;padding:10px 12px;
+      border:1.5px solid var(--line);border-radius:8px;font-family:inherit;font-size:14px;">${esc(b.content||'')}</textarea>
+    <p style="font-size:12.5px;margin-top:8px;">Ảnh đính kèm giữ nguyên. Muốn đổi ảnh thì xóa bài rồi đăng lại.</p>
+    <div id="sErr" class="msg err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary btn-sm" id="sLuu">Lưu</button>
+    </div>`, 'gen');
+
+  $('sLuu').onclick = async ()=>{
+    const title = $('sTitle').value.trim();
+    const content = $('sContent').value.trim();
+    if(!title){ showMsg($('sErr'),'Tiêu đề không được để trống.','err'); return; }
+    try{ await btRef.child(id).update({ title, content }); closeModal(); }
+    catch(e){ showMsg($('sErr'), baoLoi(e),'err'); }
+  };
+}
+
+/* ================================================================
    KHU VỰC GIÁO VIÊN
    ================================================================ */
+async function napHoTroTatCa(){
+  if(!isAdmin){ htTatCa = []; return; }
+  try{
+    const v = (await htRef.once('value')).val() || {};
+    htTatCa = Object.keys(v).map(k=> Object.assign({uid:k}, v[k]));
+  }catch(e){ htTatCa = []; }
+}
+
 async function duyetDoiCho(swapId){
   const sw = swaps.find(s=>s.id===swapId);
   if(!sw) return;
@@ -899,6 +1403,27 @@ function renderAdmin(){
   }
   $('ldMissingTable').innerHTML = h4;
 
+  /* Danh sách nhận hỗ trợ — dữ liệu nhạy cảm */
+  $('htCountBadge').textContent = htTatCa.length;
+  let h5 = `<tr><th>STT</th><th>Họ tên</th><th>Loại hỗ trợ</th><th>Hoàn cảnh</th>
+            <th>Mô tả</th><th>Điện thoại</th><th>Gửi lúc</th><th></th></tr>`;
+  if(!htTatCa.length){
+    h5 += `<tr><td colspan="8" style="text-align:center;color:var(--ink-soft);">Chưa có em nào đăng ký.</td></tr>`;
+  } else {
+    htTatCa.forEach((r,i)=> h5 += `<tr>
+      <td>${i+1}</td><td>${esc(r.name)}</td><td>${esc(r.loai)}</td><td>${esc(r.hoanCanh)}</td>
+      <td style="max-width:260px;">${esc(r.moTa)}</td><td>${esc(r.dienThoai)}</td><td>${esc(r.time)}</td>
+      <td><button class="btn btn-ghost btn-sm" data-xoaHt="${r.uid}">Xóa</button></td></tr>`);
+  }
+  $('htAdminTable').innerHTML = h5;
+  document.querySelectorAll('[data-xoaHt]').forEach(b=> b.onclick = async ()=>{
+    if(!confirm('Xóa đăng ký nhận hỗ trợ này?')) return;
+    try{
+      await htRef.child(b.getAttribute('data-xoaHt')).remove();
+      await napHoTroTatCa(); renderAdmin();
+    }catch(e){ showMsg($('adminMsg'), baoLoi(e),'err'); }
+  });
+
   /* Đổi chỗ nhanh */
   const opts = allSeatIds().map(id=>
     `<option value="${id}">${seatLabel(id)}${seats[id]? ' — '+esc(seats[id].name):' (trống)'}</option>`).join('');
@@ -957,6 +1482,15 @@ $('exportLdBtn').onclick = ()=>{
   taiFile(csv, 'dang-ky-lao-dong-10a1.csv', 'text/csv;charset=utf-8');
 };
 
+$('exportHtBtn').onclick = ()=>{
+  if(!htTatCa.length){ showMsg($('adminMsg'),'Chưa có đăng ký nào để xuất.','err'); return; }
+  const rows = [['STT','Họ tên','Loại hỗ trợ','Hoàn cảnh','Mô tả','Điện thoại','Gửi lúc']];
+  htTatCa.forEach((r,i)=> rows.push([i+1, r.name, r.loai, r.hoanCanh, r.moTa, r.dienThoai, r.time]));
+  const csv = '﻿' + rows.map(r=> r.map(x=> '"'+String(x==null?'':x).replace(/"/g,'""')+'"').join(',')).join('\n');
+  taiFile(csv, 'danh-sach-nhan-ho-tro-10a1.csv', 'text/csv;charset=utf-8');
+  showMsg($('adminMsg'),'Đã tải file. Đây là dữ liệu nhạy cảm, thầy lưu ở nơi an toàn.','ok');
+};
+
 function taiFile(noiDung, ten, kieu){
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([noiDung], {type:kieu}));
@@ -980,6 +1514,17 @@ regsRef.on('value', s=>{
   renderRegs(); if(isAdmin) renderAdmin();
 });
 tvRef.on('value', s=>{ tv = s.val()||{}; renderTv(); });
+
+/* Bảng tin: chỉ lấy các bài gần đây nhất, mới nhất hiện lên đầu */
+btRef.limitToLast(BAI_TOI_DA).on('value', s=>{
+  const v = s.val()||{};
+  baiViet = Object.keys(v).map(k=> Object.assign({id:k}, v[k]))
+              .sort((a,b)=> (b.luc||0) - (a.luc||0));
+  renderBaiViet();
+});
+
+/* Danh sách hỗ trợ không dùng lắng nghe liên tục vì là dữ liệu riêng tư —
+   chỉ nạp đúng lúc cần: khi mở trang và khi giáo viên đăng nhập. */
 </script>
 </body>
 </html>
