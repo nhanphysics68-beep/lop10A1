@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lớp 10A1 — THCS &amp; THPT Hòa Thuận</title>
+<style>
+  :root{
+    --leaf:#1f7a4d; --leaf-dark:#14532d; --sky:#eef5f0; --paper:#fffefb;
+    --ink:#1c2b22; --ink-soft:#5b6b60; --clay:#d97706; --line:#d7e6da;
+    --red:#c0392b; --blue:#2b6cb0; --shadow:0 6px 20px rgba(20,83,45,0.08);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--sky); overflow-x:hidden; color:var(--ink); min-height:100vh;
+    font-family:"Trebuchet MS","Segoe UI",sans-serif;
+    background-image:radial-gradient(circle at 8% 0%, rgba(31,122,77,0.10), transparent 40%),
+                     radial-gradient(circle at 100% 15%, rgba(217,119,6,0.08), transparent 35%);}
+  .wrap{max-width:1200px; margin:0 auto; padding:24px 24px 60px;}
+  @media (max-width:640px){ .wrap{padding:14px 10px 40px;} .card{padding:14px;} }
+
+  /* ---------- Đầu trang ---------- */
+  .page-header{display:flex; align-items:center; gap:18px; margin-bottom:10px;}
+  .page-logo{width:96px; height:auto; flex:none; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.15));}
+  .header-text{flex:1; min-width:0; text-align:center;}
+  .logo-spacer{width:96px; flex:none;}
+  @media (max-width:640px){ .page-header{gap:10px;} .page-logo,.logo-spacer{width:56px;} }
+  h1.title{color:var(--leaf-dark); font-size:clamp(20px,4vw,30px); letter-spacing:1px;
+    margin:4px 0; text-transform:uppercase; font-weight:800;}
+  p.subtitle{color:var(--ink-soft); margin:0; font-size:13.5px;}
+
+  /* ---------- Thẻ chuyển trang ---------- */
+  .tabs{display:flex; gap:8px; flex-wrap:wrap; margin:18px 0 16px;}
+  .tab{flex:1; min-width:150px; background:var(--paper); border:1.5px solid var(--line);
+    border-radius:12px; padding:12px 14px; cursor:pointer; font-weight:700; font-size:14px;
+    color:var(--ink-soft); text-align:center; transition:.15s; font-family:inherit;}
+  .tab:hover{border-color:var(--leaf); color:var(--leaf-dark);}
+  .tab.active{background:var(--leaf); border-color:var(--leaf); color:#fff; box-shadow:var(--shadow);}
+  .tab .ico{font-size:17px; display:block; margin-bottom:2px;}
+  .panel{display:none;} .panel.active{display:block;}
+
+  .card{background:var(--paper); border:1px solid var(--line); border-radius:14px;
+        box-shadow:var(--shadow); padding:20px; margin-bottom:20px;}
+  .card h2{font-size:16px; color:var(--leaf-dark); margin:0 0 6px;}
+  .section-note{font-size:13px; color:var(--ink-soft); margin:0 0 14px; line-height:1.6;}
+
+  .guide{background:#f7fbf8; border:1.5px dashed var(--line); border-radius:10px;
+    padding:12px 16px; font-size:13px; color:var(--ink-soft); margin-bottom:18px; line-height:1.7;}
+  .guide b{color:var(--leaf-dark);}
+
+  /* ---------- Sơ đồ lớp ---------- */
+  .front-zone{display:grid; grid-template-columns:1fr 1.6fr 1fr; gap:10px; margin-bottom:22px;}
+  .front-box{border-radius:10px; padding:12px 10px; text-align:center; font-size:12.5px; font-weight:700;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;}
+  .door{background:#fff; border:2px dashed var(--blue); color:var(--blue);}
+  .podium{background:linear-gradient(180deg,#eaf5ee,#dff0e4); border:2px solid var(--leaf); color:var(--leaf-dark);}
+  .podium .board{margin-top:4px; width:100%; background:#2f4a3a; color:#eafbee; border-radius:6px; padding:10px 6px; font-size:12px; letter-spacing:1px;}
+  .teacher-desk{background:#fff7ea; border:2px solid var(--clay); color:var(--clay);}
+  .front-box .icon{font-size:20px;}
+
+  .classroom-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:clamp(6px,2vw,16px); margin-bottom:10px;}
+  .lane{display:flex; flex-direction:column; gap:clamp(5px,1.4vw,16px); min-width:0;}
+  .lane-label{font-size:clamp(10px,2vw,15px); color:var(--ink-soft); font-weight:700; margin-bottom:2px; text-align:center;}
+  .desk-row{display:flex; align-items:center; gap:clamp(4px,1.2vw,10px); padding:clamp(3px,1vw,8px) clamp(4px,1.2vw,12px); border-radius:10px; min-width:0;}
+  .desk{display:flex; gap:clamp(3px,1vw,14px); flex:1; min-width:0;}
+  .desk-badge{width:clamp(14px,2.6vw,24px); height:clamp(14px,2.6vw,24px); border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:clamp(8px,1.6vw,12px);
+    font-weight:800; flex:none; background:rgba(255,255,255,0.7);}
+  .row-c1{background:#fdecea;} .row-c1 .desk-badge{color:var(--red);}
+  .row-c2{background:#fff3e0;} .row-c2 .desk-badge{color:var(--clay);}
+  .row-c3{background:#eaf5ee;} .row-c3 .desk-badge{color:var(--leaf-dark);}
+  .row-c4{background:#eaf1fb;} .row-c4 .desk-badge{color:var(--blue);}
+  .row-c5{background:#f5eafc;} .row-c5 .desk-badge{color:#7c3aed;}
+  .row-c6{background:#fff9e0;} .row-c6 .desk-badge{color:#b45309;}
+  .row-c7{background:#e0f7fa;} .row-c7 .desk-badge{color:#0f766e;}
+  .seat{flex:1; min-width:0; aspect-ratio:148/104; border-radius:clamp(6px,1.4vw,12px);
+    border:2px dashed #b9d4c0; background:#fbfdfb; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; font-size:clamp(7px,1.7vw,13px); font-weight:700;
+    color:var(--ink-soft); cursor:pointer; text-align:center; line-height:1.2;
+    padding:clamp(1px,0.6vw,4px) clamp(2px,1vw,8px); transition:transform .1s, box-shadow .1s;
+    position:relative; user-select:none; overflow:hidden;}
+  .seat-name{display:block; word-break:break-word; max-width:100%;}
+  .seat:hover{transform:translateY(-2px); box-shadow:0 3px 8px rgba(0,0,0,0.12);}
+  .seat.taken{border-style:solid; border-color:#a9c9b6; background:#eaf5ee; color:var(--leaf-dark);}
+  .seat.mine{border-color:var(--clay); background:#fff8ec; box-shadow:0 0 0 2px #fde3bd inset;}
+  .seat.pending{border-color:var(--red); animation:pulse 1.4s infinite;}
+  .seat .lockicon{position:absolute; top:-6px; right:-6px; font-size:clamp(8px,1.8vw,16px);
+    background:#fff; border-radius:50%; padding:1px;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(192,57,43,.4);}70%{box-shadow:0 0 0 8px rgba(192,57,43,0);}100%{box-shadow:0 0 0 0 rgba(192,57,43,0);}}
+  .back-label{text-align:center; font-size:12px; font-weight:700; color:var(--ink-soft);
+    letter-spacing:2px; margin-top:8px; border-top:2px solid var(--line); padding-top:10px;}
+  .legend{display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--ink-soft); margin-top:16px;}
+  .legend span{display:inline-flex; align-items:center; gap:6px;}
+  .legend .box{width:14px; height:14px; border-radius:4px; display:inline-block;}
+
+  /* ---------- Biểu mẫu ---------- */
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-weight:700; font-size:13.5px; margin-bottom:6px;}
+  .field input[type=text], .field select{width:100%; padding:10px 12px; border:1.5px solid var(--line);
+    border-radius:9px; font-family:inherit; font-size:14px; background:#fff; color:var(--ink);}
+  .field input:focus, .field select:focus{outline:none; border-color:var(--leaf); box-shadow:0 0 0 3px #cdeadb;}
+  .tools-box{display:flex; flex-wrap:wrap; gap:8px;}
+  .chk{display:inline-flex; align-items:center; gap:7px; background:#fff; border:1.5px solid var(--line);
+    border-radius:9px; padding:9px 13px; font-size:13.5px; cursor:pointer; user-select:none;}
+  .chk:hover{border-color:var(--leaf);}
+  .chk input{width:17px; height:17px; accent-color:var(--leaf); cursor:pointer;}
+  .chk:has(input:checked){background:#eaf5ee; border-color:var(--leaf); color:var(--leaf-dark); font-weight:700;}
+
+  .btn{font-weight:700; font-size:13px; border:none; border-radius:9px; padding:10px 20px;
+    cursor:pointer; font-family:inherit;}
+  .btn-primary{background:var(--leaf); color:#fff;}
+  .btn-primary:hover{background:var(--leaf-dark);}
+  .btn-ghost{background:#fff; color:var(--red); border:1.5px solid var(--red);}
+  .btn-ghost:hover{background:#fdecea;}
+  .btn-blue{background:var(--blue); color:#fff;}
+  .btn-clay{background:var(--clay); color:#fff;}
+  .btn-sm{padding:6px 12px; font-size:12px; border-radius:7px;}
+  .btn:disabled{opacity:.55; cursor:not-allowed;}
+
+  .msg{font-size:13px; padding:9px 12px; border-radius:8px; margin-top:10px; display:none;}
+  .msg.show{display:block;}
+  .msg.ok{background:#eaf7ee; color:var(--leaf-dark); border:1px solid #bfe3c9;}
+  .msg.err{background:#fdecea; color:var(--red); border:1px solid #f4b8b0;}
+  .msg.info{background:#eaf1fb; color:var(--blue); border:1px solid #bcd6f2;}
+
+  /* ---------- Bảng ---------- */
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th,td{border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:middle;}
+  th{background:#f2f8f3; color:var(--leaf-dark); font-weight:700;}
+  tbody tr:hover{background:#fafdfb;}
+  .pill{display:inline-block; background:#eaf5ee; border:1px solid #bfe3c9; color:var(--leaf-dark);
+    border-radius:999px; padding:2px 10px; font-size:12px; margin:2px 3px 2px 0;}
+  .count-badge{display:inline-block; background:var(--leaf); color:#fff; border-radius:999px;
+    padding:2px 11px; font-size:12.5px; margin-left:6px; vertical-align:middle;}
+  .empty{text-align:center; color:var(--ink-soft); padding:26px; font-size:13.5px;}
+
+  /* ---------- Tivi ---------- */
+  .tv-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px;}
+  .tv-card{background:#fff; border:1.5px solid var(--line); border-radius:12px; padding:14px;}
+  .tv-card.full{border-color:var(--leaf); background:#f4fbf6;}
+  .tv-card h4{margin:0 0 8px; color:var(--leaf-dark); font-size:14px;
+    display:flex; justify-content:space-between; align-items:center;}
+  .tv-slot{display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:6px 9px; border-radius:7px; background:#f7fbf8; margin-bottom:6px; font-size:13px;}
+  .tv-slot.trong{color:#9bb0a3; font-style:italic; background:#fbfdfb; border:1px dashed var(--line);}
+  .tv-slot .x{color:var(--red); cursor:pointer; font-weight:800; padding:0 4px;}
+
+  /* ---------- Khu vực giáo viên ---------- */
+  details.admin{background:var(--paper); border:1px solid var(--line); border-radius:14px;
+    box-shadow:var(--shadow); padding:18px; margin-bottom:20px;}
+  details.admin summary{font-weight:800; color:var(--leaf-dark); cursor:pointer; font-size:15px;}
+  .admin-login{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:12px;}
+  .admin-login input{padding:9px 12px; border:1.5px solid var(--line); border-radius:8px;
+    font-family:inherit; font-size:14px; min-width:210px;}
+  .section-title{font-weight:800; font-size:13.5px; color:var(--leaf-dark); margin:20px 0 8px;
+    padding-top:14px; border-top:1px solid var(--line);}
+  .section-title:first-of-type{border-top:none; padding-top:0; margin-top:14px;}
+  .scroll-x{overflow-x:auto;}
+  .swap-tool{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+  .swap-tool select{padding:8px; border:1.5px solid var(--line); border-radius:8px; font-size:12.5px; font-family:inherit;}
+
+  /* ---------- Modal ---------- */
+  .modal-bg{display:none; position:fixed; inset:0; background:rgba(20,30,20,.45);
+    align-items:center; justify-content:center; z-index:60; padding:16px; overflow-y:auto;}
+  .modal-bg.show{display:flex;}
+  .modal{background:#fff; border-radius:12px; padding:22px; max-width:390px; width:100%;
+    box-shadow:0 20px 50px rgba(0,0,0,.25); margin:auto;}
+  .modal h3{color:var(--leaf-dark); margin:0 0 10px; font-size:16px;}
+  .modal p{font-size:13px; color:var(--ink-soft); margin:0 0 10px; line-height:1.5;}
+  .modal input, .modal select{width:100%; padding:10px 12px; border:1.5px solid var(--line);
+    border-radius:8px; font-family:inherit; font-size:14px; margin-bottom:10px;}
+  .modal-btns{display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;}
+
+  footer{text-align:center; font-size:12px; color:var(--ink-soft); margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="page-header">
+    <img src="1.png" alt="Logo Trường THCS &amp; THPT Hòa Thuận" class="page-logo">
+    <div class="header-text">
+      <h1 class="title">Lớp 10A1</h1>
+      <p class="subtitle">Trường THCS &amp; THPT Hòa Thuận · Năm học 2026–2027</p>
+    </div>
+    <div class="logo-spacer"></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="sodo"><span class="ico">📍</span>Sơ đồ lớp</button>
+    <button class="tab" data-tab="laodong"><span class="ico">🧹</span>Đăng ký lao động</button>
+    <button class="tab" data-tab="khaigiang"><span class="ico">📺</span>Chuẩn bị khai giảng</button>
+  </div>
+
+  <!-- ============ THẺ 1: SƠ ĐỒ LỚP ============ -->
+  <div class="panel active" id="panel-sodo">
+    <div class="card">
+      <div class="guide">
+        🌱 <b>Cách dùng:</b> Chạm vào ô trống → nhập tên → xong. Chỗ đó tự động thuộc về em,
+        <b>không cần mật khẩu</b>. Ô của em viền cam, chỉ mình em sửa được.
+        Muốn đổi chỗ, chạm vào ô của bạn rồi bấm <b>Gửi yêu cầu đổi chỗ</b> — thầy sẽ duyệt.
+        <br>⚠ Máy em dùng để đăng ký chính là <b>chìa khóa</b>. Đổi máy hoặc xóa dữ liệu trình duyệt
+        thì báo thầy xóa ô giúp rồi đăng ký lại.
+      </div>
+
+      <div class="front-zone">
+        <div class="front-box door"><span class="icon">🚪</span>CỬA RA VÀO</div>
+        <div class="front-box podium"><span class="icon">🧑‍🏫</span>BỤC GIẢNG<div class="board">BẢNG LỚP</div></div>
+        <div class="front-box teacher-desk"><span class="icon">🗄️</span>BÀN GIÁO VIÊN</div>
+      </div>
+
+      <div class="classroom-grid" id="classroomGrid"></div>
+      <div class="back-label">— CUỐI LỚP —</div>
+
+      <div class="legend">
+        <span><i class="box" style="background:#fbfdfb;border:2px dashed #b9d4c0;"></i>Ô trống</span>
+        <span><i class="box" style="background:#fff8ec;border:2px solid var(--clay);"></i>Chỗ của em ✋</span>
+        <span><i class="box" style="background:#eaf5ee;border:2px solid #a9c9b6;"></i>Chỗ của bạn khác</span>
+        <span><i class="box" style="background:#fdecea;border:2px solid var(--red);"></i>Có yêu cầu đổi chỗ</span>
+      </div>
+      <div id="pageMsg" class="msg"></div>
+    </div>
+  </div>
+
+  <!-- ============ THẺ 2: ĐĂNG KÝ LAO ĐỘNG ============ -->
+  <div class="panel" id="panel-laodong">
+    <div class="card">
+      <h2>Phiếu đăng ký dụng cụ lao động</h2>
+      <p class="section-note">
+        Khối 9 &amp; 12: 24–25/08/2026 · Khối 6, 7, 8, 10, 11: 03–04/09/2026.
+        Mỗi em đăng ký một lần; muốn sửa thì bấm vào dòng của mình trong bảng bên dưới.
+      </p>
+
+      <form id="regForm">
+        <div class="field">
+          <label for="fullname">Họ và tên học sinh</label>
+          <input type="text" id="fullname" placeholder="Nguyễn Văn A" maxlength="60" required>
+        </div>
+
+        <div class="field">
+          <label>Khu vực lao động</label>
+          <div class="tools-box">
+            <label class="chk"><input type="radio" name="area" value="Trong lớp" required> Trong lớp</label>
+            <label class="chk"><input type="radio" name="area" value="Khu vực bên ngoài" required> Khu vực bên ngoài</label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Dụng cụ sẽ mang theo</label>
+          <div class="tools-box" id="toolsBox">
+            <label class="chk"><input type="checkbox" value="Dao"> Dao</label>
+            <label class="chk"><input type="checkbox" value="Chổi"> Chổi</label>
+            <label class="chk"><input type="checkbox" value="Dụng cụ hốt rác"> Dụng cụ hốt rác</label>
+            <label class="chk"><input type="checkbox" value="Giẻ lau"> Giẻ lau</label>
+            <label class="chk"><input type="checkbox" value="Cây quét mạng nhện"> Cây quét mạng nhện</label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="otherTool">Dụng cụ khác (nếu có)</label>
+          <input type="text" id="otherTool" placeholder="VD: bao tay, xô nước..." maxlength="80">
+        </div>
+
+        <button type="submit" class="btn btn-primary">Gửi đăng ký</button>
+        <div id="formMsg" class="msg"></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Danh sách đã đăng ký <span class="count-badge" id="countBadge">0</span></h2>
+      <p class="section-note">Dòng có dấu ✋ là đăng ký của em — bấm nút Sửa để thay đổi.</p>
+      <div class="scroll-x">
+        <table>
+          <thead>
+            <tr><th>#</th><th>Họ tên</th><th>Khu vực</th><th>Dụng cụ mang theo</th><th>Thời gian</th><th>Thao tác</th></tr>
+          </thead>
+          <tbody id="regBody"></tbody>
+        </table>
+      </div>
+      <div id="emptyState" class="empty" style="display:none;">Chưa có học sinh nào đăng ký. Hãy là người đầu tiên! 🌱</div>
+    </div>
+  </div>
+
+  <!-- ============ THẺ 3: CHUẨN BỊ KHAI GIẢNG ============ -->
+  <div class="panel" id="panel-khaigiang">
+    <div class="card">
+      <h2>Chuẩn bị tivi cho lễ khai giảng <span class="count-badge" id="tvCountBadge">0/9</span></h2>
+      <p class="section-note">Mỗi tivi cần tối đa <b>3 bạn</b> phụ trách. Mỗi em chỉ nhận một nhiệm vụ.</p>
+
+      <form id="tvForm">
+        <div class="field">
+          <label for="tvName">Họ và tên học sinh</label>
+          <input type="text" id="tvName" placeholder="Nguyễn Văn A" maxlength="60">
+        </div>
+        <div class="field">
+          <label for="tvSelect">Chọn nhiệm vụ</label>
+          <select id="tvSelect"></select>
+        </div>
+        <button type="submit" class="btn btn-primary">Đăng ký</button>
+        <div id="tvFormMsg" class="msg"></div>
+      </form>
+
+      <div id="tvFull" class="msg info" style="display:none;">🎉 Cả 3 tivi đều đã đủ 3 bạn phụ trách.</div>
+    </div>
+
+    <div class="card">
+      <h2>Bảng phân công</h2>
+      <div class="tv-grid" id="tvResults"></div>
+    </div>
+  </div>
+
+  <!-- ============ KHU VỰC GIÁO VIÊN ============ -->
+  <details class="admin" id="adminDetails">
+    <summary>🔒 Khu vực giáo viên / quản trị</summary>
+
+    <div id="adminLocked">
+      <p class="section-note" style="margin-top:10px;">
+        Đăng nhập bằng tài khoản giáo viên đã tạo trong Firebase Authentication.
+      </p>
+      <div class="admin-login">
+        <input type="email" id="adminEmailInput" placeholder="Email giáo viên" autocomplete="username">
+        <input type="password" id="adminPassInput" placeholder="Mật khẩu" autocomplete="current-password">
+        <button class="btn btn-primary btn-sm" id="adminUnlockBtn">Đăng nhập</button>
+      </div>
+      <div id="adminLoginErr" class="msg err"></div>
+    </div>
+
+    <div id="adminPanel" style="display:none;">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;">
+        <span class="msg info show" style="margin:0;" id="adminWho"></span>
+        <button class="btn btn-ghost btn-sm" id="adminSignOutBtn">Đăng xuất</button>
+      </div>
+
+      <div class="section-title">Yêu cầu đổi chỗ đang chờ duyệt</div>
+      <div class="scroll-x"><table id="swapApproveTable"></table></div>
+
+      <div class="section-title">Chỗ ngồi đã đăng ký</div>
+      <div class="scroll-x"><table id="adminTable"></table></div>
+
+      <div class="section-title" id="rosterTitle">Đối chiếu danh sách lớp</div>
+      <div class="scroll-x"><table id="rosterTable"></table></div>
+
+      <div class="section-title">Đổi chỗ nhanh</div>
+      <div class="swap-tool">
+        <select id="swapA"></select><span>⇄</span><select id="swapB"></select>
+        <button class="btn btn-blue btn-sm" id="swapBtn">Đổi chỗ</button>
+      </div>
+
+      <div class="section-title">Đăng ký lao động — đối chiếu ai chưa nộp</div>
+      <div class="scroll-x"><table id="ldMissingTable"></table></div>
+
+      <div class="section-title">Công cụ</div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn btn-clay btn-sm" id="exportWordBtn">📄 Xuất sơ đồ ra Word</button>
+        <button class="btn btn-clay btn-sm" id="exportLdBtn">📄 Xuất danh sách lao động (CSV)</button>
+        <button class="btn btn-ghost btn-sm" id="resetSeatsBtn">🗑️ Xóa toàn bộ sơ đồ</button>
+        <button class="btn btn-ghost btn-sm" id="resetLdBtn">🗑️ Xóa toàn bộ đăng ký lao động</button>
+      </div>
+      <div id="adminMsg" class="msg"></div>
+    </div>
+  </details>
+
+  <footer>Sạch hôm nay – Xanh ngày mai – Đẹp trường, đẹp lớp 💚</footer>
+</div>
+
+<div class="modal-bg" id="seatModal"><div class="modal" id="seatModalBody"></div></div>
+<div class="modal-bg" id="genModal"><div class="modal" id="genModalBody"></div></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script>
+/* =========================================================
+   LỚP 10A1 — trang gộp: Sơ đồ lớp + Đăng ký lao động + Khai giảng
+   Quyền sở hữu dựa trên Firebase Anonymous Auth: mỗi trình duyệt một UID,
+   bản ghi nhớ UID đó, Security Rules chỉ cho chính chủ hoặc giáo viên sửa.
+   Không lưu mật khẩu học sinh ở bất kỳ đâu.
+   ========================================================= */
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA-SI1MkDOCCEFSyvUU2McqtZGSd5CEbkw",
+  authDomain: "sodolop10a1.firebaseapp.com",
+  databaseURL: "https://sodolop10a1-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "sodolop10a1",
+  storageBucket: "sodolop10a1.firebasestorage.app",
+  messagingSenderId: "920106392128",
+  appId: "1:920106392128:web:4739789c3705a57d9b9da5"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+
+const ADMIN_UID = "3eMkknzDuNVFyrpmB1ceIBViTDD2";
+
+/* Giữ nguyên đường dẫn cũ để không mất dữ liệu đã có */
+const seatsRef  = db.ref('lop10a1/seats');
+const swapsRef  = db.ref('lop10a1/swaps');
+const rosterRef = db.ref('lop10a1/roster');
+const regsRef   = db.ref('laodong2026/registrations');
+const tvRef     = db.ref('khaigiang2026/tivi');
+
+const LANES     = [ {id:1,desks:7}, {id:2,desks:6}, {id:3,desks:6}, {id:4,desks:6} ];
+const TV_SLOTS  = [1,2,3];
+const TV_CAPACITY = 3;
+
+let seats={}, swaps=[], roster=[], regs=[], tv={};
+let myUid=null, isAdmin=false;
+
+/* -------------------- TIỆN ÍCH -------------------- */
+const $ = id => document.getElementById(id);
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function showMsg(el, text, type){
+  if(!el) return;
+  el.textContent = text; el.className = 'msg show ' + type;
+  setTimeout(()=> el.classList.remove('show'), 4200);
+}
+function chuanTen(s){ return (s||'').trim().toLowerCase().replace(/\s+/g,' '); }
+function baoLoi(e){
+  const m = String(e && e.message || e);
+  if(/permission_denied/i.test(m))
+    return 'Không có quyền. Mục này thuộc về bạn khác, hoặc em đã đổi máy nên mất quyền sửa — hãy báo thầy.';
+  return 'Có lỗi: ' + m;
+}
+function allSeatIds(){
+  const ids=[];
+  LANES.forEach(l=>{ for(let b=1;b<=l.desks;b++){ ids.push(`d${l.id}-b${b}-T`); ids.push(`d${l.id}-b${b}-P`); } });
+  return ids;
+}
+function seatLabel(id){
+  const [d,b,s]=id.split('-');
+  return `Dãy ${d.slice(1)} — Bàn ${b.slice(1)} — ghế ${s==='T'?'trái':'phải'}`;
+}
+function mySeatId(){ for(const id in seats){ if(seats[id] && seats[id].uid===myUid) return id; } return null; }
+function myRegId(){ const r = regs.find(x=> x.uid===myUid); return r? r.id : null; }
+
+/* -------------------- THẺ CHUYỂN TRANG -------------------- */
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick = ()=>{
+    document.querySelectorAll('.tab').forEach(x=> x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x=> x.classList.remove('active'));
+    t.classList.add('active');
+    $('panel-' + t.dataset.tab).classList.add('active');
+    location.hash = t.dataset.tab;
+  };
+});
+(function moTheoHash(){
+  const h = (location.hash||'').replace('#','');
+  const t = document.querySelector(`.tab[data-tab="${h}"]`);
+  if(t) t.click();
+})();
+
+/* -------------------- MODAL -------------------- */
+function openModal(html, which){
+  const box = which==='gen' ? 'genModalBody' : 'seatModalBody';
+  const bg  = which==='gen' ? 'genModal' : 'seatModal';
+  $(box).innerHTML = html;
+  $(bg).classList.add('show');
+}
+function closeModal(){
+  $('seatModal').classList.remove('show');
+  $('genModal').classList.remove('show');
+}
+['seatModal','genModal'].forEach(id=>{
+  $(id).onclick = e=>{ if(e.target.id===id) closeModal(); };
+});
+
+/* -------------------- ĐĂNG NHẬP -------------------- */
+auth.onAuthStateChanged(async user=>{
+  if(!user){
+    try{ await auth.signInAnonymously(); }
+    catch(e){
+      showMsg($('pageMsg'), 'Chưa bật Anonymous Authentication trong Firebase Console nên không đăng ký được.', 'err');
+    }
+    return;
+  }
+  myUid = user.uid;
+  isAdmin = (user.uid === ADMIN_UID);
+  $('adminLocked').style.display = isAdmin ? 'none' : 'block';
+  $('adminPanel').style.display  = isAdmin ? 'block' : 'none';
+
+  if(isAdmin){
+    $('adminWho').textContent = 'Đang đăng nhập: ' + (user.email || user.uid);
+    await loadRoster();
+    renderAdmin();
+  } else { roster = []; }
+
+  renderSeats(); renderRegs(); renderTv();
+});
+
+$('adminUnlockBtn').onclick = async ()=>{
+  const email = $('adminEmailInput').value.trim(), pass = $('adminPassInput').value;
+  if(!email || !pass){ showMsg($('adminLoginErr'), 'Nhập đủ email và mật khẩu.', 'err'); return; }
+  try{ await auth.signInWithEmailAndPassword(email, pass); $('adminPassInput').value=''; }
+  catch(e){ showMsg($('adminLoginErr'), 'Đăng nhập thất bại: sai email hoặc mật khẩu.', 'err'); }
+};
+$('adminSignOutBtn').onclick = ()=> auth.signOut();
+
+async function loadRoster(){
+  try{
+    const v = (await rosterRef.once('value')).val();
+    roster = !v ? [] : (Array.isArray(v)? v.filter(Boolean) : Object.values(v));
+  }catch(e){ roster = []; }
+}
+
+/* ================================================================
+   THẺ 1 — SƠ ĐỒ LỚP
+   ================================================================ */
+function renderSeats(){
+  const grid = $('classroomGrid');
+  grid.innerHTML = '';
+  const cuaToi = mySeatId();
+
+  LANES.forEach(l=>{
+    const lane = document.createElement('div');
+    lane.className = 'lane';
+    lane.innerHTML = `<div class="lane-label">Dãy ${l.id}</div>`;
+    for(let b=1;b<=l.desks;b++){
+      const row = document.createElement('div');
+      row.className = `desk-row row-c${((b-1)%7)+1}`;
+      const badge = document.createElement('div');
+      badge.className='desk-badge'; badge.textContent=b;
+      row.appendChild(badge);
+
+      const desk = document.createElement('div'); desk.className='desk';
+      ['T','P'].forEach(side=>{
+        const id = `d${l.id}-b${b}-${side}`;
+        const data = seats[id];
+        const div = document.createElement('div');
+        div.className='seat';
+        const coYeuCau = swaps.some(s=> s.status==='pending' && (s.fromSeatId===id || s.toSeatId===id));
+        if(data){
+          div.classList.add('taken');
+          const laCuaToi = (id===cuaToi);
+          if(laCuaToi) div.classList.add('mine');
+          if(coYeuCau) div.classList.add('pending');
+          const icon = coYeuCau ? '🔔' : (laCuaToi ? '✋' : '');
+          div.innerHTML = `<span class="seat-name">${esc(data.name)}</span>` +
+                          (icon? `<span class="lockicon">${icon}</span>`:'');
+          div.title = seatLabel(id)+' — '+data.name+(laCuaToi?' (chỗ của em)':'');
+        } else {
+          div.textContent='+'; div.title = seatLabel(id)+' — Trống';
+        }
+        div.onclick = ()=> onSeatClick(id);
+        desk.appendChild(div);
+      });
+      row.appendChild(desk); lane.appendChild(row);
+    }
+    grid.appendChild(lane);
+  });
+}
+
+function onSeatClick(seatId){
+  if(!myUid){ showMsg($('pageMsg'),'Đang kết nối, thử lại sau vài giây.','info'); return; }
+  const data = seats[seatId];
+  if(!data) return modalDangKyCho(seatId);
+  if(data.uid===myUid || isAdmin) return modalChoCuaToi(seatId, data);
+  return modalChoNguoiKhac(seatId, data);
+}
+
+function modalDangKyCho(seatId){
+  const daCo = mySeatId();
+  if(daCo && !isAdmin){
+    openModal(`<h3>Em đã có chỗ rồi</h3>
+      <p>Chỗ hiện tại: <b>${seatLabel(daCo)}</b>. Muốn chuyển sang ô này, vào ô của em bấm
+      <b>Bỏ chỗ này</b> trước rồi đăng ký lại.</p>
+      <div class="modal-btns"><button class="btn btn-primary btn-sm" onclick="closeModal()">Đã hiểu</button></div>`);
+    return;
+  }
+  openModal(`<h3>Đăng ký chỗ ngồi</h3><p>${seatLabel(seatId)}</p>
+    <input type="text" id="mName" placeholder="Nhập họ và tên của em" maxlength="60">
+    <div id="mErr" class="msg err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary btn-sm" id="mOk">Đăng ký</button>
+    </div>`);
+  $('mName').focus();
+  $('mOk').onclick = async ()=>{
+    const name = $('mName').value.trim();
+    if(!name){ showMsg($('mErr'),'Vui lòng nhập họ tên.','err'); return; }
+    if(seats[seatId]){ showMsg($('mErr'),'Ô này vừa có bạn khác đăng ký trước.','err'); return; }
+    try{
+      await seatsRef.child(seatId).set({ name, uid: myUid });
+      closeModal(); showMsg($('pageMsg'),'Đã đăng ký chỗ ngồi. Ô của em có viền cam.','ok');
+    }catch(e){ showMsg($('mErr'), baoLoi(e), 'err'); }
+  };
+}
+
+function modalChoCuaToi(seatId, data){
+  const den = swaps.filter(s=> s.status==='pending' && s.toSeatId===seatId);
+  const di  = swaps.find(s=> s.status==='pending' && s.fromSeatId===seatId);
+  let phu='';
+  if(di) phu += `<div class="msg info show">⏳ Em đã gửi yêu cầu đổi chỗ tới <b>${esc(di.toName)}</b>, chờ thầy duyệt.
+    <br><button class="btn btn-ghost btn-sm" id="huyYc" style="margin-top:6px;">Hủy yêu cầu</button></div>`;
+  den.forEach(r=> phu += `<div class="msg info show">🔁 <b>${esc(r.fromName)}</b> muốn đổi chỗ với em.
+    <br><button class="btn btn-ghost btn-sm" data-tuchoi="${r.id}" style="margin-top:6px;">Từ chối</button></div>`);
+
+  openModal(`<h3>${seatLabel(seatId)}</h3>
+    <p>${isAdmin && data.uid!==myUid ? 'Chỗ của <b>'+esc(data.name)+'</b> (thầy có toàn quyền)' : 'Đây là chỗ của em ✋'}</p>
+    <input type="text" id="mName" value="${esc(data.name)}" maxlength="60">
+    <div id="mErr" class="msg err"></div>${phu}
+    <div class="modal-btns">
+      <button class="btn btn-ghost btn-sm" id="mBo">Bỏ chỗ này</button>
+      <button class="btn btn-primary btn-sm" id="mLuu">Lưu tên</button>
+    </div>`);
+
+  $('mLuu').onclick = async ()=>{
+    const name = $('mName').value.trim();
+    if(!name){ showMsg($('mErr'),'Vui lòng nhập họ tên.','err'); return; }
+    try{ await seatsRef.child(seatId).update({name}); closeModal(); showMsg($('pageMsg'),'Đã lưu.','ok'); }
+    catch(e){ showMsg($('mErr'), baoLoi(e),'err'); }
+  };
+  $('mBo').onclick = async ()=>{
+    try{ await seatsRef.child(seatId).remove(); await xoaYeuCau(seatId); closeModal();
+      showMsg($('pageMsg'),'Đã bỏ chỗ. Em có thể chọn ô khác.','ok'); }
+    catch(e){ showMsg($('mErr'), baoLoi(e),'err'); }
+  };
+  if($('huyYc')) $('huyYc').onclick = async ()=>{
+    try{ await swapsRef.child(di.id).remove(); closeModal(); }catch(e){ showMsg($('mErr'),baoLoi(e),'err'); }
+  };
+  document.querySelectorAll('[data-tuchoi]').forEach(b=> b.onclick = async ()=>{
+    try{ await swapsRef.child(b.getAttribute('data-tuchoi')).remove(); closeModal(); }
+    catch(e){ showMsg($('mErr'),baoLoi(e),'err'); }
+  });
+}
+
+function modalChoNguoiKhac(seatId, data){
+  const cuaToi = mySeatId();
+  const daGui = cuaToi && swaps.some(s=> s.status==='pending' && s.fromSeatId===cuaToi);
+  let than;
+  if(!cuaToi) than = `<div class="msg info show">Em chưa có chỗ. Hãy đăng ký một ô trống trước rồi mới xin đổi chỗ được.</div>`;
+  else if(daGui) than = `<div class="msg info show">Em đã có một yêu cầu đang chờ duyệt, không gửi thêm được.</div>`;
+  else than = `<p>Chỗ của em: <b>${seatLabel(cuaToi)}</b>. Gửi yêu cầu đổi sang ô này, thầy sẽ duyệt.</p>`;
+
+  openModal(`<h3>${seatLabel(seatId)}</h3><p>Đang có: <b>${esc(data.name)}</b></p>${than}
+    <div id="mErr" class="msg err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Đóng</button>
+      ${cuaToi && !daGui ? '<button class="btn btn-blue btn-sm" id="mGui">Gửi yêu cầu đổi chỗ</button>' : ''}
+    </div>`);
+  if($('mGui')) $('mGui').onclick = async ()=>{
+    try{
+      await swapsRef.push({ fromSeatId:cuaToi, fromName:seats[cuaToi].name, fromUid:myUid,
+                            toSeatId:seatId, toName:data.name, status:'pending' });
+      closeModal(); showMsg($('pageMsg'), `Đã gửi yêu cầu đổi chỗ tới ${data.name}.`, 'ok');
+    }catch(e){ showMsg($('mErr'), baoLoi(e),'err'); }
+  };
+}
+
+async function xoaYeuCau(seatId){
+  for(const s of swaps.filter(s=> s.fromSeatId===seatId || s.toSeatId===seatId)){
+    try{ await swapsRef.child(s.id).remove(); }catch(e){}
+  }
+}
+
+/* ================================================================
+   THẺ 2 — ĐĂNG KÝ LAO ĐỘNG
+   ================================================================ */
+$('regForm').onsubmit = async e=>{
+  e.preventDefault();
+  const name  = $('fullname').value.trim();
+  const areaEl= document.querySelector('input[name="area"]:checked');
+  const other = $('otherTool').value.trim();
+  const chon  = Array.from(document.querySelectorAll('#toolsBox input:checked')).map(c=>c.value);
+
+  if(!name){ showMsg($('formMsg'),'Vui lòng nhập họ tên.','err'); return; }
+  if(!areaEl){ showMsg($('formMsg'),'Vui lòng chọn khu vực lao động.','err'); return; }
+  const tools = chon.concat(other ? [other] : []);
+  if(!tools.length){ showMsg($('formMsg'),'Chọn ít nhất một dụng cụ, hoặc ghi vào ô "Dụng cụ khác".','err'); return; }
+  if(myRegId()){ showMsg($('formMsg'),'Em đã đăng ký rồi. Bấm nút Sửa ở dòng của em trong bảng bên dưới.','err'); return; }
+
+  try{
+    await regsRef.push({ name, area: areaEl.value, tools, uid: myUid,
+                         time: new Date().toLocaleString('vi-VN') });
+    $('regForm').reset();
+    showMsg($('formMsg'),'Đã gửi đăng ký. Cảm ơn em! 🌱','ok');
+  }catch(err){ showMsg($('formMsg'), baoLoi(err),'err'); }
+};
+
+function renderRegs(){
+  const body = $('regBody');
+  body.innerHTML = '';
+  $('countBadge').textContent = regs.length;
+  $('emptyState').style.display = regs.length ? 'none' : 'block';
+
+  regs.forEach((r,i)=>{
+    const laCuaToi = (r.uid === myUid);
+    const suaDuoc  = laCuaToi || isAdmin;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${i+1}</td>
+      <td>${esc(r.name)} ${laCuaToi?'✋':''}</td>
+      <td>${esc(r.area)}</td>
+      <td>${(r.tools||[]).map(t=>`<span class="pill">${esc(t)}</span>`).join('')}</td>
+      <td>${esc(r.time)}</td>
+      <td style="white-space:nowrap;">${ suaDuoc
+        ? `<button class="btn btn-blue btn-sm" data-sua="${r.id}">Sửa</button>
+           <button class="btn btn-ghost btn-sm" data-xoaReg="${r.id}">Xóa</button>` : '' }</td>`;
+    body.appendChild(tr);
+  });
+
+  document.querySelectorAll('[data-sua]').forEach(b=> b.onclick = ()=> modalSuaReg(b.getAttribute('data-sua')));
+  document.querySelectorAll('[data-xoaReg]').forEach(b=> b.onclick = async ()=>{
+    if(!confirm('Xóa đăng ký này?')) return;
+    try{ await regsRef.child(b.getAttribute('data-xoaReg')).remove(); }
+    catch(e){ showMsg($('formMsg'), baoLoi(e),'err'); }
+  });
+}
+
+function modalSuaReg(id){
+  const r = regs.find(x=>x.id===id);
+  if(!r) return;
+  openModal(`<h3>Chỉnh sửa đăng ký</h3>
+    <label style="font-size:12.5px;font-weight:700;">Họ và tên</label>
+    <input type="text" id="eName" value="${esc(r.name)}" maxlength="60">
+    <label style="font-size:12.5px;font-weight:700;">Khu vực lao động</label>
+    <select id="eArea">
+      <option value="Trong lớp"${r.area==='Trong lớp'?' selected':''}>Trong lớp</option>
+      <option value="Khu vực bên ngoài"${r.area==='Khu vực bên ngoài'?' selected':''}>Khu vực bên ngoài</option>
+    </select>
+    <label style="font-size:12.5px;font-weight:700;">Dụng cụ (cách nhau bằng dấu phẩy)</label>
+    <input type="text" id="eTools" value="${esc((r.tools||[]).join(', '))}">
+    <div id="eErr" class="msg err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary btn-sm" id="eSave">Lưu</button>
+    </div>`, 'gen');
+
+  $('eSave').onclick = async ()=>{
+    const name = $('eName').value.trim();
+    const tools = $('eTools').value.split(',').map(s=>s.trim()).filter(Boolean);
+    if(!name){ showMsg($('eErr'),'Vui lòng nhập họ tên.','err'); return; }
+    if(!tools.length){ showMsg($('eErr'),'Ghi ít nhất một dụng cụ.','err'); return; }
+    try{
+      await regsRef.child(id).update({ name, area: $('eArea').value, tools });
+      closeModal();
+    }catch(e){ showMsg($('eErr'), baoLoi(e),'err'); }
+  };
+}
+
+/* ================================================================
+   THẺ 3 — CHUẨN BỊ KHAI GIẢNG (TIVI)
+   ================================================================ */
+function tvDem(n){ return Object.keys((tv && tv[n]) || {}).length; }
+
+function renderTv(){
+  const daDay = TV_SLOTS.reduce((s,n)=> s + tvDem(n), 0);
+  $('tvCountBadge').textContent = daDay + '/' + (TV_SLOTS.length*TV_CAPACITY);
+
+  /* Ô chọn nhiệm vụ, chỉ hiện tivi còn chỗ */
+  const conCho = TV_SLOTS.filter(n=> tvDem(n) < TV_CAPACITY);
+  const sel = $('tvSelect');
+  sel.innerHTML = conCho.length
+    ? conCho.map(n=> `<option value="${n}">Tivi ${n} — còn ${TV_CAPACITY - tvDem(n)} chỗ</option>`).join('')
+    : '<option value="">Đã đủ người</option>';
+  $('tvFull').style.display = conCho.length ? 'none' : 'block';
+  $('tvForm').querySelector('button').disabled = !conCho.length;
+
+  /* Bảng phân công */
+  const box = $('tvResults');
+  box.innerHTML = '';
+  TV_SLOTS.forEach(n=>{
+    const ds = (tv && tv[n]) || {};
+    const keys = Object.keys(ds);
+    const day = keys.length >= TV_CAPACITY;
+    const card = document.createElement('div');
+    card.className = 'tv-card' + (day ? ' full' : '');
+    let html = `<h4>📺 Tivi ${n} <span class="count-badge">${keys.length}/${TV_CAPACITY}</span></h4>`;
+    for(let i=0;i<TV_CAPACITY;i++){
+      const k = keys[i];
+      if(k){
+        const e = ds[k];
+        const xoaDuoc = (e.uid===myUid) || isAdmin;
+        html += `<div class="tv-slot"><span>${i+1}. ${esc(e.name)} ${e.uid===myUid?'✋':''}</span>
+          ${xoaDuoc? `<span class="x" data-tvxoa="${n}|${k}" title="Bỏ nhiệm vụ">✕</span>`:''}</div>`;
+      } else {
+        html += `<div class="tv-slot trong">${i+1}. (còn trống)</div>`;
+      }
+    }
+    card.innerHTML = html;
+    box.appendChild(card);
+  });
+
+  document.querySelectorAll('[data-tvxoa]').forEach(b=> b.onclick = async ()=>{
+    const [n,k] = b.getAttribute('data-tvxoa').split('|');
+    if(!confirm('Bỏ nhiệm vụ này?')) return;
+    try{ await tvRef.child(n).child(k).remove(); }
+    catch(e){ showMsg($('tvFormMsg'), baoLoi(e),'err'); }
+  });
+}
+
+function tvCuaToi(){
+  for(const n of TV_SLOTS){
+    const ds = (tv && tv[n]) || {};
+    for(const k in ds){ if(ds[k].uid === myUid) return n; }
+  }
+  return null;
+}
+
+$('tvForm').onsubmit = async e=>{
+  e.preventDefault();
+  const name = $('tvName').value.trim();
+  const slot = $('tvSelect').value;
+  if(!name){ showMsg($('tvFormMsg'),'Vui lòng nhập họ tên.','err'); return; }
+  if(!slot){ showMsg($('tvFormMsg'),'Cả 3 tivi đã đủ người.','err'); return; }
+  const daCo = tvCuaToi();
+  if(daCo && !isAdmin){ showMsg($('tvFormMsg'),`Em đã nhận nhiệm vụ Tivi ${daCo} rồi.`,'err'); return; }
+  if(tvDem(slot) >= TV_CAPACITY){ showMsg($('tvFormMsg'),'Tivi này vừa đủ người, chọn tivi khác.','err'); return; }
+  try{
+    await tvRef.child(slot).push({ name, uid: myUid, time: new Date().toLocaleString('vi-VN') });
+    $('tvName').value = '';
+    showMsg($('tvFormMsg'), `Đã ghi nhận em phụ trách Tivi ${slot}. 📺`, 'ok');
+  }catch(err){ showMsg($('tvFormMsg'), baoLoi(err),'err'); }
+};
+
+/* ================================================================
+   KHU VỰC GIÁO VIÊN
+   ================================================================ */
+async function duyetDoiCho(swapId){
+  const sw = swaps.find(s=>s.id===swapId);
+  if(!sw) return;
+  const capNhat = {};
+  capNhat['lop10a1/seats/'+sw.fromSeatId] = seats[sw.toSeatId]   || null;
+  capNhat['lop10a1/seats/'+sw.toSeatId]   = seats[sw.fromSeatId] || null;
+  try{
+    await db.ref().update(capNhat);
+    await xoaYeuCau(sw.fromSeatId); await xoaYeuCau(sw.toSeatId);
+    showMsg($('adminMsg'),'Đã duyệt và đổi chỗ.','ok');
+  }catch(e){ showMsg($('adminMsg'), baoLoi(e),'err'); }
+}
+
+function renderAdmin(){
+  if(!isAdmin) return;
+
+  /* Yêu cầu đổi chỗ */
+  const cho = swaps.filter(s=> s.status==='pending');
+  let h = `<tr><th>Từ</th><th>Đến</th><th></th></tr>`;
+  if(!cho.length) h += `<tr><td colspan="3" style="text-align:center;color:var(--ink-soft);">Không có yêu cầu nào.</td></tr>`;
+  else cho.forEach(s=> h += `<tr>
+      <td>${esc(s.fromName)}<br><small>${seatLabel(s.fromSeatId)}</small></td>
+      <td>${esc(s.toName)}<br><small>${seatLabel(s.toSeatId)}</small></td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-primary btn-sm" data-duyet="${s.id}">Duyệt</button>
+        <button class="btn btn-ghost btn-sm" data-boqua="${s.id}">Từ chối</button></td></tr>`);
+  $('swapApproveTable').innerHTML = h;
+  document.querySelectorAll('[data-duyet]').forEach(b=> b.onclick=()=> duyetDoiCho(b.getAttribute('data-duyet')));
+  document.querySelectorAll('[data-boqua]').forEach(b=> b.onclick=async ()=>{
+    try{ await swapsRef.child(b.getAttribute('data-boqua')).remove(); }catch(e){ showMsg($('adminMsg'),baoLoi(e),'err'); }
+  });
+
+  /* Chỗ ngồi */
+  const daCo = allSeatIds().filter(id=> seats[id]).sort();
+  let h2 = `<tr><th>STT</th><th>Vị trí</th><th>Họ tên</th><th></th></tr>`;
+  daCo.forEach((id,i)=> h2 += `<tr><td>${i+1}</td><td>${seatLabel(id)}</td>
+    <td><input type="text" id="an-${id}" value="${esc(seats[id].name)}" maxlength="60"
+        style="width:100%;padding:5px 7px;border:1px solid var(--line);border-radius:5px;font-family:inherit;"></td>
+    <td style="white-space:nowrap;">
+      <button class="btn btn-primary btn-sm" data-luuGhe="${id}">Lưu</button>
+      <button class="btn btn-ghost btn-sm" data-xoaGhe="${id}">Xóa</button></td></tr>`);
+  if(!daCo.length) h2 += `<tr><td colspan="4" style="text-align:center;color:var(--ink-soft);">Chưa có ai đăng ký.</td></tr>`;
+  $('adminTable').innerHTML = h2;
+  document.querySelectorAll('[data-luuGhe]').forEach(b=> b.onclick = async ()=>{
+    const id=b.getAttribute('data-luuGhe'), name=$('an-'+id).value.trim();
+    if(!name) return;
+    try{ await seatsRef.child(id).update({name}); showMsg($('adminMsg'),'Đã lưu.','ok'); }
+    catch(e){ showMsg($('adminMsg'),baoLoi(e),'err'); }
+  });
+  document.querySelectorAll('[data-xoaGhe]').forEach(b=> b.onclick = async ()=>{
+    const id=b.getAttribute('data-xoaGhe');
+    try{ await seatsRef.child(id).remove(); await xoaYeuCau(id); }
+    catch(e){ showMsg($('adminMsg'),baoLoi(e),'err'); }
+  });
+
+  /* Đối chiếu danh sách lớp — chỗ ngồi */
+  let h3 = `<tr><th>STT</th><th>Họ tên</th><th>Ngày sinh</th><th>Giới tính</th><th>Dân tộc</th></tr>`;
+  if(!roster.length){
+    $('rosterTitle').textContent = 'Đối chiếu danh sách lớp';
+    h3 += `<tr><td colspan="5" style="text-align:center;color:var(--red);">
+      Chưa đọc được danh sách lớp. Kiểm tra nhánh <b>lop10a1/roster</b> và Security Rules.</td></tr>`;
+  } else {
+    const coCho = new Set(Object.values(seats).map(s=> chuanTen(s.name)));
+    const thieu = roster.filter(st=> !coCho.has(chuanTen(st.name)));
+    $('rosterTitle').textContent = `Chưa chọn chỗ ngồi (${roster.length-thieu.length}/${roster.length} đã có chỗ)`;
+    if(!thieu.length) h3 += `<tr><td colspan="5" style="text-align:center;color:var(--leaf-dark);font-weight:700;">🎉 Tất cả đã chọn chỗ!</td></tr>`;
+    else thieu.forEach((st,i)=> h3 += `<tr style="background:#fdecea;"><td>${i+1}</td><td>${esc(st.name)}</td>
+      <td>${esc(st.dob)}</td><td>${esc(st.gender)}</td><td>${esc(st.ethnic)}</td></tr>`);
+  }
+  $('rosterTable').innerHTML = h3;
+
+  /* Đối chiếu danh sách lớp — lao động */
+  let h4 = `<tr><th>STT</th><th>Họ tên</th><th>Ngày sinh</th></tr>`;
+  if(!roster.length){
+    h4 += `<tr><td colspan="3" style="text-align:center;color:var(--ink-soft);">Cần nạp danh sách lớp để đối chiếu.</td></tr>`;
+  } else {
+    const daNop = new Set(regs.map(r=> chuanTen(r.name)));
+    const thieu = roster.filter(st=> !daNop.has(chuanTen(st.name)));
+    if(!thieu.length) h4 += `<tr><td colspan="3" style="text-align:center;color:var(--leaf-dark);font-weight:700;">🎉 Cả lớp đã đăng ký lao động!</td></tr>`;
+    else thieu.forEach((st,i)=> h4 += `<tr style="background:#fff7ea;"><td>${i+1}</td><td>${esc(st.name)}</td><td>${esc(st.dob)}</td></tr>`);
+  }
+  $('ldMissingTable').innerHTML = h4;
+
+  /* Đổi chỗ nhanh */
+  const opts = allSeatIds().map(id=>
+    `<option value="${id}">${seatLabel(id)}${seats[id]? ' — '+esc(seats[id].name):' (trống)'}</option>`).join('');
+  $('swapA').innerHTML = opts; $('swapB').innerHTML = opts;
+}
+
+$('swapBtn').onclick = async ()=>{
+  const a=$('swapA').value, b=$('swapB').value;
+  if(a===b) return;
+  const capNhat={};
+  capNhat['lop10a1/seats/'+a] = seats[b] || null;
+  capNhat['lop10a1/seats/'+b] = seats[a] || null;
+  try{
+    await db.ref().update(capNhat); await xoaYeuCau(a); await xoaYeuCau(b);
+    showMsg($('adminMsg'),'Đã đổi chỗ.','ok');
+  }catch(e){ showMsg($('adminMsg'), baoLoi(e),'err'); }
+};
+
+$('resetSeatsBtn').onclick = async ()=>{
+  if(!confirm('Xóa TOÀN BỘ sơ đồ chỗ ngồi? Không hoàn tác được.')) return;
+  try{ await seatsRef.remove(); await swapsRef.remove(); showMsg($('adminMsg'),'Đã xóa sơ đồ.','ok'); }
+  catch(e){ showMsg($('adminMsg'), baoLoi(e),'err'); }
+};
+$('resetLdBtn').onclick = async ()=>{
+  if(!confirm('Xóa TOÀN BỘ đăng ký lao động? Không hoàn tác được.')) return;
+  try{ await regsRef.remove(); showMsg($('adminMsg'),'Đã xóa đăng ký lao động.','ok'); }
+  catch(e){ showMsg($('adminMsg'), baoLoi(e),'err'); }
+};
+
+$('exportWordBtn').onclick = ()=>{
+  const maxB = Math.max.apply(null, LANES.map(l=>l.desks));
+  let bang = `<table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;width:100%;font-family:Arial;font-size:12px;">
+    <tr>${LANES.map(l=>`<th style="background:#eaf5ee;">Dãy ${l.id}</th>`).join('')}</tr>`;
+  for(let b=1;b<=maxB;b++){
+    bang += '<tr>';
+    LANES.forEach(l=>{
+      if(b > l.desks){ bang += '<td></td>'; return; }
+      const t=seats[`d${l.id}-b${b}-T`], p=seats[`d${l.id}-b${b}-P`];
+      bang += `<td style="text-align:center;">Bàn ${b}<br>${t?esc(t.name):'(trống)'} — ${p?esc(p.name):'(trống)'}</td>`;
+    });
+    bang += '</tr>';
+  }
+  bang += '</table>';
+  taiFile(`<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head><meta charset="utf-8"><title>Sơ đồ lớp 10A1</title></head><body style="font-family:Arial;">
+    <h2 style="text-align:center;">SƠ ĐỒ LỚP 10A1</h2>
+    <p style="text-align:center;">CỬA RA VÀO (trái) — BẢNG LỚP (giữa) — BÀN GIÁO VIÊN (phải)</p>
+    ${bang}<p style="text-align:center;margin-top:10px;">— CUỐI LỚP —</p></body></html>`,
+    'so-do-lop-10a1.doc', 'application/msword');
+};
+
+$('exportLdBtn').onclick = ()=>{
+  const rows = [['STT','Họ tên','Khu vực','Dụng cụ','Thời gian']];
+  regs.forEach((r,i)=> rows.push([i+1, r.name, r.area, (r.tools||[]).join(' / '), r.time]));
+  const csv = '﻿' + rows.map(r=> r.map(x=> '"'+String(x==null?'':x).replace(/"/g,'""')+'"').join(',')).join('\n');
+  taiFile(csv, 'dang-ky-lao-dong-10a1.csv', 'text/csv;charset=utf-8');
+};
+
+function taiFile(noiDung, ten, kieu){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([noiDung], {type:kieu}));
+  a.download = ten;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+}
+
+/* ================================================================
+   LẮNG NGHE THAY ĐỔI TỪ FIREBASE
+   ================================================================ */
+seatsRef.on('value', s=>{ seats = s.val()||{}; renderSeats(); if(isAdmin) renderAdmin(); });
+swapsRef.on('value', s=>{
+  const v = s.val()||{};
+  swaps = Object.keys(v).map(k=> Object.assign({id:k}, v[k]));
+  renderSeats(); if(isAdmin) renderAdmin();
+});
+regsRef.on('value', s=>{
+  const v = s.val()||{};
+  regs = Object.keys(v).map(k=> Object.assign({id:k}, v[k]));
+  renderRegs(); if(isAdmin) renderAdmin();
+});
+tvRef.on('value', s=>{ tv = s.val()||{}; renderTv(); });
+</script>
+</body>
+</html>
