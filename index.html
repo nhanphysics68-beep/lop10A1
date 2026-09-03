@@ -206,9 +206,20 @@
   .den-anh{display:none; position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:70;
     align-items:center; justify-content:center; padding:20px;}
   .den-anh.show{display:flex;}
-  .den-anh img{max-width:100%; max-height:92vh; border-radius:8px;}
+  .den-anh img{max-width:100%; max-height:92vh; border-radius:8px; user-select:none;}
   .den-anh .dong{position:absolute; top:16px; right:22px; color:#fff; font-size:34px;
     cursor:pointer; line-height:1; background:none; border:none;}
+  .den-anh .dieuhuong{position:absolute; top:50%; transform:translateY(-50%); color:#fff;
+    font-size:38px; line-height:1; background:rgba(255,255,255,.12); border:none;
+    width:52px; height:52px; border-radius:50%; cursor:pointer; transition:.15s;
+    display:flex; align-items:center; justify-content:center;}
+  .den-anh .dieuhuong:hover{background:rgba(255,255,255,.28);}
+  .den-anh .dieuhuong:disabled{opacity:0; pointer-events:none;}
+  .den-anh .truoc{left:14px;} .den-anh .sau{right:14px;}
+  @media (max-width:640px){ .den-anh .dieuhuong{width:42px; height:42px; font-size:28px;}
+    .den-anh .truoc{left:4px;} .den-anh .sau{right:4px;} }
+  .den-anh .dem-anh{position:absolute; bottom:18px; left:50%; transform:translateX(-50%);
+    color:#fff; font-size:13px; background:rgba(255,255,255,.15); border-radius:20px; padding:4px 14px;}
 
   /* ---------- Modal ---------- */
   .modal-bg{display:none; position:fixed; inset:0; background:rgba(20,30,20,.45);
@@ -589,7 +600,10 @@
 
 <div class="den-anh" id="denAnh">
   <button class="dong" id="denAnhDong">&times;</button>
+  <button class="dieuhuong truoc" id="denAnhTruoc" aria-label="Ảnh trước">&#8249;</button>
   <img id="denAnhImg" alt="Ảnh bài đăng">
+  <button class="dieuhuong sau" id="denAnhSau" aria-label="Ảnh sau">&#8250;</button>
+  <div class="dem-anh" id="denAnhDem"></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -657,6 +671,7 @@ const BAI_TOI_DA   = 25;     // số bài hiển thị trên bảng tin, giữ t
 let seats={}, swaps=[], roster=[], regs=[], tv={};
 let htCuaToi=null, htTatCa=[], baiViet=[], anhDangChon=[];
 let hosoCuaToi=null, hosoTatCa=[];
+let denAnhHienTai=null;
 let myUid=null, isAdmin=false;
 
 /* -------------------- TIỆN ÍCH -------------------- */
@@ -1352,10 +1367,15 @@ function renderBaiViet(){
 }
 
 async function moAnhLon(khoa){
-  const [id, i] = khoa.split('|');
+  const [id, iStr] = khoa.split('|');
+  const i = Number(iStr);
   const bai = baiViet.find(b=> b.id===id);
   if(!bai) return;
+
+  const tong = (bai.anhIds && bai.anhIds.length) || (bai.anhNho && bai.anhNho.length) || bai.soAnh || 1;
+  denAnhHienTai = { id, i, tong };
   $('denAnh').classList.add('show');
+  capNhatNutDieuHuong();
 
   if(bai.anhIds && bai.anhIds[i]){
     /* Ảnh trên Drive: hiện bản nhỏ trước cho nhanh, rồi thay bằng bản lớn */
@@ -1372,9 +1392,31 @@ async function moAnhLon(khoa){
     if(v) $('denAnhImg').src = v;
   }catch(e){ /* không tải được ảnh lớn thì giữ ảnh nhỏ */ }
 }
-$('denAnhDong').onclick = ()=> $('denAnh').classList.remove('show');
-$('denAnh').onclick = e=>{ if(e.target.id==='denAnh') $('denAnh').classList.remove('show'); };
-document.addEventListener('keydown', e=>{ if(e.key==='Escape') $('denAnh').classList.remove('show'); });
+
+function capNhatNutDieuHuong(){
+  if(!denAnhHienTai) return;
+  const { i, tong } = denAnhHienTai;
+  $('denAnhTruoc').disabled = (i <= 0);
+  $('denAnhSau').disabled = (i >= tong - 1);
+  $('denAnhDem').textContent = tong > 1 ? `${i+1} / ${tong}` : '';
+  $('denAnhDem').style.display = tong > 1 ? 'block' : 'none';
+}
+function chuyenAnh(buoc){
+  if(!denAnhHienTai) return;
+  const moi = denAnhHienTai.i + buoc;
+  if(moi < 0 || moi >= denAnhHienTai.tong) return;
+  moAnhLon(`${denAnhHienTai.id}|${moi}`);
+}
+$('denAnhTruoc').onclick = ()=> chuyenAnh(-1);
+$('denAnhSau').onclick = ()=> chuyenAnh(1);
+$('denAnhDong').onclick = ()=> { $('denAnh').classList.remove('show'); denAnhHienTai = null; };
+$('denAnh').onclick = e=>{ if(e.target.id==='denAnh'){ $('denAnh').classList.remove('show'); denAnhHienTai = null; } };
+document.addEventListener('keydown', e=>{
+  if(!$('denAnh').classList.contains('show')) return;
+  if(e.key==='Escape'){ $('denAnh').classList.remove('show'); denAnhHienTai = null; }
+  else if(e.key==='ArrowLeft') chuyenAnh(-1);
+  else if(e.key==='ArrowRight') chuyenAnh(1);
+});
 
 function modalSuaBai(id){
   const b = baiViet.find(x=> x.id===id);
