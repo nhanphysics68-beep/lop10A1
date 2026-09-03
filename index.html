@@ -195,6 +195,40 @@
     border:1px solid var(--line); cursor:zoom-in; transition:transform .12s;}
   .bai .anh-hang img:hover{transform:scale(1.04);}
   .bai .thao-tac{margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;}
+
+  /* ---------- Cảm xúc & bình luận ---------- */
+  .hang-tuong-tac{display:flex; align-items:center; gap:10px;
+    margin-top:12px; padding-top:10px; border-top:1px solid var(--line);}
+  .tom-tat-cx{font-size:12.5px; color:var(--ink-soft); display:flex; align-items:center; gap:4px;}
+  .icon-cx{font-size:14px; letter-spacing:-2px;}
+  .nut-cam-xuc-wrap{position:relative;}
+  .btn-cx{background:#fff; border:1.5px solid var(--line); border-radius:8px;
+    padding:6px 12px; font-size:13px; font-weight:700; color:var(--ink-soft); cursor:pointer;
+    font-family:inherit; transition:.15s;}
+  .btn-cx:hover{border-color:var(--leaf); color:var(--leaf-dark); background:#f4fbf6;}
+  .btn-cx.da-chon{color:var(--leaf-dark); border-color:var(--leaf); background:#eaf5ee;}
+  .rong-cam-xuc{position:absolute; bottom:calc(100% + 8px); left:0; background:#fff;
+    border:1px solid var(--line); border-radius:30px; box-shadow:0 8px 20px rgba(20,83,45,.18);
+    padding:6px 8px; display:flex; gap:2px; z-index:20;}
+  .nut-cam-xuc{background:none; border:none; font-size:22px; padding:4px 6px; cursor:pointer;
+    border-radius:50%; transition:transform .12s, background .12s; line-height:1;}
+  .nut-cam-xuc:hover{transform:scale(1.35) translateY(-3px); background:#f7fbf8;}
+
+  .khoi-binh-luan{margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);}
+  .nhan-binh-luan{font-size:12.5px; font-weight:700; color:var(--leaf-dark); margin-bottom:8px;}
+  .ds-binh-luan{display:flex; flex-direction:column; gap:8px; margin-bottom:10px;}
+  .binh-luan{background:#f7fbf8; border-radius:10px; padding:8px 12px;}
+  .bl-noi-dung{font-size:13.5px; line-height:1.55; word-break:break-word;}
+  .bl-em{color:var(--clay); font-weight:700; font-size:12px;}
+  .bl-meta{font-size:11px; color:var(--ink-soft); margin-top:4px; display:flex; gap:10px;}
+  .bl-xoa{color:var(--red); cursor:pointer; text-decoration:underline;}
+  .bl-trong{font-size:13px; color:var(--ink-soft); font-style:italic; padding:6px 0;}
+  .form-binh-luan{display:flex; flex-direction:column; gap:6px;}
+  .bl-ten{padding:8px 11px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13px;}
+  .bl-hang-nhap{display:flex; gap:6px;}
+  .bl-noidung{flex:1; padding:8px 11px; border:1.5px solid var(--line); border-radius:8px;
+    font-family:inherit; font-size:13.5px; min-width:0;}
+  .bl-ten:focus, .bl-noidung:focus{outline:none; border-color:var(--leaf); box-shadow:0 0 0 3px #cdeadb;}
   .xem-truoc{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
   .xem-truoc .o{position:relative;}
   .xem-truoc img{width:96px; height:96px; object-fit:cover; border-radius:8px; border:1px solid var(--line);}
@@ -654,6 +688,8 @@ const tvRef     = db.ref('khaigiang2026/tivi');
 const htRef     = db.ref('hotro2026/dangky');      // riêng tư: khóa theo uid, chỉ chủ nhân và giáo viên đọc
 const btRef     = db.ref('bangtin2026/baiviet');   // bài đăng, ảnh nhỏ nằm kèm
 const btAnhRef  = db.ref('bangtin2026/anh');       // ảnh cỡ lớn, chỉ tải khi bấm xem
+const cambienRef  = db.ref('bangtin2026/cambien');   // thả cảm xúc — đọc công khai, mỗi người 1 dòng theo uid của mình
+const binhluanRef = db.ref('bangtin2026/binhluan');  // bình luận theo từng bài — đọc công khai
 const hosoRef   = db.ref('hoso2026/hoso');         // riêng tư: khóa theo uid, giống hotro2026
 
 const LANES     = [ {id:1,desks:7}, {id:2,desks:6}, {id:3,desks:6}, {id:4,desks:6} ];
@@ -670,6 +706,18 @@ const BAI_TOI_DA   = 25;     // số bài hiển thị trên bảng tin, giữ t
 
 let seats={}, swaps=[], roster=[], regs=[], tv={};
 let htCuaToi=null, htTatCa=[], baiViet=[], anhDangChon=[];
+let camXucState={}, binhLuanState={};
+const daGanNgheBai = new Set();
+let pickerCamXucMo = null;
+const duThaoBinhLuan = {};
+const CAM_XUC = [
+  {id:'thich',    icon:'👍', nhan:'Thích'},
+  {id:'yeuthich', icon:'❤️', nhan:'Yêu thích'},
+  {id:'haha',     icon:'😆', nhan:'Haha'},
+  {id:'wow',      icon:'😮', nhan:'Wow'},
+  {id:'buon',     icon:'😢', nhan:'Buồn'},
+  {id:'phanno',   icon:'😠', nhan:'Phẫn nộ'},
+];
 let hosoCuaToi=null, hosoTatCa=[];
 let denAnhHienTai=null;
 let myUid=null, isAdmin=false;
@@ -1325,6 +1373,7 @@ function renderBaiViet(){
   $('btEmpty').style.display = baiViet.length ? 'none' : 'block';
 
   baiViet.forEach(b=>{
+    ganNgheBai(b.id);
     const cuaToi = (b.uid === myUid);
     const suaDuoc = cuaToi || isAdmin;
     const div = document.createElement('div');
@@ -1335,6 +1384,43 @@ function renderBaiViet(){
       : (b.anhNho || []);
     const anh = nguonAnh.map((src,i)=>
       `<img src="${src}" alt="Ảnh ${i+1}" loading="lazy" data-xemanh="${b.id}|${i}">`).join('');
+
+    /* ---- Cảm xúc ---- */
+    const cx = tomTatCamXuc(b.id);
+    const cxCuaToi = camXucCuaToi(b.id);
+    const cxHienThi = cxCuaToi ? timCamXuc(cxCuaToi) : null;
+    const pickerMo = pickerCamXucMo === b.id;
+    const pickerHtml = pickerMo ? `<div class="rong-cam-xuc">${CAM_XUC.map(c=>
+        `<button type="button" class="nut-cam-xuc" data-chon-cx="${b.id}|${c.id}" title="${esc(c.nhan)}">${c.icon}</button>`
+      ).join('')}</div>` : '';
+
+    /* ---- Bình luận (luôn hiện sẵn, không cần bấm mở) ---- */
+    const dsBinhLuan = Object.keys(binhLuanState[b.id]||{})
+      .map(k=> Object.assign({id:k}, binhLuanState[b.id][k]))
+      .sort((x,y)=> (x.luc||0) - (y.luc||0));
+    const blHtml = `
+      <div class="khoi-binh-luan">
+        <div class="nhan-binh-luan">💬 ${dsBinhLuan.length ? dsBinhLuan.length + ' bình luận' : 'Bình luận'}</div>
+        <div class="ds-binh-luan">
+          ${dsBinhLuan.length ? dsBinhLuan.map(c=>{
+            const blCuaToi = c.uid===myUid, xoaDuoc = blCuaToi || isAdmin;
+            return `<div class="binh-luan">
+              <div class="bl-noi-dung"><b>${esc(c.author)}</b>${blCuaToi?' <span class="bl-em">(em)</span>':''}<br>${esc(c.content)}</div>
+              <div class="bl-meta"><span>${esc(c.time)}</span>${xoaDuoc?`<span class="bl-xoa" data-xoa-bl="${b.id}|${c.id}">Xóa</span>`:''}</div>
+            </div>`;
+          }).join('') : `<div class="bl-trong">Chưa có bình luận nào — hãy là người đầu tiên!</div>`}
+        </div>
+        <div class="form-binh-luan">
+          <input type="text" class="bl-ten" id="blTen_${b.id}" placeholder="Tên của em" maxlength="60"
+            value="${esc(layTenBinhLuanDaLuu())}">
+          <div class="bl-hang-nhap">
+            <input type="text" class="bl-noidung" id="blNoiDung_${b.id}" placeholder="Viết bình luận..." maxlength="500"
+              value="${esc(duThaoBinhLuan[b.id]||'')}">
+            <button type="button" class="btn btn-primary btn-sm" data-gui-bl="${b.id}">Gửi</button>
+          </div>
+        </div>
+      </div>`;
+
     div.innerHTML = `
       <h3>${esc(b.title)}</h3>
       <div class="meta">
@@ -1346,7 +1432,17 @@ function renderBaiViet(){
       ${anh ? `<div class="anh-hang">${anh}</div>` : ''}
       ${suaDuoc ? `<div class="thao-tac">
         <button class="btn btn-blue btn-sm" data-suabai="${b.id}">Sửa</button>
-        <button class="btn btn-ghost btn-sm" data-xoabai="${b.id}">Xóa</button></div>` : ''}`;
+        <button class="btn btn-ghost btn-sm" data-xoabai="${b.id}">Xóa</button></div>` : ''}
+      <div class="hang-tuong-tac">
+        <div class="tom-tat-cx">${cx.tong ? `<span class="icon-cx">${cx.noiBat}</span> ${cx.tong}` : ''}</div>
+        <div class="nut-cam-xuc-wrap">
+          <button type="button" class="btn-cx ${cxCuaToi?'da-chon':''}" data-mo-cx="${b.id}">
+            ${cxHienThi ? cxHienThi.icon+' '+esc(cxHienThi.nhan) : '👍 Thích'}
+          </button>
+          ${pickerHtml}
+        </div>
+      </div>
+      ${blHtml}`;
     feed.appendChild(div);
   });
 
@@ -1362,8 +1458,104 @@ function renderBaiViet(){
       /* Bài mới có thư mục riêng thì xóa cả thư mục, bài cũ thì xóa từng ảnh */
       if(bai && bai.anhFolder)      xoaThuMucTrenDrive(bai.anhFolder);
       else if(bai && bai.anhIds)    xoaAnhTrenDrive(bai.anhIds);
+      thaoNgheBai(id);
     }catch(e){ showMsg($('btMsg'), baoLoi(e),'err'); }
   });
+
+  feed.querySelectorAll('[data-mo-cx]').forEach(b=> b.onclick = e=>{
+    e.stopPropagation();
+    const id = b.getAttribute('data-mo-cx');
+    pickerCamXucMo = (pickerCamXucMo===id) ? null : id;
+    renderBaiViet();
+  });
+  feed.querySelectorAll('[data-chon-cx]').forEach(b=> b.onclick = e=>{
+    e.stopPropagation();
+    const [baiId, cxId] = b.getAttribute('data-chon-cx').split('|');
+    datCamXuc(baiId, cxId);
+  });
+  feed.querySelectorAll('.bl-noidung').forEach(el=>{
+    el.oninput = ()=> { duThaoBinhLuan[el.id.replace('blNoiDung_','')] = el.value; };
+    el.addEventListener('keydown', e=>{
+      if(e.key==='Enter'){ e.preventDefault(); guiBinhLuan(el.id.replace('blNoiDung_','')); }
+    });
+  });
+  feed.querySelectorAll('[data-gui-bl]').forEach(b=> b.onclick = ()=> guiBinhLuan(b.getAttribute('data-gui-bl')));
+  feed.querySelectorAll('[data-xoa-bl]').forEach(el=> el.onclick = async ()=>{
+    const [baiId, cmtId] = el.getAttribute('data-xoa-bl').split('|');
+    if(!confirm('Xóa bình luận này?')) return;
+    try{ await binhluanRef.child(baiId).child(cmtId).remove(); }
+    catch(e){ showMsg($('btMsg'), baoLoi(e),'err'); }
+  });
+}
+
+/* ================================================================
+   CẢM XÚC & BÌNH LUẬN
+   Mỗi bài có 2 nhánh con: cambien/<baiId>/<uid> (1 dòng mỗi người, đọc
+   công khai) và binhluan/<baiId>/<cmtId> (đọc công khai, sửa/xóa được
+   nếu là bình luận của chính mình hoặc là giáo viên).
+   ================================================================ */
+function timCamXuc(id){ return CAM_XUC.find(c=> c.id===id); }
+/* localStorage có thể bị chặn ở một số trình duyệt/chế độ (ẩn danh, webview...) — luôn bọc try/catch,
+   giống cách owner-secret.js đã làm cho mật khẩu chỗ ngồi. */
+function layTenBinhLuanDaLuu(){ try{ return localStorage.getItem('tenHocSinhBinhLuan') || ''; }catch(e){ return ''; } }
+function luuTenBinhLuan(ten){ try{ localStorage.setItem('tenHocSinhBinhLuan', ten); }catch(e){} }
+
+function tomTatCamXuc(baiId){
+  const ds = camXucState[baiId] || {};
+  const dem = {};
+  Object.values(ds).forEach(v=> dem[v] = (dem[v]||0) + 1);
+  const tong = Object.keys(ds).length;
+  const noiBat = Object.keys(dem).sort((a,b)=> dem[b]-dem[a]).slice(0,3)
+    .map(id=> (timCamXuc(id)||{}).icon || '👍').join('');
+  return { tong, noiBat };
+}
+function camXucCuaToi(baiId){
+  const ds = camXucState[baiId] || {};
+  return myUid ? (ds[myUid] || null) : null;
+}
+async function datCamXuc(baiId, id){
+  if(!myUid) return;
+  const hienTai = camXucCuaToi(baiId);
+  pickerCamXucMo = null;
+  renderBaiViet();
+  try{
+    if(hienTai === id) await cambienRef.child(baiId).child(myUid).remove();
+    else await cambienRef.child(baiId).child(myUid).set(id);
+  }catch(e){ showMsg($('btMsg'), baoLoi(e),'err'); }
+}
+document.addEventListener('click', e=>{
+  if(pickerCamXucMo && !e.target.closest('.nut-cam-xuc-wrap')){ pickerCamXucMo = null; renderBaiViet(); }
+});
+
+async function guiBinhLuan(baiId){
+  if(!myUid){ showMsg($('btMsg'), 'Đang kết nối, thử lại sau vài giây.', 'info'); return; }
+  const tenEl = $('blTen_'+baiId), noiDungEl = $('blNoiDung_'+baiId);
+  const ten = (tenEl.value||'').trim(), noiDung = (noiDungEl.value||'').trim();
+  if(!ten){ showMsg($('btMsg'), 'Vui lòng nhập tên trước khi bình luận.', 'err'); return; }
+  if(!noiDung) return;
+  try{
+    luuTenBinhLuan(ten);
+    await binhluanRef.child(baiId).push({
+      content: noiDung, author: ten, uid: myUid, luc: Date.now(),
+      time: new Date().toLocaleString('vi-VN')
+    });
+    delete duThaoBinhLuan[baiId];
+  }catch(e){ showMsg($('btMsg'), baoLoi(e),'err'); }
+}
+
+/* Gắn/gỡ lắng nghe realtime cho cảm xúc + bình luận của từng bài, chỉ 1 lần mỗi bài */
+function ganNgheBai(baiId){
+  if(daGanNgheBai.has(baiId)) return;
+  daGanNgheBai.add(baiId);
+  cambienRef.child(baiId).on('value', s=>{ camXucState[baiId] = s.val()||{}; renderBaiViet(); });
+  binhluanRef.child(baiId).on('value', s=>{ binhLuanState[baiId] = s.val()||{}; renderBaiViet(); });
+}
+function thaoNgheBai(baiId){
+  cambienRef.child(baiId).off();
+  binhluanRef.child(baiId).off();
+  daGanNgheBai.delete(baiId);
+  delete camXucState[baiId];
+  delete binhLuanState[baiId];
 }
 
 async function moAnhLon(khoa){
