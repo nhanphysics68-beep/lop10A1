@@ -447,7 +447,7 @@
             placeholder="Nhập nội dung bài đăng..."></textarea>
         </div>
         <div class="field">
-          <label>Ảnh đính kèm (tối đa 3 ảnh)</label>
+          <label>Ảnh đính kèm <span id="btAnhLabel">(tối đa 10 ảnh)</span></label>
           <label class="nut-chon-anh" for="btFiles">📷 Chọn ảnh từ máy</label>
           <input type="file" id="btFiles" accept="image/*" multiple hidden>
           <div class="xem-truoc" id="btPreview"></div>
@@ -586,7 +586,7 @@ const TV_SLOTS  = [1,2,3];
 const TV_CAPACITY = 3;
 
 /* Giới hạn ảnh: nén trên máy học sinh trước khi gửi, tránh làm nặng cơ sở dữ liệu */
-const ANH_TOI_DA   = 3;      // số ảnh mỗi bài
+const ANH_TOI_DA   = 10;     // số ảnh mỗi bài
 const ANH_NHO_PX   = 360;    // cạnh dài ảnh xem trước (hiển thị 130px nên 360 là dư)
 const ANH_LON_PX   = 1280;   // cạnh dài ảnh phóng to
 const ANH_CHAT_NHO = 0.55;
@@ -1130,6 +1130,10 @@ $('btFiles').onchange = async e=>{
 function renderXemTruoc(){
   const box = $('btPreview');
   box.innerHTML = '';
+  const nhan = $('btAnhLabel');
+  if(nhan) nhan.textContent = anhDangChon.length
+    ? `— đã chọn ${anhDangChon.length}/${ANH_TOI_DA} ảnh`
+    : `(tối đa ${ANH_TOI_DA} ảnh)`;
   anhDangChon.forEach((a,i)=>{
     const o = document.createElement('div');
     o.className = 'o';
@@ -1162,14 +1166,19 @@ $('btForm').onsubmit = async e=>{
                   time: new Date().toLocaleString('vi-VN') };
 
     if(anhDangChon.length && dungDrive()){
-      /* Gửi ảnh lên Google Drive, chỉ lưu mã tệp vào Firebase */
+      /* Mỗi bài đăng có một thư mục riêng trên Drive, đặt tên theo thời gian đăng */
+      const tenThuMuc = tenThuMucTheoGio();
       nut.textContent = 'Đang tải ảnh lên Drive...';
       const ids = [];
+      let maThuMuc = null;
       for(let i=0;i<anhDangChon.length;i++){
         nut.textContent = `Đang tải ảnh ${i+1}/${anhDangChon.length}...`;
-        ids.push(await guiAnhLenDrive(anhDangChon[i].lon, author));
+        const kq = await guiAnhLenDrive(anhDangChon[i].lon, author, tenThuMuc);
+        ids.push(kq.id);
+        if(kq.thuMucId) maThuMuc = kq.thuMucId;
       }
       bai.anhIds = ids;
+      if(maThuMuc){ bai.anhFolder = maThuMuc; bai.anhFolderTen = tenThuMuc; }
       await ref.set(bai);
     } else {
       /* Chưa cấu hình Drive: lưu thẳng vào Firebase như trước */
@@ -1190,16 +1199,33 @@ $('btForm').onsubmit = async e=>{
   nut.disabled = false; nut.textContent = 'Đăng bài';
 };
 
-/* Gửi một ảnh lên Apps Script, nhận về mã tệp Drive */
-async function guiAnhLenDrive(duLieuAnh, tenNguoiDang){
+/* Tên thư mục cho một bài đăng: 2026-09-03 13-45-20 */
+function tenThuMucTheoGio(){
+  const d = new Date(), p = n=> String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} `
+       + `${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`;
+}
+
+/* Gửi một ảnh lên Apps Script, nhận về mã tệp và mã thư mục của bài */
+async function guiAnhLenDrive(duLieuAnh, tenNguoiDang, tenThuMuc){
   const res = await fetch(DRIVE_URL, {
     method: 'POST',
     body: JSON.stringify({ ma: MA_DRIVE, hanhDong: 'upload',
-                           duLieu: duLieuAnh, ten: tenNguoiDang })
+                           duLieu: duLieuAnh, ten: tenNguoiDang,
+                           thuMuc: tenThuMuc || '' })
   });
   const kq = await res.json();
   if(!kq.ok) throw new Error(kq.loi || 'Không tải được ảnh lên Drive.');
-  return kq.id;
+  return { id: kq.id, thuMucId: kq.thuMucId || null };
+}
+
+/* Xóa cả thư mục ảnh của một bài (đưa vào Thùng rác Drive) */
+async function xoaThuMucTrenDrive(maThuMuc){
+  if(!dungDrive() || !maThuMuc) return;
+  try{
+    await fetch(DRIVE_URL, { method:'POST',
+      body: JSON.stringify({ ma: MA_DRIVE, hanhDong: 'xoaThuMuc', id: maThuMuc }) });
+  }catch(e){ /* xóa thư mục thất bại thì bỏ qua, bài vẫn được xóa */ }
 }
 
 /* Xóa ảnh khỏi Drive khi xóa bài (đưa vào Thùng rác, không mất hẳn) */
@@ -1254,7 +1280,9 @@ function renderBaiViet(){
     try{
       await btRef.child(id).remove();
       try{ await btAnhRef.child(id).remove(); }catch(e){}
-      if(bai && bai.anhIds) xoaAnhTrenDrive(bai.anhIds);
+      /* Bài mới có thư mục riêng thì xóa cả thư mục, bài cũ thì xóa từng ảnh */
+      if(bai && bai.anhFolder)      xoaThuMucTrenDrive(bai.anhFolder);
+      else if(bai && bai.anhIds)    xoaAnhTrenDrive(bai.anhIds);
     }catch(e){ showMsg($('btMsg'), baoLoi(e),'err'); }
   });
 }
