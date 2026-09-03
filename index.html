@@ -1544,11 +1544,18 @@ async function guiBinhLuan(baiId){
 }
 
 /* Gắn/gỡ lắng nghe realtime cho cảm xúc + bình luận của từng bài, chỉ 1 lần mỗi bài */
+let daBaoLoiQuyenCX = false; // chỉ báo lỗi 1 lần, tránh spam nếu Rules chưa cập nhật
 function ganNgheBai(baiId){
   if(daGanNgheBai.has(baiId)) return;
   daGanNgheBai.add(baiId);
-  cambienRef.child(baiId).on('value', s=>{ camXucState[baiId] = s.val()||{}; renderBaiViet(); });
-  binhluanRef.child(baiId).on('value', s=>{ binhLuanState[baiId] = s.val()||{}; renderBaiViet(); });
+  cambienRef.child(baiId).on('value',
+    s=>{ camXucState[baiId] = s.val()||{}; renderBaiViet(); },
+    err=>{ if(!daBaoLoiQuyenCX){ daBaoLoiQuyenCX=true; showMsg($('btMsg'),
+      'Không đọc được cảm xúc — có thể Rules Firebase chưa được cập nhật khối "cambien". Báo thầy kiểm tra Firebase Console.', 'err'); }
+      console.error('Lỗi đọc cambien:', err); });
+  binhluanRef.child(baiId).on('value',
+    s=>{ binhLuanState[baiId] = s.val()||{}; renderBaiViet(); },
+    err=>{ console.error('Lỗi đọc binhluan:', err); });
 }
 function thaoNgheBai(baiId){
   cambienRef.child(baiId).off();
