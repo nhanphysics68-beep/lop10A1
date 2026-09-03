@@ -218,6 +218,15 @@
     padding:6px 12px; font-size:13px; font-weight:700; color:var(--ink-soft); cursor:pointer;
     font-family:inherit; transition:.15s;}
   .btn-chiase:hover{border-color:var(--blue); color:var(--blue); background:#eaf1fb;}
+  .nut-chiase-wrap{position:relative;}
+  .rong-chiase{position:absolute; bottom:calc(100% + 8px); left:0; background:#fff;
+    border:1px solid var(--line); border-radius:12px; box-shadow:0 8px 20px rgba(20,83,45,.18);
+    padding:6px; display:flex; flex-direction:column; gap:2px; z-index:20; min-width:180px;}
+  .dong-chiase{display:flex; align-items:center; gap:10px; background:none; border:none;
+    padding:8px 10px; font-size:13.5px; font-family:inherit; color:var(--ink); text-align:left;
+    cursor:pointer; border-radius:8px; white-space:nowrap;}
+  .dong-chiase:hover{background:#f4fbf6;}
+  .dong-chiase-icon{font-size:17px; flex:none; width:20px; text-align:center;}
   .rong-cam-xuc{position:absolute; bottom:calc(100% + 8px); left:0; background:#fff;
     border:1px solid var(--line); border-radius:30px; box-shadow:0 8px 20px rgba(20,83,45,.18);
     padding:6px 8px; display:flex; gap:2px; z-index:20;}
@@ -728,6 +737,7 @@ let baiDangNoiBat = null; // id bài đang tô sáng tạm thời — giữ nguy
 let camXucState={}, binhLuanState={};
 const daGanNgheBai = new Set();
 let pickerCamXucMo = null;
+let pickerChiaSeMo = null;
 const duThaoBinhLuan = {};
 const CAM_XUC = [
   {id:'thich',    icon:'👍', nhan:'Thích'},
@@ -1478,7 +1488,17 @@ function renderBaiViet(){
           </button>
           ${pickerHtml}
         </div>
-        <button type="button" class="btn-chiase" data-chia-se="${b.id}">🔗 Chia sẻ</button>
+        <div class="nut-chiase-wrap">
+          <button type="button" class="btn-chiase" data-mo-cs="${b.id}">🔗 Chia sẻ</button>
+          ${pickerChiaSeMo===b.id ? `<div class="rong-chiase">
+            ${KENH_CHIA_SE.map(k=> `<button type="button" class="dong-chiase" data-mo-kenh="${b.id}|${k.id}">
+                <span class="dong-chiase-icon">${k.icon}</span><span>${esc(k.nhan)}</span></button>`).join('')}
+            <button type="button" class="dong-chiase" data-sao-chep="${b.id}">
+              <span class="dong-chiase-icon">📋</span><span>Sao chép liên kết</span></button>
+            ${(typeof navigator!=='undefined' && navigator.share) ? `<button type="button" class="dong-chiase" data-chia-se-may="${b.id}">
+              <span class="dong-chiase-icon">📤</span><span>Cách khác...</span></button>` : ''}
+          </div>` : ''}
+        </div>
       </div>
       ${blHtml}`;
     feed.appendChild(div);
@@ -1513,7 +1533,25 @@ function renderBaiViet(){
     }catch(e){ showMsg($('btMsg'), baoLoi(e),'err'); }
   });
 
-  feed.querySelectorAll('[data-chia-se]').forEach(b=> b.onclick = ()=> chiaSeBai(b.getAttribute('data-chia-se')));
+  feed.querySelectorAll('[data-mo-cs]').forEach(b=> b.onclick = e=>{
+    e.stopPropagation();
+    const id = b.getAttribute('data-mo-cs');
+    pickerChiaSeMo = (pickerChiaSeMo===id) ? null : id;
+    renderBaiViet();
+  });
+  feed.querySelectorAll('[data-mo-kenh]').forEach(b=> b.onclick = e=>{
+    e.stopPropagation();
+    const [baiId, kenhId] = b.getAttribute('data-mo-kenh').split('|');
+    moKenhChiaSe(baiId, kenhId);
+  });
+  feed.querySelectorAll('[data-sao-chep]').forEach(b=> b.onclick = e=>{
+    e.stopPropagation();
+    saoChepLienKet(b.getAttribute('data-sao-chep'));
+  });
+  feed.querySelectorAll('[data-chia-se-may]').forEach(b=> b.onclick = e=>{
+    e.stopPropagation();
+    chiaSeKieuMay(b.getAttribute('data-chia-se-may'));
+  });
   feed.querySelectorAll('[data-mo-cx]').forEach(b=> b.onclick = e=>{
     e.stopPropagation();
     const id = b.getAttribute('data-mo-cx');
@@ -1590,6 +1628,7 @@ async function datCamXuc(baiId, id){
 }
 document.addEventListener('click', e=>{
   if(pickerCamXucMo && !e.target.closest('.nut-cam-xuc-wrap')){ pickerCamXucMo = null; renderBaiViet(); }
+  if(pickerChiaSeMo && !e.target.closest('.nut-chiase-wrap')){ pickerChiaSeMo = null; renderBaiViet(); }
 });
 
 async function guiBinhLuan(baiId){
@@ -1734,21 +1773,47 @@ function noiDungCoLink(text){
   });
 }
 
-async function chiaSeBai(baiId){
+/* Đường dẫn "chia sẻ nhanh" chính thức của từng nền tảng — mở app nếu máy có cài (universal link),
+   không thì mở trang web tương ứng. */
+const KENH_CHIA_SE = [
+  {id:'zalo',     icon:'💬', nhan:'Zalo',      url:(u,t)=> `https://sp.zalo.me/share?u=${encodeURIComponent(u)}&t=${encodeURIComponent(t)}`},
+  {id:'facebook', icon:'📘', nhan:'Facebook',  url:(u,t)=> `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(u)}`},
+  {id:'messenger',icon:'✈️', nhan:'Messenger', url:(u,t)=> `https://www.messenger.com/t/?link=${encodeURIComponent(u)}`},
+  {id:'telegram', icon:'📩', nhan:'Telegram',  url:(u,t)=> `https://t.me/share/url?url=${encodeURIComponent(u)}&text=${encodeURIComponent(t)}`},
+];
+
+function urlChiaSeBai(baiId){
+  return `${location.origin}${location.pathname}#bangtin-bai=${encodeURIComponent(baiId)}`;
+}
+function moKenhChiaSe(baiId, kenhId){
   const bai = baiViet.find(b=> b.id===baiId);
   if(!bai) return;
-  const url = `${location.origin}${location.pathname}#bangtin-bai=${encodeURIComponent(baiId)}`;
-  if(navigator.share){
-    try{ await navigator.share({ title: bai.title || 'Bảng tin lớp 10A1', text: bai.content ? bai.content.slice(0,150) : '', url }); }
-    catch(e){ /* người dùng bấm hủy hộp thoại chia sẻ — không phải lỗi */ }
-    return;
-  }
+  const kenh = KENH_CHIA_SE.find(k=> k.id===kenhId);
+  if(!kenh) return;
+  const url = urlChiaSeBai(baiId);
+  window.open(kenh.url(url, bai.title || 'Bảng tin lớp 10A1'), '_blank', 'noopener,noreferrer');
+  pickerChiaSeMo = null;
+  renderBaiViet();
+}
+async function saoChepLienKet(baiId){
+  const url = urlChiaSeBai(baiId);
   try{
     await navigator.clipboard.writeText(url);
-    showMsg($('btMsg'), '🔗 Đã sao chép liên kết bài đăng — dán vào Zalo/Messenger để chia sẻ.', 'ok');
+    showMsg($('btMsg'), '📋 Đã sao chép liên kết bài đăng.', 'ok');
   }catch(e){
     prompt('Sao chép liên kết bên dưới để chia sẻ:', url);
   }
+  pickerChiaSeMo = null;
+  renderBaiViet();
+}
+async function chiaSeKieuMay(baiId){
+  const bai = baiViet.find(b=> b.id===baiId);
+  if(!bai || !navigator.share) return;
+  try{
+    await navigator.share({ title: bai.title || 'Bảng tin lớp 10A1', text: bai.content ? bai.content.slice(0,150) : '', url: urlChiaSeBai(baiId) });
+  }catch(e){ /* người dùng bấm hủy hộp thoại chia sẻ — không phải lỗi */ }
+  pickerChiaSeMo = null;
+  renderBaiViet();
 }
 
 /* ================================================================
