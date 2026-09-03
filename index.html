@@ -224,11 +224,13 @@
   .bl-xoa{color:var(--red); cursor:pointer; text-decoration:underline;}
   .bl-trong{font-size:13px; color:var(--ink-soft); font-style:italic; padding:6px 0;}
   .form-binh-luan{display:flex; flex-direction:column; gap:6px;}
-  .bl-ten{padding:8px 11px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13px;}
+  .bl-danh-tinh{font-size:12px; color:var(--ink-soft);}
+  .bl-danh-tinh b{color:var(--leaf-dark);}
+  .bl-danh-tinh a{color:var(--blue); cursor:pointer; text-decoration:underline; margin-left:2px;}
   .bl-hang-nhap{display:flex; gap:6px;}
   .bl-noidung{flex:1; padding:8px 11px; border:1.5px solid var(--line); border-radius:8px;
     font-family:inherit; font-size:13.5px; min-width:0;}
-  .bl-ten:focus, .bl-noidung:focus{outline:none; border-color:var(--leaf); box-shadow:0 0 0 3px #cdeadb;}
+  .bl-noidung:focus{outline:none; border-color:var(--leaf); box-shadow:0 0 0 3px #cdeadb;}
   .xem-truoc{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
   .xem-truoc .o{position:relative;}
   .xem-truoc img{width:96px; height:96px; object-fit:cover; border-radius:8px; border:1px solid var(--line);}
@@ -1411,8 +1413,7 @@ function renderBaiViet(){
           }).join('') : `<div class="bl-trong">Chưa có bình luận nào — hãy là người đầu tiên!</div>`}
         </div>
         <div class="form-binh-luan">
-          <input type="text" class="bl-ten" id="blTen_${b.id}" placeholder="Tên của em" maxlength="60"
-            value="${esc(layTenBinhLuanDaLuu())}">
+          <div class="bl-danh-tinh">Bình luận với tên: <b>${esc(layTenHienThi())}</b> <a data-doi-ten="1">(đổi tên)</a></div>
           <div class="bl-hang-nhap">
             <input type="text" class="bl-noidung" id="blNoiDung_${b.id}" placeholder="Viết bình luận..." maxlength="500"
               value="${esc(duThaoBinhLuan[b.id]||'')}">
@@ -1496,9 +1497,22 @@ function renderBaiViet(){
    ================================================================ */
 function timCamXuc(id){ return CAM_XUC.find(c=> c.id===id); }
 /* localStorage có thể bị chặn ở một số trình duyệt/chế độ (ẩn danh, webview...) — luôn bọc try/catch,
-   giống cách owner-secret.js đã làm cho mật khẩu chỗ ngồi. */
-function layTenBinhLuanDaLuu(){ try{ return localStorage.getItem('tenHocSinhBinhLuan') || ''; }catch(e){ return ''; } }
+   giống cách owner-secret.js đã làm cho mật khẩu chỗ ngồi.
+   Tên hiển thị được nhớ 1 lần cho cả trình duyệt (không hỏi lại mỗi lần bình luận):
+   - Học sinh đã từng đặt tên (bấm "đổi tên") → luôn dùng đúng tên đó.
+   - Chưa từng đặt tên (khách, phụ huynh, người ngoài lớp...) → mặc định hiện "Khách". */
+function layTenHienThi(){ try{ return (localStorage.getItem('tenHocSinhBinhLuan')||'').trim() || 'Khách'; }catch(e){ return 'Khách'; } }
 function luuTenBinhLuan(ten){ try{ localStorage.setItem('tenHocSinhBinhLuan', ten); }catch(e){} }
+function doiTenHienThi(){
+  const hienTai = layTenHienThi();
+  const ten = prompt('Nhập tên của em để hiển thị khi bình luận (để trống = Khách):', hienTai==='Khách' ? '' : hienTai);
+  if(ten === null) return; // bấm Hủy thì giữ nguyên
+  luuTenBinhLuan(ten.trim());
+  renderBaiViet();
+}
+document.addEventListener('click', e=>{
+  if(e.target.closest('[data-doi-ten]')) doiTenHienThi();
+});
 
 function tomTatCamXuc(baiId){
   const ds = camXucState[baiId] || {};
@@ -1529,14 +1543,12 @@ document.addEventListener('click', e=>{
 
 async function guiBinhLuan(baiId){
   if(!myUid){ showMsg($('btMsg'), 'Đang kết nối, thử lại sau vài giây.', 'info'); return; }
-  const tenEl = $('blTen_'+baiId), noiDungEl = $('blNoiDung_'+baiId);
-  const ten = (tenEl.value||'').trim(), noiDung = (noiDungEl.value||'').trim();
-  if(!ten){ showMsg($('btMsg'), 'Vui lòng nhập tên trước khi bình luận.', 'err'); return; }
+  const noiDungEl = $('blNoiDung_'+baiId);
+  const noiDung = (noiDungEl.value||'').trim();
   if(!noiDung) return;
   try{
-    luuTenBinhLuan(ten);
     await binhluanRef.child(baiId).push({
-      content: noiDung, author: ten, uid: myUid, luc: Date.now(),
+      content: noiDung, author: layTenHienThi(), uid: myUid, luc: Date.now(),
       time: new Date().toLocaleString('vi-VN')
     });
     delete duThaoBinhLuan[baiId];
