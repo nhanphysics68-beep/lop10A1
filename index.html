@@ -170,6 +170,18 @@
   .the-cua-toi dt{font-weight:700; color:var(--leaf-dark);}
   .the-cua-toi dd{margin:0;}
 
+  /* ---------- Hồ sơ đầu năm ---------- */
+  .field input[type=date], .field input[type=tel], .field input[type=number]{
+    width:100%; padding:10px 12px; border:1.5px solid var(--line); border-radius:9px;
+    font-family:inherit; font-size:14px; background:#fff; color:var(--ink);}
+  .field input[type=date]:focus, .field input[type=tel]:focus, .field input[type=number]:focus{
+    outline:none; border-color:var(--leaf); box-shadow:0 0 0 3px #cdeadb;}
+  .field input:disabled{background:#f2f5f2; color:var(--ink-soft);}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:0 14px;}
+  @media (max-width:640px){ .grid2{grid-template-columns:1fr;} }
+  .field .note{font-size:11.5px; color:var(--ink-soft); margin-top:4px;}
+  .req{color:var(--red);}
+
   /* ---------- Bảng tin ---------- */
   .bai{background:#fff; border:1.5px solid var(--line); border-radius:12px;
     padding:16px 18px; margin-bottom:14px;}
@@ -231,6 +243,7 @@
     <button class="tab" data-tab="khaigiang"><span class="ico">📺</span>Chuẩn bị khai giảng</button>
     <button class="tab" data-tab="hotro"><span class="ico">🤝</span>Nhận hỗ trợ</button>
     <button class="tab" data-tab="bangtin"><span class="ico">📰</span>Bảng tin lớp</button>
+    <button class="tab" data-tab="hoso"><span class="ico">🧾</span>Hồ sơ đầu năm</button>
   </div>
 
   <!-- ============ THẺ 1: SƠ ĐỒ LỚP ============ -->
@@ -464,6 +477,42 @@
     </div>
   </div>
 
+  <!-- ============ THẺ 6: HỒ SƠ HỌC SINH ĐẦU NĂM ============ -->
+  <div class="panel" id="panel-hoso">
+    <div class="card">
+      <h2>Hồ sơ học sinh đầu năm 2026–2027</h2>
+      <div class="rieng-tu">
+        🔒 <b>Mục này là riêng tư</b> — giống mục Nhận hỗ trợ. Chỉ mình em (trên máy này) và thầy chủ nhiệm
+        đọc được nội dung em điền. Điền đầy đủ theo giấy khai sinh/CCCD của em và ba mẹ.
+        Vào lại đúng máy này bất cứ lúc nào để xem/sửa lại — nếu đổi máy hoặc xoá dữ liệu trình duyệt,
+        báo thầy để được hỗ trợ.
+      </div>
+
+      <form id="hsForm">
+        <div class="field">
+          <label for="hs_hoten">Họ và tên học sinh <span class="req">*</span></label>
+          <input type="text" id="hs_hoten" maxlength="60" required>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label for="hs_ngaysinh">Ngày sinh <span class="req">*</span></label>
+            <input type="date" id="hs_ngaysinh" required>
+          </div>
+          <div class="field">
+            <label for="hs_gioitinh">Giới tính <span class="req">*</span></label>
+            <select id="hs_gioitinh" required></select>
+          </div>
+        </div>
+
+        <div id="hsSectionsHost"></div>
+
+        <button type="submit" class="btn btn-primary" id="hsSubmit">💾 Lưu / Cập nhật hồ sơ</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="hsXoaBtn" style="display:none; margin-left:8px;">Xoá hồ sơ đã nộp</button>
+        <div id="hsMsg" class="msg"></div>
+      </form>
+    </div>
+  </div>
+
   <!-- ============ KHU VỰC GIÁO VIÊN ============ -->
   <details class="admin" id="adminDetails">
     <summary>🔒 Khu vực giáo viên / quản trị</summary>
@@ -510,6 +559,15 @@
       </p>
       <div class="scroll-x"><table id="htAdminTable"></table></div>
 
+      <div class="section-title">Hồ sơ đầu năm — đối chiếu ai chưa nộp</div>
+      <div class="scroll-x"><table id="hsMissingTable"></table></div>
+
+      <div class="section-title">🔒 Hồ sơ đầu năm đã nộp <span class="count-badge" id="hsCountBadge">0</span></div>
+      <p class="section-note" style="margin:0 0 6px;">
+        Dữ liệu nhạy cảm (CCCD, chính sách, khuyết tật...) — chỉ tài khoản giáo viên đọc được. Không chia sẻ bảng này ra ngoài.
+      </p>
+      <div class="scroll-x"><table id="hsAdminTable"></table></div>
+
       <div class="section-title">Công cụ</div>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <button class="btn btn-clay btn-sm" id="exportWordBtn">📄 Xuất sơ đồ ra Word</button>
@@ -517,6 +575,7 @@
         <button class="btn btn-clay btn-sm" id="exportHtBtn">📄 Xuất danh sách hỗ trợ (CSV)</button>
         <button class="btn btn-ghost btn-sm" id="resetSeatsBtn">🗑️ Xóa toàn bộ sơ đồ</button>
         <button class="btn btn-ghost btn-sm" id="resetLdBtn">🗑️ Xóa toàn bộ đăng ký lao động</button>
+        <button class="btn btn-clay btn-sm" id="exportHsBtn">📊 Xuất hồ sơ đầu năm (Excel, đúng 70 cột)</button>
       </div>
       <div id="adminMsg" class="msg"></div>
     </div>
@@ -536,6 +595,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 /* =========================================================
    LỚP 10A1 — trang gộp: Sơ đồ lớp + Đăng ký lao động + Khai giảng
@@ -580,6 +640,7 @@ const tvRef     = db.ref('khaigiang2026/tivi');
 const htRef     = db.ref('hotro2026/dangky');      // riêng tư: khóa theo uid, chỉ chủ nhân và giáo viên đọc
 const btRef     = db.ref('bangtin2026/baiviet');   // bài đăng, ảnh nhỏ nằm kèm
 const btAnhRef  = db.ref('bangtin2026/anh');       // ảnh cỡ lớn, chỉ tải khi bấm xem
+const hosoRef   = db.ref('hoso2026/hoso');         // riêng tư: khóa theo uid, giống hotro2026
 
 const LANES     = [ {id:1,desks:7}, {id:2,desks:6}, {id:3,desks:6}, {id:4,desks:6} ];
 const TV_SLOTS  = [1,2,3];
@@ -595,6 +656,7 @@ const BAI_TOI_DA   = 25;     // số bài hiển thị trên bảng tin, giữ t
 
 let seats={}, swaps=[], roster=[], regs=[], tv={};
 let htCuaToi=null, htTatCa=[], baiViet=[], anhDangChon=[];
+let hosoCuaToi=null, hosoTatCa=[];
 let myUid=null, isAdmin=false;
 
 /* -------------------- TIỆN ÍCH -------------------- */
@@ -675,10 +737,12 @@ auth.onAuthStateChanged(async user=>{
     $('adminWho').textContent = 'Đang đăng nhập: ' + (user.email || user.uid);
     await loadRoster();
     await napHoTroTatCa();
+    await napHoSoTatCa();
     renderAdmin();
-  } else { roster = []; htTatCa = []; }
+  } else { roster = []; htTatCa = []; hosoTatCa = []; }
 
   await napHoTroCuaToi();
+  await napHoSoCuaToi();
   renderSeats(); renderRegs(); renderTv(); renderBaiViet();
 });
 
@@ -1338,6 +1402,324 @@ function modalSuaBai(id){
 }
 
 /* ================================================================
+   THẺ 6 — HỒ SƠ HỌC SINH ĐẦU NĂM
+   Mỗi bản ghi nằm ở hoso2026/hoso/<uid> — cùng cơ chế với hotro2026/dangky:
+   đúng chủ nhân (đúng máy đã nộp) và giáo viên mới đọc/sửa được.
+   Dữ liệu 70 cột đúng theo file mẫu chính thức của trường (VNEdu/SMAS).
+   ================================================================ */
+const HS_LOOKUPS = {"GIOI_TINH": ["Nam", "Nữ"], "DAN_TOC": ["Kinh", "Tày", "Thái", "Hoa", "Khơ-me", "Mường", "Nùng", "Hmông", "Dao", "Gia-rai", "Ngái", "Ê-đê", "Ba-na", "Xơ-đăng", "Sán Chay", "Cơ-ho", "Chăm", "Sán Dìu", "Hrê", "Mnông", "Ra-glai", "Xtiêng", "Bru-Vân Kiều", "Thổ", "Giáy", "Cơ-tu", "Gié-Triêng", "Mạ", "Khơ-mú", "Co", "Ta-ôi", "Chơ-ro", "Kháng", "Xinh-mun", "Hà Nhì", "Chu-ru", "Lào", "La Chi", "La Ha", "Phù Lá", "La Hủ", "Lự", "Lô Lô", "Chứt", "Mảng", "Pà Thẻn", "Cơ Lao", "Cống", "Bố Y", "Si La", "Pu Péo", "Brâu", "Ơ Đu", "Rơ-măm", "Người nước ngoài"], "TRANG_THAI": ["Đang học", "Chuyển đến kỳ 1", "Nghỉ học xin học lại kỳ 1", "Chuyển đi kỳ 1", "Thôi học kỳ 1", "Chuyển đến kỳ 2", "Nghỉ học xin học lại kỳ 2", "Chuyển đi kỳ 2", "Thôi học kỳ 2", "Chuyển đến trong hè", "Chuyển đi trong hè", "Thôi học trong hè"], "LD_THOI_HOC": ["Có hoàn cảnh kinh tế gia đình khó khăn", "Học lực yếu kém", "Xa trường, đi lại khó khăn", "Ảnh hưởng thiên tai, dịch bệnh", "Do kỳ thị", "Nguyên nhân khác"], "KHUYET_TAT": ["Khuyết tật vận động", "Khuyết tật nghe", "Khuyết tật nói", "Khuyết tật nhìn", "Khuyết tật thần kinh", "Khuyết tật tâm thần", "Khuyết tật trí tuệ", "Khuyết tật tự kỷ", "Khuyết tật khác"], "QUOC_TICH": ["Áp-ga-ni-xtan", "An ba ni", "An giê ri", "Ăng -gô-la", "A-déc-bai-gian", "Ac-hen-ti-na", "Úc", "Áo", "Ba-ranh", "Băng-la-đét", "Ar-mê-nia", "Bỉ", "BuTan", "Bô-li-nia", "Booxx-na He-rơ-xe-gô-vin-na", "Bốt-xoa-na", "B-ra-xin", "Quần đảo Sô-lô-môn", "B-ru-nây", "Bun-ga-ri", "My-an-ma", "Bu-run-đi", "Be-lo-rut-xia", "Căm-Pu-Chia", "Can-mơ-run", "Ca-na-đa", "CH Trung Phi", "Sri-lan-ka", "Sat", "Nam phi", "Chi lê", "CHND Trung Hoa", "Đài Loan", "Cô-lôm-bi-a", "Công-Kinshasa", "Cooxxta Rica", "Croát-chia-a", "Cuba", "Cộng hòa Séc", "Đan Mạch", "Dominica", "Ê-cu-a-đo", "En Xan-va-đo", "Et-to-ni", "Phi-Ghi", "Phần Lan", "Pháp", "Gru-dia", "Dăm-bia", "Palestine", "Đức", "Gha-na", "Ki-ri-ba-ti", "Hy Lạp", "Goa-tê-ma-la", "Ghi nê", "Guy-a-na", "Ha-i-ti", "Ôn-đu-rát", "Hồng Công", "Hung-ga-ri", "Ai-xlen", "Ấn Độ", "In-đô-nê-xi-a", "I-ran", "I-rắc", "A-rơ-len", "I-xra-en", "I-ra-li-a", "Gia-mai-ca", "Nhật Bản", "Ka-dắc-xtan", "Giooc-đa-ni", "Kê-nia", "Triều Tiên", "Hàn Quốc", "Cô-oét", "Cư-rơ-gư-dơ-xtan", "CHDCND Lào", "Li Băng", "Latvia", "Li-bê-ri-a", "Libi", "Lit-ten-xten", "Lit-va", "Luc-xem-bua", "Ma Cao", "Ma-đa-gát-xka", "Ma-la0uy", "Ma-lai-xi-a", "Man-đi-vơ", "Ma-li", "Man-ta", "Mau-ri-ti-út", "Mê hi cô", "Ma-na-cô", "Mông Cổ", "Môn-đô-va", "Mông-tê-nê-groo", "Ma Rốc", "Mô-dăm-bich", "Ô man", "Nam-mi-bia", "Nê-Pan", "Hà Lan", "Va-nu-a-tu", "Ni Di Lân", "Ni-ca-ra-goa", "No-giê", "Ni-giê-ri-a", "Na Uy", "Mi-cờ-rô-nê-xia-a", "Quần đảo Ma-rơ-san", "Pa-Ki-xtan", "Pa-na-ma", "Pa-pua Niu Ghi - nê", "Pa-ra-goay", "Pê - ru", "Phi-li-pin", "Ba Lan", "Bồ Đào Nha", "Đông -ti-mo", "Pu-ec-to Ri-cô", "Quatar", "Ru-ma-no", "Liên Bang Nga", "Ruanđa", "Ả rập Xê út", "Xê nê gan", "Sec-bi-a", "Xi-ê-a Lê- ôn", "Xi-ga-po", "Slô-vac-ki-a", "Việt Nam", "Slô-ven-ni-a", "Sô-ma-li", "Dim-ba-buê", "Tây Ban Nha", "Nam Xu-đăng", "Xu-đăng", "Thụy Điển", "Thụy Sỹ", "Si-ri-a", "Tat-gi-ki-xtan", "Thái Lan", "To-go", "Tôn-ga", "Các Tiểu vương quốc Ả Rập Thống Nhất", "Tuy-ni-di", "Thổ Nhĩ Kỳ", "Turkmênistan", "Tu-va-lu", "U-gan-da", "U-krai-na", "Ma-xê-đô-ni-a", "Ai cập", "Vương Quốc Anh", "Tan-da-nia", "Mỹ", "Buốc-ki-na-pha-xô", "U-ru-goay", "U-dơ-bê-ki-xtan", "Vê-nê-xu-ê-la", "Tây Sa-moa", "Y-ê-men", "Gam-bi-a"], "KHU_VUC": ["Biên giới - Hải đảo", "Đô thị", "Đồng bằng", "Miền núi - vùng sâu"], "HUONG_NGHIEP_DN": ["Nông lâm", "Tin học ứng dụng", "Tiểu thủ công nghiệp", "Dịch vụ", "Nghề khác"], "SO_BUOI_HOC_TREN_TUAN": ["5 buổi/tuần", "6 buổi/tuần", "7 buổi/tuần", "8 buổi/tuần", "9 buổi/tuần", "10 buổi/tuần"], "BENH_VE_MAT": ["Cận thị", "Viễn thị", "Loạn thị", "Đục thủy tinh thể", "Thoái hóa điểm", "Bệnh khô mắt", "Bệnh khác về mắt"], "TIENG_DAN_TOC": ["Tiếng Thái", "Tiếng M'Nông", "Tiếng Mông", "Tiếng Khmer", "Tiếng Ê Đê", "Tiếng Chăm", "Tiếng Jrai", "Tiếng Bahnar", "Tiếng Raglai", "Tiếng Xơ đăng", "Tiếng Cơ tu", "Tiếng Pa Cô", "Tiếng Bru Vân Kiều", "Tiếng Mường", "Tiếng Hoa", "Khác"], "BAN_TRU": ["Thuộc đối tượng chính sách", "Tự nguyện"], "DOI_TUONG_CS": ["Con của người có công", "Con anh hùng", "Con liệt sỹ", "Con thương binh, bệnh binh", "Mồ côi cả cha, mẹ", "Bị tàn tật, khuyết tật", "Bị bỏ rơi, mất nguồn nuôi dưỡng", "Thuộc diện hộ nghèo theo quy định", "Thuộc hộ cận nghèo theo quy định", "Con của hạ SQ và BS, CS đang phục vụ có thời hạn trong LLVTg nhân dân", "Hiện sống, học tập ở vùng đặc biệt khó khăn", "Có cha mẹ là công nhân bị tai nạn hoặc mắc bệnh nghề nghiệp", "Có cha mẹ thường trú tại xã biên giới, vùng cao, hải đảo, xã ĐBKK", "Có cha mẹ thu nhập bằng 150% thu nhập hộ nghèo theo quy định", "Con hộ nghèo thuộc CT135", "Diện chính sách khác", "Học sinh, sinh viên hưởng chính sách bán trú theo QĐCP", "Học sinh hưởng chính sách dân tộc nội trú theo QĐCP"], "TINH": [{"ma": "01", "ten": "Thành phố Hà Nội"}, {"ma": "04", "ten": "Tỉnh Cao Bằng"}, {"ma": "08", "ten": "Tỉnh Tuyên Quang"}, {"ma": "11", "ten": "Tỉnh Điện Biên"}, {"ma": "12", "ten": "Tỉnh Lai Châu"}, {"ma": "14", "ten": "Tỉnh Sơn La"}, {"ma": "15", "ten": "Tỉnh Lào Cai"}, {"ma": "19", "ten": "Tỉnh Thái Nguyên"}, {"ma": "20", "ten": "Tỉnh Lạng Sơn"}, {"ma": "22", "ten": "Tỉnh Quảng Ninh"}, {"ma": "24", "ten": "Tỉnh Bắc Ninh"}, {"ma": "25", "ten": "Tỉnh Phú Thọ"}, {"ma": "31", "ten": "Thành phố Hải Phòng"}, {"ma": "33", "ten": "Tỉnh Hưng Yên"}, {"ma": "37", "ten": "Tỉnh Ninh Bình"}, {"ma": "38", "ten": "Tỉnh Thanh Hóa"}, {"ma": "40", "ten": "Tỉnh Nghệ An"}, {"ma": "42", "ten": "Tỉnh Hà Tĩnh"}, {"ma": "44", "ten": "Tỉnh Quảng Trị"}, {"ma": "46", "ten": "Thành phố Huế"}, {"ma": "48", "ten": "Thành phố Đà Nẵng"}, {"ma": "51", "ten": "Tỉnh Quảng Ngãi"}, {"ma": "52", "ten": "Tỉnh Gia Lai"}, {"ma": "56", "ten": "Tỉnh Khánh Hòa"}, {"ma": "66", "ten": "Tỉnh Đắk Lắk"}, {"ma": "68", "ten": "Tỉnh Lâm Đồng"}, {"ma": "75", "ten": "Tỉnh Đồng Nai"}, {"ma": "79", "ten": "Thành phố Hồ Chí Minh"}, {"ma": "80", "ten": "Tỉnh Tây Ninh"}, {"ma": "82", "ten": "Tỉnh Đồng Tháp"}, {"ma": "86", "ten": "Tỉnh Vĩnh Long"}, {"ma": "91", "ten": "Tỉnh An Giang"}, {"ma": "92", "ten": "Thành phố Cần Thơ"}, {"ma": "96", "ten": "Tỉnh Cà Mau"}], "XA_PHUONG_BY_TINH": {"01": ["Phường Ba Đình", "Phường Bạch Mai", "Phường Bồ Đề", "Phường Chương Mỹ", "Phường Cầu Giấy", "Phường Cửa Nam", "Phường Dương Nội", "Phường Giảng Võ", "Phường Hai Bà Trưng", "Phường Hoàn Kiếm", "Phường Hoàng Liệt", "Phường Hoàng Mai", "Phường Hà Đông", "Phường Hồng Hà", "Phường Khương Đình", "Phường Kim Liên", "Phường Kiến Hưng", "Phường Long Biên", "Phường Láng", "Phường Lĩnh Nam", "Phường Nghĩa Đô", "Phường Ngọc Hà", "Phường Phú Diễn", "Phường Phú Lương", "Phường Phú Thượng", "Phường Phúc Lợi", "Phường Phương Liệt", "Phường Sơn Tây", "Phường Thanh Liệt", "Phường Thanh Xuân", "Phường Thượng Cát", "Phường Tây Hồ", "Phường Tây Mỗ", "Phường Tây Tựu", "Phường Tùng Thiện", "Phường Tương Mai", "Phường Từ Liêm", "Phường Việt Hưng", "Phường Văn Miếu - Quốc Tử Giám", "Phường Vĩnh Hưng", "Phường Vĩnh Tuy", "Phường Xuân Phương", "Phường Xuân Đỉnh", "Phường Yên Hòa", "Phường Yên Nghĩa", "Phường Yên Sở", "Phường Ô Chợ Dừa", "Phường Đông Ngạc", "Phường Đại Mỗ", "Phường Định Công", "Phường Đống Đa", "Xã An Khánh", "Xã Ba Vì", "Xã Bát Tràng", "Xã Bình Minh", "Xã Bất Bạt", "Xã Chuyên Mỹ", "Xã Chương Dương", "Xã Cổ Đô", "Xã Dân Hòa", "Xã Dương Hòa", "Xã Gia Lâm", "Xã Hoài Đức", "Xã Hát Môn", "Xã Hòa Lạc", "Xã Hòa Phú", "Xã Hòa Xá", "Xã Hưng Đạo", "Xã Hương Sơn", "Xã Hạ Bằng", "Xã Hồng Sơn", "Xã Hồng Vân", "Xã Kim Anh", "Xã Kiều Phú", "Xã Liên Minh", "Xã Minh Châu", "Xã Mê Linh", "Xã Mỹ Đức", "Xã Nam Phù", "Xã Ngọc Hồi", "Xã Nội Bài", "Xã Phù Đổng", "Xã Phú Cát", "Xã Phú Nghĩa", "Xã Phú Xuyên", "Xã Phúc Lộc", "Xã Phúc Sơn", "Xã Phúc Thịnh", "Xã Phúc Thọ", "Xã Phượng Dực", "Xã Quang Minh", "Xã Quảng Bị", "Xã Quảng Oai", "Xã Quốc Oai", "Xã Suối Hai", "Xã Sóc Sơn", "Xã Sơn Đồng", "Xã Tam Hưng", "Xã Thanh Oai", "Xã Thanh Trì", "Xã Thiên Lộc", "Xã Thuận An", "Xã Thư Lâm", "Xã Thường Tín", "Xã Thượng Phúc", "Xã Thạch Thất", "Xã Tiến Thắng", "Xã Trung Giã", "Xã Trần Phú", "Xã Tây Phương", "Xã Vân Đình", "Xã Vĩnh Thanh", "Xã Vật Lại", "Xã Xuân Mai", "Xã Yên Bài", "Xã Yên Lãng", "Xã Yên Xuân", "Xã Ô Diên", "Xã Đa Phúc", "Xã Đan Phượng", "Xã Đoài Phương", "Xã Đông Anh", "Xã Đại Thanh", "Xã Đại Xuyên", "Xã Ứng Hòa", "Xã Ứng Thiên"], "04": ["Phường Nùng Trí Cao", "Phường Thục Phán", "Phường Tân Giang", "Xã Bạch Đằng", "Xã Bảo Lâm", "Xã Bảo Lạc", "Xã Bế Văn Đàn", "Xã Ca Thành", "Xã Canh Tân", "Xã Cô Ba", "Xã Cần Yên", "Xã Cốc Pàng", "Xã Huy Giáp", "Xã Hà Quảng", "Xã Hòa An", "Xã Hưng Đạo", "Xã Hạ Lang", "Xã Hạnh Phúc", "Xã Khánh Xuân", "Xã Kim Đồng", "Xã Lý Bôn", "Xã Lý Quốc", "Xã Lũng Nặm", "Xã Minh Khai", "Xã Minh Tâm", "Xã Nam Quang", "Xã Nam Tuấn", "Xã Nguyên Bình", "Xã Nguyễn Huệ", "Xã Phan Thanh", "Xã Phục Hòa", "Xã Quang Hán", "Xã Quang Long", "Xã Quang Trung", "Xã Quảng Lâm", "Xã Quảng Uyên", "Xã Sơn Lộ", "Xã Tam Kim", "Xã Thanh Long", "Xã Thành Công", "Xã Thông Nông", "Xã Thạch An", "Xã Trà Lĩnh", "Xã Trùng Khánh", "Xã Trường Hà", "Xã Tĩnh Túc", "Xã Tổng Cọt", "Xã Vinh Quý", "Xã Xuân Trường", "Xã Yên Thổ", "Xã Đoài Dương", "Xã Đàm Thủy", "Xã Đình Phong", "Xã Đông Khê", "Xã Độc Lập", "Xã Đức Long"], "08": ["Phường An Tường", "Phường Bình Thuận", "Phường Hà Giang 1", "Phường Hà Giang 2", "Phường Minh Xuân", "Phường Mỹ Lâm", "Phường Nông Tiến", "Xã Bình An", "Xã Bình Ca", "Xã Bình Xa", "Xã Bạch Ngọc", "Xã Bạch Xa", "Xã Bạch Đích", "Xã Bản Máy", "Xã Bắc Mê", "Xã Bắc Quang", "Xã Bằng Hành", "Xã Bằng Lang", "Xã Cao Bồ", "Xã Chiêm Hóa", "Xã Cán Tỷ", "Xã Côn Lôn", "Xã Du Già", "Xã Giáp Trung", "Xã Hoàng Su Phì", "Xã Hàm Yên", "Xã Hòa An", "Xã Hùng An", "Xã Hùng Lợi", "Xã Hùng Đức", "Xã Hồ Thầu", "Xã Hồng Sơn", "Xã Hồng Thái", "Xã Khuôn Lùng", "Xã Khâu Vai", "Xã Kim Bình", "Xã Kiên Đài", "Xã Kiến Thiết", "Xã Lao Chải", "Xã Linh Hồ", "Xã Liên Hiệp", "Xã Lâm Bình", "Xã Lùng Tám", "Xã Lũng Cú", "Xã Lũng Phìn", "Xã Lực Hành", "Xã Minh Ngọc", "Xã Minh Quang", "Xã Minh Sơn", "Xã Minh Thanh", "Xã Minh Tân", "Xã Mèo Vạc", "Xã Mậu Duệ", "Xã Nghĩa Thuận", "Xã Ngọc Long", "Xã Ngọc Đường", "Xã Nhữ Khê", "Xã Niêm Sơn", "Xã Nà Hang", "Xã Nấm Dẩn", "Xã Nậm Dịch", "Xã Phù Lưu", "Xã Phú Linh", "Xã Phú Lương", "Xã Phố Bảng", "Xã Pà Vầy Sủ", "Xã Pờ Ly Ngài", "Xã Quang Bình", "Xã Quản Bạ", "Xã Quảng Nguyên", "Xã Sà Phìn", "Xã Sơn Dương", "Xã Sơn Thủy", "Xã Sơn Vĩ", "Xã Sủng Máng", "Xã Thanh Thủy", "Xã Thuận Hòa", "Xã Thàng Tín", "Xã Thái Bình", "Xã Thái Hòa", "Xã Thái Sơn", "Xã Thông Nguyên", "Xã Thượng Lâm", "Xã Thượng Nông", "Xã Thượng Sơn", "Xã Thắng Mố", "Xã Tiên Nguyên", "Xã Tiên Yên", "Xã Tri Phú", "Xã Trung Hà", "Xã Trung Sơn", "Xã Trung Thịnh", "Xã Trường Sinh", "Xã Tát Ngà", "Xã Tân An", "Xã Tân Long", "Xã Tân Mỹ", "Xã Tân Quang", "Xã Tân Thanh", "Xã Tân Tiến", "Xã Tân Trào", "Xã Tân Trịnh", "Xã Tùng Bá", "Xã Tùng Vài", "Xã Việt Lâm", "Xã Vĩnh Tuy", "Xã Vị Xuyên", "Xã Xuân Giang", "Xã Xuân Vân", "Xã Xín Mần", "Xã Yên Cường", "Xã Yên Hoa", "Xã Yên Lập", "Xã Yên Minh", "Xã Yên Nguyên", "Xã Yên Phú", "Xã Yên Sơn", "Xã Yên Thành", "Xã Đông Thọ", "Xã Đường Hồng", "Xã Đường Thượng", "Xã Đồng Tâm", "Xã Đồng Văn", "Xã Đồng Yên"], "11": ["Phường Mường Lay", "Phường Mường Thanh", "Phường Điện Biên Phủ", "Xã Nậm Nèn", "Xã Búng Lao", "Xã Chiềng Sinh", "Xã Chà Tở", "Xã Mường Chà", "Xã Mường Luân", "Xã Mường Lạn", "Xã Mường Mùn", "Xã Mường Nhà", "Xã Mường Nhé", "Xã Mường Phăng", "Xã Mường Pồn", "Xã Mường Toong", "Xã Mường Tùng", "Xã Mường Ảng", "Xã Na Sang", "Xã Na Son", "Xã Nà Bủng", "Xã Nà Hỳ", "Xã Nà Tấu", "Xã Núa Ngam", "Xã Nậm Kè", "Xã Pa Ham", "Xã Phình Giàng", "Xã Pu Nhi", "Xã Pú Nhung", "Xã Quài Tở", "Xã Quảng Lâm", "Xã Sam Mứn", "Xã Si Pa Phìn", "Xã Sáng Nhè", "Xã Sín Chải", "Xã Sín Thầu", "Xã Sính Phình", "Xã Thanh An", "Xã Thanh Nưa", "Xã Thanh Yên", "Xã Tuần Giáo", "Xã Tìa Dình", "Xã Tủa Chùa", "Xã Tủa Thàng", "Xã Xa Dung"], "12": ["Phường Tân Phong", "Phường Đoàn Kết", "Xã Bum Nưa", "Xã Bum Tở", "Xã Bình Lư", "Xã Bản Bo", "Xã Dào San", "Xã Hua Bum", "Xã Hồng Thu", "Xã Khoen On", "Xã Khun Há", "Xã Khổng Lào", "Xã Lê Lợi", "Xã Mù Cả", "Xã Mường Khoa", "Xã Mường Kim", "Xã Mường Mô", "Xã Mường Than", "Xã Mường Tè", "Xã Nậm Cuổi", "Xã Nậm Hàng", "Xã Nậm Mạ", "Xã Nậm Sỏ", "Xã Nậm Tăm", "Xã Pa Tần", "Xã Pa Ủ", "Xã Phong Thổ", "Xã Pu Sam Cáp", "Xã Pắc Ta", "Xã Sin Suối Hồ", "Xã Sì Lở Lầu", "Xã Sìn Hồ", "Xã Than Uyên", "Xã Thu Lũm", "Xã Tà Tổng", "Xã Tân Uyên", "Xã Tả Lèng", "Xã Tủa Sín Chải"], "14": ["Phường Chiềng An", "Phường Chiềng Cơi", "Phường Chiềng Sinh", "Phường Mộc Châu", "Phường Mộc Sơn", "Phường Thảo Nguyên", "Phường Tô Hiệu", "Phường Vân Sơn", "Xã Bình Thuận", "Xã Bó Sinh", "Xã Bắc Yên", "Xã Chiềng Hoa", "Xã Chiềng Hặc", "Xã Chiềng Khoong", "Xã Chiềng Khương", "Xã Chiềng La", "Xã Chiềng Lao", "Xã Chiềng Mai", "Xã Chiềng Mung", "Xã Chiềng Sung", "Xã Chiềng Sơ", "Xã Chiềng Sơn", "Xã Chiềng Sại", "Xã Co Mạ", "Xã Gia Phù", "Xã Huổi Một", "Xã Kim Bon", "Xã Long Hẹ", "Xã Lóng Phiêng", "Xã Lóng Sập", "Xã Mai Sơn", "Xã Muổi Nọi", "Xã Mường Bang", "Xã Mường Bám", "Xã Mường Bú", "Xã Mường Chanh", "Xã Mường Chiên", "Xã Mường Cơi", "Xã Mường Giôn", "Xã Mường Hung", "Xã Mường Khiêng", "Xã Mường La", "Xã Mường Lèo", "Xã Mường Lạn", "Xã Mường Lầm", "Xã Mường Sại", "Xã Mường É", "Xã Ngọc Chiến", "Xã Nậm Lầu", "Xã Nậm Ty", "Xã Phiêng Cằm", "Xã Phiêng Khoài", "Xã Phiêng Pằn", "Xã Phù Yên", "Xã Púng Bánh", "Xã Pắc Ngà", "Xã Quỳnh Nhai", "Xã Song Khủa", "Xã Suối Tọ", "Xã Sông Mã", "Xã Sốp Cộp", "Xã Thuận Châu", "Xã Tà Hộc", "Xã Tà Xùa", "Xã Tân Phong", "Xã Tân Yên", "Xã Tô Múa", "Xã Tường Hạ", "Xã Tạ Khoa", "Xã Vân Hồ", "Xã Xuân Nha", "Xã Xím Vàng", "Xã Yên Châu", "Xã Yên Sơn", "Xã Đoàn Kết"], "15": ["Phường Cam Đường", "Phường Cầu Thia", "Phường Lào Cai", "Phường Nam Cường", "Phường Nghĩa Lộ", "Phường Sa Pa", "Phường Trung Tâm", "Phường Văn Phú", "Phường Yên Bái", "Phường Âu Lâu", "Xã Khánh Hòa", "Xã Lương Thịnh", "Xã Mỏ Vàng", "Xã Mường Lai", "Xã Thượng Bằng La", "Xã Tú Lệ", "Xã A Mú Sung", "Xã Bát Xát", "Xã Bản Hồ", "Xã Bản Liền", "Xã Bản Lầu", "Xã Bản Xèo", "Xã Bảo Hà", "Xã Bảo Nhai", "Xã Bảo Thắng", "Xã Bảo Yên", "Xã Bảo Ái", "Xã Bắc Hà", "Xã Cao Sơn", "Xã Chiềng Ken", "Xã Châu Quế", "Xã Chấn Thịnh", "Xã Chế Tạo", "Xã Cát Thịnh", "Xã Cảm Nhân", "Xã Cốc Lầu", "Xã Cốc San", "Xã Dương Quỳ", "Xã Dền Sáng", "Xã Gia Hội", "Xã Gia Phú", "Xã Hưng Khánh", "Xã Hạnh Phúc", "Xã Hợp Thành", "Xã Khao Mang", "Xã Khánh Yên", "Xã Lao Chải", "Xã Liên Sơn", "Xã Lâm Giang", "Xã Lâm Thượng", "Xã Lùng Phình", "Xã Lục Yên", "Xã Minh Lương", "Xã Mù Cang Chải", "Xã Mường Bo", "Xã Mường Hum", "Xã Mường Khương", "Xã Mậu A", "Xã Nghĩa Tâm", "Xã Nghĩa Đô", "Xã Ngũ Chỉ Sơn", "Xã Nậm Chày", "Xã Nậm Có", "Xã Nậm Xé", "Xã Pha Long", "Xã Phong Dụ Hạ", "Xã Phong Dụ Thượng", "Xã Phong Hải", "Xã Phúc Lợi", "Xã Phình Hồ", "Xã Phúc Khánh", "Xã Púng Luông", "Xã Quy Mông", "Xã Si Ma Cai", "Xã Sín Chéng", "Xã Sơn Lương", "Xã Thác Bà", "Xã Thượng Hà", "Xã Trạm Tấu", "Xã Trấn Yên", "Xã Trịnh Tường", "Xã Tà Xi Láng", "Xã Tân Hợp", "Xã Tân Lĩnh", "Xã Tả Củ Tỷ", "Xã Tả Phìn", "Xã Tả Van", "Xã Tằng Loỏng", "Xã Việt Hồng", "Xã Võ Lao", "Xã Văn Bàn", "Xã Văn Chấn", "Xã Xuân Ái", "Xã Xuân Hòa", "Xã Xuân Quang", "Xã Y Tý", "Xã Yên Bình", "Xã Yên Thành", "Xã Đông Cuông"], "19": ["Phường Bá Xuyên", "Phường Bách Quang", "Phường Bắc Kạn", "Phường Gia Sàng", "Phường Linh Sơn", "Phường Phan Đình Phùng", "Phường Phúc Thuận", "Phường Phổ Yên", "Phường Quan Triều", "Phường Quyết Thắng", "Phường Sông Công", "Phường Trung Thành", "Phường Tích Lương", "Phường Vạn Xuân", "Phường Đức Xuân", "Xã An Khánh", "Xã Ba Bể", "Xã Bình Thành", "Xã Bình Yên", "Xã Bạch Thông", "Xã Bằng Thành", "Xã Bằng Vân", "Xã Cao Minh", "Xã Chợ Mới", "Xã Chợ Rã", "Xã Chợ Đồn", "Xã Côn Minh", "Xã Cường Lợi", "Xã Cẩm Giàng", "Xã Dân Tiến", "Xã Hiệp Lực", "Xã Hợp Thành", "Xã Kha Sơn", "Xã Kim Phượng", "Xã La Bằng", "Xã La Hiên", "Xã Lam Vỹ", "Xã Na Rì", "Xã Nam Cường", "Xã Nam Hòa", "Xã Nghinh Tường", "Xã Nghiên Loan", "Xã Nghĩa Tá", "Xã Ngân Sơn", "Xã Nà Phặc", "Xã Phong Quang", "Xã Phú Bình", "Xã Phú Lương", "Xã Phú Lạc", "Xã Phú Thịnh", "Xã Phú Xuyên", "Xã Phú Đình", "Xã Phúc Lộc", "Xã Phượng Tiến", "Xã Phủ Thông", "Xã Quang Sơn", "Xã Quân Chu", "Xã Quảng Bạch", "Xã Sảng Mộc", "Xã Thanh Mai", "Xã Thanh Thịnh", "Xã Thành Công", "Xã Thượng Minh", "Xã Thượng Quan", "Xã Thần Sa", "Xã Trung Hội", "Xã Tràng Xá", "Xã Trại Cau", "Xã Trần Phú", "Xã Tân Cương", "Xã Tân Khánh", "Xã Tân Kỳ", "Xã Tân Thành", "Xã Vô Tranh", "Xã Võ Nhai", "Xã Văn Hán", "Xã Văn Lang", "Xã Văn Lăng", "Xã Vĩnh Thông", "Xã Vạn Phú", "Xã Xuân Dương", "Xã Yên Bình", "Xã Yên Phong", "Xã Yên Thịnh", "Xã Yên Trạch", "Xã Điềm Thụy", "Xã Đại Phúc", "Xã Đại Từ", "Xã Định Hóa", "Xã Đồng Hỷ", "Xã Đồng Phúc", "Xã Đức Lương"], "20": ["Phường Kỳ Lừa", "Phường Lương Văn Tri", "Phường Tam Thanh", "Phường Đông Kinh", "Xã Ba Sơn", "Xã Bình Gia", "Xã Bắc Sơn", "Xã Bằng Mạc", "Xã Cai Kinh", "Xã Cao Lộc", "Xã Chi Lăng", "Xã Chiến Thắng", "Xã Châu Sơn", "Xã Công Sơn", "Xã Hoa Thám", "Xã Hoàng Văn Thụ", "Xã Hưng Vũ", "Xã Hồng Phong", "Xã Hội Hoan", "Xã Hữu Liên", "Xã Hữu Lũng", "Xã Khuất Xá", "Xã Kháng Chiến", "Xã Khánh Khê", "Xã Kiên Mộc", "Xã Lộc Bình", "Xã Lợi Bác", "Xã Mẫu Sơn", "Xã Na Dương", "Xã Na Sầm", "Xã Nhân Lý", "Xã Nhất Hòa", "Xã Quan Sơn", "Xã Quý Hòa", "Xã Quốc Khánh", "Xã Quốc Việt", "Xã Thiện Hòa", "Xã Thiện Long", "Xã Thiện Thuật", "Xã Thiện Tân", "Xã Thái Bình", "Xã Thất Khê", "Xã Thống Nhất", "Xã Thụy Hùng", "Xã Tri Lễ", "Xã Tràng Định", "Xã Tuấn Sơn", "Xã Tân Thành", "Xã Tân Tiến", "Xã Tân Tri", "Xã Tân Văn", "Xã Tân Đoàn", "Xã Vân Nham", "Xã Văn Lãng", "Xã Văn Quan", "Xã Vũ Lăng", "Xã Vũ Lễ", "Xã Vạn Linh", "Xã Xuân Dương", "Xã Yên Bình", "Xã Yên Phúc", "Xã Điềm He", "Xã Đoàn Kết", "Xã Đình Lập", "Xã Đồng Đăng"], "22": ["Phường An Sinh", "Phường Bãi Cháy", "Phường Bình Khê", "Phường Cao Xanh", "Phường Cẩm Phả", "Phường Cửa Ông", "Phường Hiệp Hòa", "Phường Hoàng Quế", "Phường Hoành Bồ", "Phường Hà An", "Phường Hà Lầm", "Phường Hà Tu", "Phường Hạ Long", "Phường Hồng Gai", "Phường Liên Hòa", "Phường Móng Cái 1", "Phường Móng Cái 2", "Phường Móng Cái 3", "Phường Mông Dương", "Phường Mạo Khê", "Phường Phong Cốc", "Phường Quang Hanh", "Phường Quảng Yên", "Phường Tuần Châu", "Phường Uông Bí", "Phường Việt Hưng", "Phường Vàng Danh", "Phường Yên Tử", "Phường Đông Mai", "Phường Đông Triều", "Xã Ba Chẽ", "Xã Bình Liêu", "Xã Cái Chiên", "Xã Hoành Mô", "Xã Hải Hòa", "Xã Hải Lạng", "Xã Hải Ninh", "Xã Hải Sơn", "Xã Kỳ Thượng", "Xã Lương Minh", "Xã Lục Hồn", "Xã Quảng Hà", "Xã Quảng La", "Xã Quảng Tân", "Xã Quảng Đức", "Xã Thống Nhất", "Xã Tiên Yên", "Xã Vĩnh Thực", "Xã Điền Xá", "Xã Đông Ngũ", "Xã Đường Hoa", "Xã Đầm Hà", "Đặc khu Cô Tô", "Đặc khu Vân Đồn"], "24": ["Phường Bắc Giang", "Phường Bồng Lai", "Phường Chũ", "Phường Cảnh Thụy", "Phường Hạp Lĩnh", "Phường Kinh Bắc", "Phường Mão Điền", "Phường Nam Sơn", "Phường Nhân Hòa", "Phường Ninh Xá", "Phường Nếnh", "Phường Phù Khê", "Phường Phương Liễu", "Phường Phượng Sơn", "Phường Quế Võ", "Phường Song Liễu", "Phường Tam Sơn", "Phường Thuận Thành", "Phường Tiền Phong", "Phường Trí Quả", "Phường Trạm Lộ", "Phường Tân An", "Phường Tân Tiến", "Phường Từ Sơn", "Phường Tự Lạn", "Phường Việt Yên", "Phường Vân Hà", "Phường Võ Cường", "Phường Vũ Ninh", "Phường Yên Dũng", "Phường Đa Mai", "Phường Đào Viên", "Phường Đồng Nguyên", "Xã An Lạc", "Xã Biên Sơn", "Xã Biển Động", "Xã Bảo Đài", "Xã Bắc Lũng", "Xã Bố Hạ", "Xã Cao Đức", "Xã Chi Lăng", "Xã Cẩm Lý", "Xã Dương Hưu", "Xã Gia Bình", "Xã Hiệp Hòa", "Xã Hoàng Vân", "Xã Hợp Thịnh", "Xã Kiên Lao", "Xã Kép", "Xã Liên Bão", "Xã Lâm Thao", "Xã Lương Tài", "Xã Lạng Giang", "Xã Lục Nam", "Xã Lục Ngạn", "Xã Lục Sơn", "Xã Mỹ Thái", "Xã Nam Dương", "Xã Nghĩa Phương", "Xã Ngọc Thiện", "Xã Nhân Thắng", "Xã Nhã Nam", "Xã Phù Lãng", "Xã Phúc Hòa", "Xã Phật Tích", "Xã Quang Trung", "Xã Sa Lý", "Xã Sơn Hải", "Xã Sơn Động", "Xã Tam Giang", "Xã Tam Tiến", "Xã Tam Đa", "Xã Tiên Du", "Xã Tiên Lục", "Xã Trung Chính", "Xã Trung Kênh", "Xã Trường Sơn", "Xã Tuấn Đạo", "Xã Tân Chi", "Xã Tân Dĩnh", "Xã Tân Sơn", "Xã Tân Yên", "Xã Tây Yên Tử", "Xã Vân Sơn", "Xã Văn Môn", "Xã Xuân Cẩm", "Xã Xuân Lương", "Xã Yên Phong", "Xã Yên Thế", "Xã Yên Trung", "Xã Yên Định", "Xã Đèo Gia", "Xã Đông Cứu", "Xã Đông Phú", "Xã Đại Lai", "Xã Đại Sơn", "Xã Đại Đồng", "Xã Đồng Kỳ", "Xã Đồng Việt"], "25": ["Phường Hòa Bình", "Phường Kỳ Sơn", "Phường Nông Trang", "Phường Phong Châu", "Phường Phú Thọ", "Phường Phúc Yên", "Phường Thanh Miếu", "Phường Thống Nhất", "Phường Tân Hòa", "Phường Việt Trì", "Phường Vân Phú", "Phường Vĩnh Phúc", "Phường Vĩnh Yên", "Phường Xuân Hòa", "Phường Âu Cơ", "Xã An Bình", "Xã An Nghĩa", "Xã Bao La", "Xã Bình Nguyên", "Xã Bình Phú", "Xã Bình Tuyền", "Xã Bình Xuyên", "Xã Bản Nguyên", "Xã Bằng Luân", "Xã Cao Dương", "Xã Cao Phong", "Xã Cao Sơn", "Xã Chân Mộng", "Xã Chí Tiên", "Xã Chí Đám", "Xã Cẩm Khê", "Xã Cự Đồng", "Xã Dân Chủ", "Xã Dũng Tiến", "Xã Hiền Lương", "Xã Hiền Quan", "Xã Hoàng An", "Xã Hoàng Cương", "Xã Hy Cương", "Xã Hùng Việt", "Xã Hương Cần", "Xã Hạ Hòa", "Xã Hải Lựu", "Xã Hội Thịnh", "Xã Hợp Kim", "Xã Hợp Lý", "Xã Khả Cửu", "Xã Kim Bôi", "Xã Lai Đồng", "Xã Liên Châu", "Xã Liên Hòa", "Xã Liên Minh", "Xã Liên Sơn", "Xã Long Cốc", "Xã Lâm Thao", "Xã Lương Sơn", "Xã Lạc Lương", "Xã Lạc Sơn", "Xã Lạc Thủy", "Xã Lập Thạch", "Xã Mai Châu", "Xã Mai Hạ", "Xã Minh Hòa", "Xã Minh Đài", "Xã Mường Bi", "Xã Mường Hoa", "Xã Mường Thàng", "Xã Mường Vang", "Xã Mường Động", "Xã Nguyệt Đức", "Xã Ngọc Sơn", "Xã Nhân Nghĩa", "Xã Nật Sơn", "Xã Phù Ninh", "Xã Phùng Nguyên", "Xã Phú Khê", "Xã Phú Mỹ", "Xã Pà Cò", "Xã Quy Đức", "Xã Quyết Thắng", "Xã Quảng Yên", "Xã Sông Lô", "Xã Sơn Lương", "Xã Sơn Đông", "Xã Tam Dương", "Xã Tam Dương Bắc", "Xã Tam Hồng", "Xã Tam Nông", "Xã Tam Sơn", "Xã Tam Đảo", "Xã Thanh Ba", "Xã Thanh Sơn", "Xã Thanh Thủy", "Xã Thu Cúc", "Xã Thung Nai", "Xã Thái Hòa", "Xã Thượng Cốc", "Xã Thượng Long", "Xã Thịnh Minh", "Xã Thọ Văn", "Xã Thổ Tang", "Xã Tiên Lương", "Xã Tiên Lữ", "Xã Tiền Phong", "Xã Toàn Thắng", "Xã Trung Sơn", "Xã Trạm Thản", "Xã Tu Vũ", "Xã Tân Lạc", "Xã Tân Mai", "Xã Tân Pheo", "Xã Tân Sơn", "Xã Tây Cốc", "Xã Tề Lỗ", "Xã Vân Bán", "Xã Vân Sơn", "Xã Võ Miếu", "Xã Văn Lang", "Xã Văn Miếu", "Xã Vĩnh An", "Xã Vĩnh Chân", "Xã Vĩnh Hưng", "Xã Vĩnh Phú", "Xã Vĩnh Thành", "Xã Vĩnh Tường", "Xã Vạn Xuân", "Xã Xuân Lãng", "Xã Xuân Lũng", "Xã Xuân Viên", "Xã Xuân Đài", "Xã Yên Kỳ", "Xã Yên Lãng", "Xã Yên Lạc", "Xã Yên Lập", "Xã Yên Phú", "Xã Yên Sơn", "Xã Yên Thủy", "Xã Yên Trị", "Xã Đan Thượng", "Xã Đoan Hùng", "Xã Đà Bắc", "Xã Đào Xá", "Xã Đông Thành", "Xã Đại Đình", "Xã Đại Đồng", "Xã Đạo Trù", "Xã Đồng Lương", "Xã Đức Nhàn"], "31": ["Phường An Biên", "Phường An Dương", "Phường An Hải", "Phường An Phong", "Phường Bạch Đằng", "Phường Bắc An Phụ", "Phường Chu Văn An", "Phường Chí Linh", "Phường Dương Kinh", "Phường Gia Viên", "Phường Hòa Bình", "Phường Hưng Đạo", "Phường Hải An", "Phường Hải Dương", "Phường Hồng An", "Phường Hồng Bàng", "Phường Kinh Môn", "Phường Kiến An", "Phường Lê Chân", "Phường Lê Thanh Nghị", "Phường Lê Ích Mộc", "Phường Lê Đại Hành", "Phường Lưu Kiếm", "Phường Nam Triệu", "Phường Nam Đồ Sơn", "Phường Nam Đồng", "Phường Nguyễn Trãi", "Phường Nguyễn Đại Năng", "Phường Ngô Quyền", "Phường Nhị Chiểu", "Phường Phù Liễn", "Phường Phạm Sư Mạnh", "Phường Thiên Hương", "Phường Thành Đông", "Phường Thạch Khôi", "Phường Thủy Nguyên", "Phường Trần Hưng Đạo", "Phường Trần Liễu", "Phường Trần Nhân Tông", "Phường Tân Hưng", "Phường Tứ Minh", "Phường Việt Hòa", "Phường Ái Quốc", "Phường Đông Hải", "Phường Đồ Sơn", "Xã An Hưng", "Xã An Khánh", "Xã An Lão", "Xã An Phú", "Xã An Quang", "Xã An Thành", "Xã An Trường", "Xã Bình Giang", "Xã Bắc Thanh Miện", "Xã Chí Minh", "Xã Chấn Hưng", "Xã Cẩm Giang", "Xã Cẩm Giàng", "Xã Gia Lộc", "Xã Gia Phúc", "Xã Hà Bắc", "Xã Hà Nam", "Xã Hà Tây", "Xã Hà Đông", "Xã Hùng Thắng", "Xã Hải Hưng", "Xã Hồng Châu", "Xã Hợp Tiến", "Xã Khúc Thừa Dụ", "Xã Kim Thành", "Xã Kiến Hưng", "Xã Kiến Hải", "Xã Kiến Minh", "Xã Kiến Thụy", "Xã Kẻ Sặt", "Xã Lai Khê", "Xã Lạc Phượng", "Xã Mao Điền", "Xã Nam An Phụ", "Xã Nam Sách", "Xã Nam Thanh Miện", "Xã Nghi Dương", "Xã Nguyên Giáp", "Xã Nguyễn Bỉnh Khiêm", "Xã Nguyễn Lương Bằng", "Xã Ninh Giang", "Xã Phú Thái", "Xã Quyết Thắng", "Xã Thanh Hà", "Xã Thanh Miện", "Xã Thái Tân", "Xã Thượng Hồng", "Xã Tiên Lãng", "Xã Tiên Minh", "Xã Trường Tân", "Xã Trần Phú", "Xã Tuệ Tĩnh", "Xã Tân An", "Xã Tân Kỳ", "Xã Tân Minh", "Xã Tứ Kỳ", "Xã Việt Khê", "Xã Vĩnh Am", "Xã Vĩnh Bảo", "Xã Vĩnh Hòa", "Xã Vĩnh Hải", "Xã Vĩnh Lại", "Xã Vĩnh Thuận", "Xã Vĩnh Thịnh", "Xã Yết Kiêu", "Xã Đường An", "Xã Đại Sơn", "Đặc khu Bạch Long Vĩ", "Đặc khu Cát Hải"], "33": ["Phường Hồng Châu", "Phường Mỹ Hào", "Phường Phố Hiến", "Phường Sơn Nam", "Phường Thái Bình", "Phường Thượng Hồng", "Phường Trà Lý", "Phường Trần Hưng Đạo", "Phường Trần Lãm", "Phường Vũ Phúc", "Phường Đường Hào", "Xã  Bắc Đông Quan", "Xã A Sào", "Xã Bình Nguyên", "Xã Bình Thanh", "Xã Bình Định", "Xã Bắc Thái Ninh", "Xã Bắc Thụy Anh", "Xã Bắc Tiên Hưng", "Xã Bắc Đông Hưng", "Xã Châu Ninh", "Xã Chí Minh", "Xã Diên Hà", "Xã Hiệp Cường", "Xã Hoàn Long", "Xã Hoàng Hoa Thám", "Xã Hưng Hà", "Xã Hưng Phú", "Xã Hồng Minh", "Xã Hồng Quang", "Xã Hồng Vũ", "Xã Khoái Châu", "Xã Kiến Xương", "Xã Long Hưng", "Xã Lê Lợi", "Xã Lê Quý Đôn", "Xã Lương Bằng", "Xã Lạc Đạo", "Xã Minh Thọ", "Xã Mễ Sở", "Xã Nam Cường", "Xã Nam Thái Ninh", "Xã Nam Thụy Anh", "Xã Nam Tiên Hưng", "Xã Nam Tiền Hải", "Xã Nam Đông Hưng", "Xã Nghĩa Dân", "Xã Nghĩa Trụ", "Xã Nguyễn Du", "Xã Nguyễn Trãi", "Xã Nguyễn Văn Linh", "Xã Ngọc Lâm", "Xã Ngự Thiên", "Xã Như Quỳnh", "Xã Phạm Ngũ Lão", "Xã Phụ Dực", "Xã Phụng Công", "Xã Quang Hưng", "Xã Quang Lịch", "Xã Quỳnh An", "Xã Quỳnh Phụ", "Xã Thái Ninh", "Xã Thái Thụy", "Xã Thư Trì", "Xã Thư Vũ", "Xã Thần Khê", "Xã Thụy Anh", "Xã Tiên Hoa", "Xã Tiên Hưng", "Xã Tiên La", "Xã Tiên Lữ", "Xã Tiên Tiến", "Xã Tiền Hải", "Xã Triệu Việt Vương", "Xã Trà Giang", "Xã Tân Hưng", "Xã Tân Thuận", "Xã Tân Tiến", "Xã Tây Thái Ninh", "Xã Tây Thụy Anh", "Xã Tây Tiền Hải", "Xã Tống Trân", "Xã Việt Tiến", "Xã Việt Yên", "Xã Văn Giang", "Xã Vũ Quý", "Xã Vũ Thư", "Xã Vũ Tiên", "Xã Vạn Xuân", "Xã Xuân Trúc", "Xã Yên Mỹ", "Xã Ái Quốc", "Xã Ân Thi", "Xã Đoàn Đào", "Xã Đông Hưng", "Xã Đông Quan", "Xã Đông Thái Ninh", "Xã Đông Thụy Anh", "Xã Đông Tiên Hưng", "Xã Đông Tiền Hải", "Xã Đại Đồng", "Xã Đồng Bằng", "Xã Đồng Châu", "Xã Đức Hợp"], "37": ["Phường Châu Sơn", "Phường Duy Hà", "Phường Duy Tiên", "Phường Duy Tân", "Phường Hoa Lư", "Phường Hà Nam", "Phường Hồng Quang", "Phường Kim Bảng", "Phường Kim Thanh", "Phường Liêm Tuyền", "Phường Lê Hồ", "Phường Lý Thường Kiệt", "Phường Mỹ Lộc", "Phường Nam Hoa Lư", "Phường Nam Định", "Phường Nguyễn Úy", "Phường Phù Vân", "Phường Phủ Lý", "Phường Tam Chúc", "Phường Tam Điệp", "Phường Thiên Trường", "Phường Thành Nam", "Phường Tiên Sơn", "Phường Trung Sơn", "Phường Trường Thi", "Phường Tây Hoa Lư", "Phường Vị Khê", "Phường Yên Sơn", "Phường Yên Thắng", "Phường Đông A", "Phường Đông Hoa Lư", "Phường Đồng Văn", "Xã Bình An", "Xã Bình Giang", "Xã Bình Lục", "Xã Bình Minh", "Xã Bình Mỹ", "Xã Bình Sơn", "Xã Bắc Lý", "Xã Chất Bình", "Xã Cát Thành", "Xã Cúc Phương", "Xã Cổ Lễ", "Xã Gia Hưng", "Xã Gia Lâm", "Xã Gia Phong", "Xã Gia Trấn", "Xã Gia Tường", "Xã Gia Viễn", "Xã Gia Vân", "Xã Giao Bình", "Xã Giao Hòa", "Xã Giao Hưng", "Xã Giao Minh", "Xã Giao Ninh", "Xã Giao Phúc", "Xã Giao Thủy", "Xã Hiển Khánh", "Xã Hải An", "Xã Hải Anh", "Xã Hải Hưng", "Xã Hải Hậu", "Xã Hải Quang", "Xã Hải Thịnh", "Xã Hải Tiến", "Xã Hải Xuân", "Xã Hồng Phong", "Xã Khánh Hội", "Xã Khánh Nhạc", "Xã Khánh Thiện", "Xã Khánh Trung", "Xã Kim Sơn", "Xã Kim Đông", "Xã Lai Thành", "Xã Liêm Hà", "Xã Liên Minh", "Xã Lý Nhân", "Xã Minh Thái", "Xã Minh Tân", "Xã Nam Hồng", "Xã Nam Lý", "Xã Nam Minh", "Xã Nam Ninh", "Xã Nam Trực", "Xã Nam Xang", "Xã Nam Đồng", "Xã Nghĩa Hưng", "Xã Nghĩa Lâm", "Xã Nghĩa Sơn", "Xã Nho Quan", "Xã Nhân Hà", "Xã Ninh Cường", "Xã Ninh Giang", "Xã Phong Doanh", "Xã Phát Diệm", "Xã Phú Long", "Xã Phú Sơn", "Xã Quang Hưng", "Xã Quang Thiện", "Xã Quỳnh Lưu", "Xã Quỹ Nhất", "Xã Rạng Đông", "Xã Thanh Bình", "Xã Thanh Liêm", "Xã Thanh Lâm", "Xã Thanh Sơn", "Xã Trần Thương", "Xã Trực Ninh", "Xã Tân Minh", "Xã Tân Thanh", "Xã Vĩnh Trụ", "Xã Vũ Dương", "Xã Vạn Thắng", "Xã Vụ Bản", "Xã Xuân Giang", "Xã Xuân Hưng", "Xã Xuân Hồng", "Xã Xuân Trường", "Xã Yên Cường", "Xã Yên Khánh", "Xã Yên Mô", "Xã Yên Mạc", "Xã Yên Từ", "Xã Yên Đồng", "Xã Ý Yên", "Xã Đại Hoàng", "Xã Định Hóa", "Xã Đồng Thái", "Xã Đồng Thịnh"], "38": ["Phường Bỉm Sơn", "Phường Hàm Rồng", "Phường Hạc Thành", "Phường Hải Bình", "Phường Hải Lĩnh", "Phường Nam Sầm Sơn", "Phường Nghi Sơn", "Phường Nguyệt Viên", "Phường Ngọc Sơn", "Phường Quang Trung", "Phường Quảng Phú", "Phường Sầm Sơn", "Phường Trúc Lâm", "Phường Tân Dân", "Phường Tĩnh Gia", "Phường Đào Duy Từ", "Phường Đông Quang", "Phường Đông Sơn", "Phường Đông Tiến", "Xã An Nông", "Xã Ba Đình", "Xã Biện Thượng", "Xã Bá Thước", "Xã Bát Mọt", "Xã Các Sơn", "Xã Công Chính", "Xã Cẩm Thạch", "Xã Cẩm Thủy", "Xã Cẩm Tân", "Xã Cẩm Tú", "Xã Cẩm Vân", "Xã Cổ Lũng", "Xã Giao An", "Xã Hiền Kiệt", "Xã Hoa Lộc", "Xã Hoạt Giang", "Xã Hoằng Châu", "Xã Hoằng Giang", "Xã Hoằng Hóa", "Xã Hoằng Lộc", "Xã Hoằng Phú", "Xã Hoằng Sơn", "Xã Hoằng Thanh", "Xã Hoằng Tiến", "Xã Hà Long", "Xã Hà Trung", "Xã Hóa Quỳ", "Xã Hậu Lộc", "Xã Hồ Vương", "Xã Hồi Xuân", "Xã Hợp Tiến", "Xã Kim Tân", "Xã Kiên Thọ", "Xã Lam Sơn", "Xã Linh Sơn", "Xã Luận Thành", "Xã Lĩnh Toại", "Xã Lưu Vệ", "Xã Lương Sơn", "Xã Minh Sơn", "Xã Mường Chanh", "Xã Mường Lát", "Xã Mường Lý", "Xã Mường Mìn", "Xã Mậu Lâm", "Xã Na Mèo", "Xã Nam Xuân", "Xã Nga An", "Xã Nga Sơn", "Xã Nga Thắng", "Xã Nguyệt Ấn", "Xã Ngọc Liên", "Xã Ngọc Lặc", "Xã Ngọc Trạo", "Xã Nhi Sơn", "Xã Như Thanh", "Xã Như Xuân", "Xã Nông Cống", "Xã Phú Lệ", "Xã Phú Xuân", "Xã Pù Luông", "Xã Pù Nhi", "Xã Quan Sơn", "Xã Quang Chiểu", "Xã Quý Lương", "Xã Quý Lộc", "Xã Quảng Bình", "Xã Quảng Chính", "Xã Quảng Ngọc", "Xã Quảng Ninh", "Xã Quảng Yên", "Xã Sao Vàng", "Xã Sơn Thủy", "Xã Sơn Điện", "Xã Tam Chung", "Xã Tam Lư", "Xã Tam Thanh", "Xã Thanh Kỳ", "Xã Thanh Phong", "Xã Thanh Quân", "Xã Thiên Phủ", "Xã Thiết Ống", "Xã Thiệu Hóa", "Xã Thiệu Quang", "Xã Thiệu Tiến", "Xã Thiệu Toán", "Xã Thiệu Trung", "Xã Thành Vinh", "Xã Thăng Bình", "Xã Thường Xuân", "Xã Thượng Ninh", "Xã Thạch Bình", "Xã Thạch Lập", "Xã Thạch Quảng", "Xã Thắng Lộc", "Xã Thắng Lợi", "Xã Thọ Bình", "Xã Thọ Long", "Xã Thọ Lập", "Xã Thọ Ngọc", "Xã Thọ Phú", "Xã Thọ Xuân", "Xã Tiên Trang", "Xã Triệu Lộc", "Xã Triệu Sơn", "Xã Trung Chính", "Xã Trung Hạ", "Xã Trung Lý", "Xã Trung Sơn", "Xã Trung Thành", "Xã Trường Lâm", "Xã Trường Văn", "Xã Tân Ninh", "Xã Tân Thành", "Xã Tân Tiến", "Xã Tây Đô", "Xã Tượng Lĩnh", "Xã Tống Sơn", "Xã Vân Du", "Xã Văn Nho", "Xã Văn Phú", "Xã Vĩnh Lộc", "Xã Vạn Lộc", "Xã Vạn Xuân", "Xã Xuân Bình", "Xã Xuân Chinh", "Xã Xuân Du", "Xã Xuân Hòa", "Xã Xuân Lập", "Xã Xuân Thái", "Xã Xuân Tín", "Xã Yên Khương", "Xã Yên Nhân", "Xã Yên Ninh", "Xã Yên Phú", "Xã Yên Thắng", "Xã Yên Thọ", "Xã Yên Trường", "Xã Yên Định", "Xã Điền Lư", "Xã Điền Quang", "Xã Đông Thành", "Xã Định Hòa", "Xã Định Tân", "Xã Đồng Lương", "Xã Đồng Tiến"], "40": ["Phường Cửa Lò", "Phường Hoàng Mai", "Phường Quỳnh Mai", "Phường Thành Vinh", "Phường Thái Hòa", "Phường Trường Vinh", "Phường Tân Mai", "Phường Tây Hiếu", "Phường Vinh Hưng", "Phường Vinh Lộc", "Phường Vinh Phú", "Xã An Châu", "Xã Anh Sơn", "Xã Anh Sơn Đông", "Xã Bình Chuẩn", "Xã Bình Minh", "Xã Bích Hào", "Xã Bạch Hà", "Xã Bạch Ngọc", "Xã Bắc Lý", "Xã Cam Phục", "Xã Chiêu Lưu", "Xã Châu Bình", "Xã Châu Hồng", "Xã Châu Khê", "Xã Châu Lộc", "Xã Châu Tiến", "Xã Con Cuông", "Xã Cát Ngạn", "Xã Diễn Châu", "Xã Giai Lạc", "Xã Giai Xuân", "Xã Hoa Quân", "Xã Huồi Tụ", "Xã Hùng Chân", "Xã Hùng Châu", "Xã Hưng Nguyên", "Xã Hưng Nguyên Nam", "Xã Hạnh Lâm", "Xã Hải Châu", "Xã Hải Lộc", "Xã Hợp Minh", "Xã Hữu Khuông", "Xã Hữu Kiệm", "Xã Keng Đu", "Xã Kim Bảng", "Xã Kim Liên", "Xã Lam Thành", "Xã Lương Sơn", "Xã Lượng Minh", "Xã Minh Châu", "Xã Minh Hợp", "Xã Môn Sơn", "Xã Mường Chọng", "Xã Mường Ham", "Xã Mường Lống", "Xã Mường Quàng", "Xã Mường Típ", "Xã Mường Xén", "Xã Mậu Thạch", "Xã Mỹ Lý", "Xã Na Loi", "Xã Na Ngoi", "Xã Nam Đàn", "Xã Nga My", "Xã Nghi Lộc", "Xã Nghĩa Hành", "Xã Nghĩa Hưng", "Xã Nghĩa Khánh", "Xã Nghĩa Lâm", "Xã Nghĩa Lộc", "Xã Nghĩa Mai", "Xã Nghĩa Thọ", "Xã Nghĩa Đàn", "Xã Nghĩa Đồng", "Xã Nhân Hòa", "Xã Nhôn Mai", "Xã Nậm Cắn", "Xã Phúc Lộc", "Xã Quan Thành", "Xã Quang Đồng", "Xã Quảng Châu", "Xã Quế Phong", "Xã Quỳ Châu", "Xã Quỳ Hợp", "Xã Quỳnh Anh", "Xã Quỳnh Lưu", "Xã Quỳnh Phú", "Xã Quỳnh Sơn", "Xã Quỳnh Tam", "Xã Quỳnh Thắng", "Xã Quỳnh Văn", "Xã Sơn Lâm", "Xã Tam Hợp", "Xã Tam Quang", "Xã Tam Thái", "Xã Tam Đồng", "Xã Thiên Nhẫn", "Xã Thuần Trung", "Xã Thành Bình Thọ", "Xã Thông Thụ", "Xã Thần Lĩnh", "Xã Tiên Đồng", "Xã Tiền Phong", "Xã Tri Lễ", "Xã Trung Lộc", "Xã Tân An", "Xã Tân Châu", "Xã Tân Kỳ", "Xã Tân Phú", "Xã Tương Dương", "Xã Vân Du", "Xã Vân Tụ", "Xã Văn Hiến", "Xã Văn Kiều", "Xã Vĩnh Tường", "Xã Vạn An", "Xã Xuân Lâm", "Xã Yên Hòa", "Xã Yên Na", "Xã Yên Thành", "Xã Yên Trung", "Xã Yên Xuân", "Xã Đô Lương", "Xã Đông Hiếu", "Xã Đông Lộc", "Xã Đông Thành", "Xã Đại Huệ", "Xã Đại Đồng", "Xã Đức Châu"], "42": ["Phường Bắc Hồng Lĩnh", "Phường Hoành Sơn", "Phường Hà Huy Tập", "Phường Hải Ninh", "Phường Nam Hồng Lĩnh", "Phường Sông Trí", "Phường Thành Sen", "Phường Trần Phú", "Phường Vũng Áng", "Xã Can Lộc", "Xã Cẩm Bình", "Xã Cẩm Duệ", "Xã Cẩm Hưng", "Xã Cẩm Lạc", "Xã Cẩm Trung", "Xã Cẩm Xuyên", "Xã Cổ Đạm", "Xã Gia Hanh", "Xã Hà Linh", "Xã Hương Bình", "Xã Hương Khê", "Xã Hương Phố", "Xã Hương Sơn", "Xã Hương Xuân", "Xã Hương Đô", "Xã Hồng Lộc", "Xã Kim Hoa", "Xã Kỳ Anh", "Xã Kỳ Hoa", "Xã Kỳ Khang", "Xã Kỳ Lạc", "Xã Kỳ Thượng", "Xã Kỳ Văn", "Xã Kỳ Xuân", "Xã Lộc Hà", "Xã Mai Hoa", "Xã Mai Phụ", "Xã Nghi Xuân", "Xã Phúc Trạch", "Xã Sơn Giang", "Xã Sơn Hồng", "Xã Sơn Kim 1", "Xã Sơn Kim 2", "Xã Sơn Tiến", "Xã Sơn Tây", "Xã Thiên Cầm", "Xã Thượng Đức", "Xã Thạch Hà", "Xã Thạch Khê", "Xã Thạch Lạc", "Xã Thạch Xuân", "Xã Tiên Điền", "Xã Toàn Lưu", "Xã Trường Lưu", "Xã Tùng Lộc", "Xã Tứ Mỹ", "Xã Việt Xuyên", "Xã Vũ Quang", "Xã Xuân Lộc", "Xã Yên Hòa", "Xã Đan Hải", "Xã Đông Kinh", "Xã Đồng Lộc", "Xã Đồng Tiến", "Xã Đức Minh", "Xã Đức Quang", "Xã Đức Thịnh", "Xã Đức Thọ", "Xã Đức Đồng"], "44": ["Phường Ba Đồn", "Phường Bắc Gianh", "Phường Nam Đông Hà", "Phường Quảng Trị", "Phường Đông Hà", "Phường Đồng Hới", "Phường Đồng Sơn", "Phường Đồng Thuận", "Xã A Dơi", "Xã Ba Lòng", "Xã Bắc Trạch", "Xã Bến Hải", "Xã Bến Quan", "Xã Bố Trạch", "Xã Cam Hồng", "Xã Cam Lộ", "Xã Cồn Tiên", "Xã Cửa Tùng", "Xã Cửa Việt", "Xã Diên Sanh", "Xã Dân Hóa", "Xã Gio Linh", "Xã Hiếu Giang", "Xã Hoàn Lão", "Xã Hòa Trạch", "Xã Hướng Hiệp", "Xã Hướng Lập", "Xã Hướng Phùng", "Xã Hải Lăng", "Xã Khe Sanh", "Xã Kim Ngân", "Xã Kim Phú", "Xã Kim Điền", "Xã La Lay", "Xã Lao Bảo", "Xã Lìa", "Xã Lệ Ninh", "Xã Lệ Thủy", "Xã Minh Hóa", "Xã Mỹ Thủy", "Xã Nam Ba Đồn", "Xã Nam Cửa Việt", "Xã Nam Gianh", "Xã Nam Hải Lăng", "Xã Nam Trạch", "Xã Ninh Châu", "Xã Phong Nha", "Xã Phú Trạch", "Xã Quảng Ninh", "Xã Quảng Trạch", "Xã Sen Ngư", "Xã Thượng Trạch", "Xã Triệu Bình", "Xã Triệu Cơ", "Xã Triệu Phong", "Xã Trung Thuần", "Xã Trường Ninh", "Xã Trường Phú", "Xã Trường Sơn", "Xã Tuyên Bình", "Xã Tuyên Hóa", "Xã Tuyên Lâm", "Xã Tuyên Phú", "Xã Tuyên Sơn", "Xã Tà Rụt", "Xã Tân Gianh", "Xã Tân Lập", "Xã Tân Mỹ", "Xã Tân Thành", "Xã Vĩnh Hoàng", "Xã Vĩnh Linh", "Xã Vĩnh Thủy", "Xã Vĩnh Định", "Xã Ái Tử", "Xã Đakrông", "Xã Đông Trạch", "Xã Đồng Lê", "Đặc khu Cồn Cỏ"], "46": ["Phường An Cựu", "Phường Dương Nỗ", "Phường Hóa Châu", "Phường Hương An", "Phường Hương Thủy", "Phường Hương Trà", "Phường Kim Long", "Phường Kim Trà", "Phường Mỹ Thượng", "Phường Phong Dinh", "Phường Phong Phú", "Phường Phong Quảng", "Phường Phong Thái", "Phường Phong Điền", "Phường Phú Bài", "Phường Phú Xuân", "Phường Thanh Thủy", "Phường Thuận An", "Phường Thuận Hóa", "Phường Thủy Xuân", "Phường Vỹ Dạ", "Xã A Lưới 1", "Xã A Lưới 2", "Xã A Lưới 3", "Xã A Lưới 4", "Xã A Lưới 5", "Xã Bình Điền", "Xã Chân Mây - Lăng Cô", "Xã Hưng Lộc", "Xã Khe Tre", "Xã Long Quảng", "Xã Lộc An", "Xã Nam Đông", "Xã Phú Hồ", "Xã Phú Lộc", "Xã Phú Vang", "Xã Phú Vinh", "Xã Quảng Điền", "Xã Vinh Lộc", "Xã Đan Điền"], "48": ["Phường An Hải", "Phường An Khê", "Phường An Thắng", "Phường Bàn Thạch", "Phường Cẩm Lệ", "Phường Hòa Cường", "Phường Hòa Khánh", "Phường Hòa Xuân", "Phường Hương Trà", "Phường Hải Châu", "Phường Hải Vân", "Phường Hội An", "Phường Hội An Tây", "Phường Hội An Đông", "Phường Liên Chiểu", "Phường Ngũ Hành Sơn", "Phường Quảng Phú", "Phường Sơn Trà", "Phường Tam Kỳ", "Phường Thanh Khê", "Phường Điện Bàn", "Phường Điện Bàn Bắc", "Phường Điện Bàn Đông", "Xã Avương", "Xã Bà Nà", "Xã Bến Giằng", "Xã Bến Hiên", "Xã Chiên Đàn", "Xã Duy Nghĩa", "Xã Duy Xuyên", "Xã Gò Nổi", "Xã Hiệp Đức", "Xã Hà Nha", "Xã Hòa Tiến", "Xã Hòa Vang", "Xã Hùng Sơn", "Xã Khâm Đức", "Xã La Dêê", "Xã La Êê", "Xã Lãnh Ngọc", "Xã Nam Giang", "Xã Nam Phước", "Xã Nam Trà My", "Xã Nông Sơn", "Xã Núi Thành", "Xã Phú Ninh", "Xã Phú Thuận", "Xã Phước Chánh", "Xã Phước Hiệp", "Xã Phước Năng", "Xã Phước Thành", "Xã Phước Trà", "Xã Quế Phước", "Xã Quế Sơn", "Xã Quế Sơn Trung", "Xã Sông Kôn", "Xã Sông Vàng", "Xã Sơn Cẩm Hà", "Xã Tam Anh", "Xã Tam Hải", "Xã Tam Mỹ", "Xã Tam Xuân", "Xã Thu Bồn", "Xã Thăng An", "Xã Thăng Bình", "Xã Thăng Phú", "Xã Thăng Trường", "Xã Thăng Điền", "Xã Thượng Đức", "Xã Thạnh Bình", "Xã Thạnh Mỹ", "Xã Tiên Phước", "Xã Trà Giáp", "Xã Trà Leng", "Xã Trà Linh", "Xã Trà Liên", "Xã Trà My", "Xã Trà Tân", "Xã Trà Tập", "Xã Trà Vân", "Xã Trà Đốc", "Xã Tân Hiệp", "Xã Tây Giang", "Xã Tây Hồ", "Xã Việt An", "Xã Vu Gia", "Xã Xuân Phú", "Xã Điện Bàn Tây", "Xã Đông Giang", "Xã Đại Lộc", "Xã Đắc Pring", "Xã Đồng Dương", "Xã Đức Phú", "Đặc khu Hoàng Sa"], "51": ["Phường Cẩm Thành", "Phường Kon Tum", "Phường Nghĩa Lộ", "Phường Sa Huỳnh", "Phường Trà Câu", "Phường Trương Quang Trọng", "Phường Đăk Bla", "Phường Đăk Cấm", "Phường Đức Phổ", "Xã An Phú", "Xã Ba Dinh", "Xã Ba Gia", "Xã Ba Tô", "Xã Ba Tơ", "Xã Ba Vinh", "Xã Ba Vì", "Xã Ba Xa", "Xã Ba Động", "Xã Bình Chương", "Xã Bình Minh", "Xã Bình Sơn", "Xã Bờ Y", "Xã Cà Đam", "Xã Dục Nông", "Xã Ia Chim", "Xã Ia Tơi", "Xã Ia Đal", "Xã Khánh Cường", "Xã Kon Braih", "Xã Kon Plông", "Xã Kon Đào", "Xã Long Phụng", "Xã Lân Phong", "Xã Minh Long", "Xã Mô Rai", "Xã Măng Bút", "Xã Măng Ri", "Xã Măng Đen", "Xã Mỏ Cày", "Xã Mộ Đức", "Xã Nghĩa Giang", "Xã Nghĩa Hành", "Xã Nguyễn Nghiêm", "Xã Ngọc Linh", "Xã Ngọk Bay", "Xã Ngọk Réo", "Xã Ngọk Tụ", "Xã Phước Giang", "Xã Rờ Kơi", "Xã Sa Bình", "Xã Sa Loong", "Xã Sa Thầy", "Xã Sơn Hà", "Xã Sơn Hạ", "Xã Sơn Kỳ", "Xã Sơn Linh", "Xã Sơn Mai", "Xã Sơn Thủy", "Xã Sơn Tây", "Xã Sơn Tây Hạ", "Xã Sơn Tây Thượng", "Xã Sơn Tịnh", "Xã Thanh Bồng", "Xã Thiện Tín", "Xã Thọ Phong", "Xã Trà Bồng", "Xã Trà Giang", "Xã Trường Giang", "Xã Tu Mơ Rông", "Xã Tây Trà", "Xã Tây Trà Bồng", "Xã Tư Nghĩa", "Xã Tịnh Khê", "Xã Vạn Tường", "Xã Vệ Giang", "Xã Xốp", "Xã Ya Ly", "Xã Đình Cương", "Xã Đông Sơn", "Xã Đông Trà Bồng", "Xã Đăk Hà", "Xã Đăk Kôi", "Xã Đăk Long", "Xã Đăk Mar", "Xã Đăk Môn", "Xã Đăk Plô", "Xã Đăk Pxi", "Xã Đăk Pék", "Xã Đăk Rve", "Xã Đăk Rơ Wa", "Xã Đăk Sao", "Xã Đăk Tô", "Xã Đăk Tờ Kan", "Xã Đăk Ui", "Xã Đặng Thùy Trâm", "Đặc khu Lý Sơn"], "52": ["Phường An Bình", "Phường An Khê", "Phường An Nhơn", "Phường An Nhơn Bắc", "Phường An Nhơn Nam", "Phường An Nhơn Đông", "Phường An Phú", "Phường Ayun Pa", "Phường Bình Định", "Phường Bồng Sơn", "Phường Diên Hồng", "Phường Hoài Nhơn", "Phường Hoài Nhơn Bắc", "Phường Hoài Nhơn Nam", "Phường Hoài Nhơn Tây", "Phường Hoài Nhơn Đông", "Phường Hội Phú", "Phường Pleiku", "Phường Quy Nhơn", "Phường Quy Nhơn Bắc", "Phường Quy Nhơn Nam", "Phường Quy Nhơn Tây", "Phường Quy Nhơn Đông", "Phường Tam Quan", "Phường Thống Nhất", "Xã Al Bá", "Xã An Hòa", "Xã An Lão", "Xã An Lương", "Xã An Nhơn Tây", "Xã An Toàn", "Xã An Vinh", "Xã Ayun", "Xã Biển Hồ", "Xã Bàu Cạn", "Xã Bình An", "Xã Bình Dương", "Xã Bình Hiệp", "Xã Bình Khê", "Xã Bình Phú", "Xã Bờ Ngoong", "Xã Canh Liên", "Xã Canh Vinh", "Xã Chơ Long", "Xã Chư A Thai", "Xã Chư Krey", "Xã Chư Prông", "Xã Chư Păh", "Xã Chư Pưh", "Xã Chư Sê", "Xã Cát Tiến", "Xã Cửu An", "Xã Gào", "Xã Hoài Ân", "Xã Hra", "Xã Hòa Hội", "Xã Hội Sơn", "Xã Ia Boòng", "Xã Ia Băng", "Xã Ia Chia", "Xã Ia Dom", "Xã Ia Dreh", "Xã Ia Dơk", "Xã Ia Grai", "Xã Ia Hiao", "Xã Ia Hrung", "Xã Ia Hrú", "Xã Ia Khươl", "Xã Ia Ko", "Xã Ia Krái", "Xã Ia Krêl", "Xã Ia Le", "Xã Ia Ly", "Xã Ia Lâu", "Xã Ia Mơ", "Xã Ia Nan", "Xã Ia O", "Xã Ia Pa", "Xã Ia Phí", "Xã Ia Pia", "Xã Ia Pnôn", "Xã Ia Púch", "Xã Ia Rbol", "Xã Ia Rsai", "Xã Ia Sao", "Xã Ia Tul", "Xã Ia Tôr", "Xã KDang", "Xã Kbang", "Xã Kim Sơn", "Xã Kon Chiêng", "Xã Kon Gang", "Xã Krong", "Xã Kông Bơ La", "Xã Kông Chro", "Xã Lơ Pang", "Xã Mang Yang", "Xã Ngô Mây", "Xã Nhơn Châu", "Xã Phù Cát", "Xã Phù Mỹ", "Xã Phù Mỹ Bắc", "Xã Phù Mỹ Nam", "Xã Phù Mỹ Tây", "Xã Phù Mỹ Đông", "Xã Phú Thiện", "Xã Phú Túc", "Xã Pờ Tó", "Xã SRó", "Xã Sơn Lang", "Xã Tuy Phước", "Xã Tuy Phước Bắc", "Xã Tuy Phước Tây", "Xã Tuy Phước Đông", "Xã Tây Sơn", "Xã Tơ Tung", "Xã Uar", "Xã Vân Canh", "Xã Vĩnh Quang", "Xã Vĩnh Sơn", "Xã Vĩnh Thạnh", "Xã Vĩnh Thịnh", "Xã Vạn Đức", "Xã Xuân An", "Xã Ya Hội", "Xã Ya Ma", "Xã Ân Hảo", "Xã Ân Tường", "Xã Đak Pơ", "Xã Đak Rong", "Xã Đak Sơmei", "Xã Đak Đoa", "Xã Đăk Song", "Xã Đề Gi", "Xã Đức Cơ"], "56": ["Phường Hòa Thắng", "Phường Đông Ninh Hòa", "Phường Ba Ngòi", "Phường Bảo An", "Phường Bắc Cam Ranh", "Phường Bắc Nha Trang", "Phường Cam Linh", "Phường Cam Ranh", "Phường Nam Nha Trang", "Phường Nha Trang", "Phường Ninh Chử", "Phường Ninh Hòa", "Phường Phan Rang", "Phường Tây Nha Trang", "Phường Đô Vinh", "Phường Đông Hải", "Xã Hòa Trí", "Xã Nam Ninh Hòa", "Xã Tây Ninh Hòa", "Xã Anh Dũng", "Xã Bác Ái", "Xã Bác Ái Tây", "Xã Bác Ái Đông", "Xã Bắc Khánh Vĩnh", "Xã Bắc Ninh Hòa", "Xã Cam An", "Xã Cam Hiệp", "Xã Cam Lâm", "Xã Cà Ná", "Xã Công Hải", "Xã Diên Khánh", "Xã Diên Lâm", "Xã Diên Lạc", "Xã Diên Thọ", "Xã Diên Điền", "Xã Khánh Sơn", "Xã Khánh Vĩnh", "Xã Lâm Sơn", "Xã Mỹ Sơn", "Xã Nam Cam Ranh", "Xã Nam Khánh Vĩnh", "Xã Ninh Hải", "Xã Ninh Phước", "Xã Ninh Sơn", "Xã Phước Dinh", "Xã Phước Hà", "Xã Phước Hậu", "Xã Phước Hữu", "Xã Suối Dầu", "Xã Suối Hiệp", "Xã Thuận Bắc", "Xã Thuận Nam", "Xã Trung Khánh Vĩnh", "Xã Tu Bông", "Xã Tân Định", "Xã Tây Khánh Sơn", "Xã Tây Khánh Vĩnh", "Xã Vĩnh Hải", "Xã Vạn Hưng", "Xã Vạn Ninh", "Xã Vạn Thắng", "Xã Xuân Hải", "Xã Đông Khánh Sơn", "Xã Đại Lãnh", "Đặc khu Trường Sa"], "66": ["Phường Buôn Hồ", "Phường Buôn Ma Thuột", "Phường Bình Kiến", "Phường Cư Bao", "Phường Ea Kao", "Phường Hòa Hiệp", "Phường Phú Yên", "Phường Sông Cầu", "Phường Thành Nhất", "Phường Tuy Hòa", "Phường Tân An", "Phường Tân Lập", "Phường Xuân Đài", "Phường Đông Hòa", "Xã Buôn Đôn", "Xã Cuôr Đăng", "Xã Cư M’gar", "Xã Cư M’ta", "Xã Cư Prao", "Xã Cư Pui", "Xã Cư Pơng", "Xã Cư Yang", "Xã Dang Kang", "Xã Dliê Ya", "Xã Dray Bhăng", "Xã Dur Kmăl", "Xã Ea Bung", "Xã Ea Bá", "Xã Ea Drông", "Xã Ea Drăng", "Xã Ea Hiao", "Xã Ea H’Leo", "Xã Ea Kar", "Xã Ea Khăl", "Xã Ea Kiết", "Xã Ea Kly", "Xã Ea Knuếc", "Xã Ea Knốp", "Xã Ea Ktur", "Xã Ea Ly", "Xã Ea M’Droh", "Xã Ea Na", "Xã Ea Ning", "Xã Ea Nuôl", "Xã Ea Phê", "Xã Ea Păl", "Xã Ea Riêng", "Xã Ea Rốk", "Xã Ea Súp", "Xã Ea Trang", "Xã Ea Tul", "Xã Ea Wer", "Xã Ea Wy", "Xã Ea Ô", "Xã Hòa Mỹ", "Xã Hòa Phú", "Xã Hòa Sơn", "Xã Hòa Thịnh", "Xã Hòa Xuân", "Xã Ia Lốp", "Xã Ia Rvê", "Xã Krông Ana", "Xã Krông Bông", "Xã Krông Búk", "Xã Krông Nô", "Xã Krông Năng", "Xã Krông Pắc", "Xã Krông Á", "Xã Liên Sơn Lắk", "Xã M’Drắk", "Xã Nam Ka", "Xã Phú Hòa 1", "Xã Phú Hòa 2", "Xã Phú Mỡ", "Xã Phú Xuân", "Xã Pơng Drang", "Xã Quảng Phú", "Xã Suối Trai", "Xã Sông Hinh", "Xã Sơn Hòa", "Xã Sơn Thành", "Xã Tam Giang", "Xã Tuy An Bắc", "Xã Tuy An Nam", "Xã Tuy An Tây", "Xã Tuy An Đông", "Xã Tân Tiến", "Xã Tây Hòa", "Xã Tây Sơn", "Xã Vân Hòa", "Xã Vụ Bổn", "Xã Xuân Cảnh", "Xã Xuân Lãnh", "Xã Xuân Lộc", "Xã Xuân Phước", "Xã Xuân Thọ", "Xã Yang Mao", "Xã Ô Loan", "Xã Đắk Liêng", "Xã Đắk Phơi", "Xã Đồng Xuân", "Xã Đức Bình"], "68": ["Phường 1 Bảo Lộc", "Phường 2 Bảo Lộc", "Phường 3 Bảo Lộc", "Phường B''Lao'", "Phường Bình Thuận", "Phường Bắc Gia Nghĩa", "Phường Cam Ly - Đà Lạt", "Phường Hàm Thắng", "Phường La Gi", "Phường Lang Biang - Đà Lạt", "Phường Lâm Viên - Đà Lạt", "Phường Mũi Né", "Phường Nam Gia Nghĩa", "Phường Phan Thiết", "Phường Phú Thủy", "Phường Phước Hội", "Phường Tiến Thành", "Phường Xuân Hương - Đà Lạt", "Phường Xuân Trường - Đà Lạt", "Phường Đông Gia Nghĩa", "Xã Bảo Lâm 1", "Xã Bảo Lâm 2", "Xã Bảo Lâm 3", "Xã Bảo Lâm 4", "Xã Bảo Lâm 5", "Xã Bảo Thuận", "Xã Bắc Bình", "Xã Bắc Ruộng", "Xã Cát Tiên", "Xã Cát Tiên 2", "Xã Cát Tiên 3", "Xã Cư Jút", "Xã D''Ran'", "Xã Di Linh", "Xã Gia Hiệp", "Xã Hiệp Thạnh", "Xã Hoài Đức", "Xã Hàm Kiệm", "Xã Hàm Liêm", "Xã Hàm Thuận", "Xã Hàm Thuận Bắc", "Xã Hàm Thuận Nam", "Xã Hàm Thạnh", "Xã Hàm Tân", "Xã Hòa Bắc", "Xã Hòa Ninh", "Xã Hòa Thắng", "Xã Hải Ninh", "Xã Hồng Sơn", "Xã Hồng Thái", "Xã Ka Đô", "Xã Kiến Đức", "Xã Krông Nô", "Xã La Dạ", "Xã Liên Hương", "Xã Lương Sơn", "Xã Lạc Dương", "Xã Nam Ban Lâm Hà", "Xã Nam Dong", "Xã Nam Hà Lâm Hà", "Xã Nam Thành", "Xã Nam Đà", "Xã Nghị Đức", "Xã Nhân Cơ", "Xã Ninh Gia", "Xã Nâm Nung", "Xã Phan Rí Cửa", "Xã Phan Sơn", "Xã Phú Sơn Lâm Hà", "Xã Phúc Thọ Lâm Hà", "Xã Quảng Hòa", "Xã Quảng Khê", "Xã Quảng Lập", "Xã Quảng Phú", "Xã Quảng Sơn", "Xã Quảng Trực", "Xã Quảng Tân", "Xã Quảng Tín", "Xã Suối Kiết", "Xã Sông Lũy", "Xã Sơn Mỹ", "Xã Sơn Điền", "Xã Thuận An", "Xã Thuận Hạnh", "Xã Trà Tân", "Xã Trường Xuân", "Xã Tuy Phong", "Xã Tuy Đức", "Xã Tuyên Quang", "Xã Tà Hine", "Xã Tà Năng", "Xã Tà Đùng", "Xã Tánh Linh", "Xã Tân Hà Lâm Hà", "Xã Tân Hải", "Xã Tân Hội", "Xã Tân Lập", "Xã Tân Minh", "Xã Tân Thành", "Xã Vĩnh Hảo", "Xã Đam Rông 1", "Xã Đam Rông 2", "Xã Đam Rông 3", "Xã Đam Rông 4", "Xã Đinh Trang Thượng", "Xã Đinh Văn Lâm Hà", "Xã Đông Giang", "Xã Đơn Dương", "Xã Đạ Huoai", "Xã Đạ Huoai 2", "Xã Đạ Huoai 3", "Xã Đạ Tẻh", "Xã Đạ Tẻh 2", "Xã Đạ Tẻh 3", "Xã Đắk Mil", "Xã Đắk Song", "Xã Đắk Sắk", "Xã Đắk Wil", "Xã Đồng Kho", "Xã Đức An", "Xã Đức Linh", "Xã Đức Lập", "Xã Đức Trọng", "Đặc khu Phú Quý"], "75": ["Phường An Lộc", "Phường Biên Hòa", "Phường Bình Long", "Phường Bình Lộc", "Phường Bình Phước", "Phường Bảo Vinh", "Phường Chơn Thành", "Phường Hàng Gòn", "Phường Hố Nai", "Phường Long Bình", "Phường Long Hưng", "Phường Long Khánh", "Phường Minh Hưng", "Phường Phước Bình", "Phường Phước Long", "Phường Phước Tân", "Phường Tam Hiệp", "Phường Tam Phước", "Phường Trảng Dài", "Phường Trấn Biên", "Phường Tân Triều", "Phường Xuân Lập", "Phường Đồng Xoài", "Xã An Phước", "Xã An Viễn", "Xã Bom Bo", "Xã Bàu Hàm", "Xã Bình An", "Xã Bình Minh", "Xã Bình Tân", "Xã Bù Gia Mập", "Xã Bù Đăng", "Xã Cẩm Mỹ", "Xã Dầu Giây", "Xã Gia Kiệm", "Xã Hưng Phước", "Xã Hưng Thịnh", "Xã La Ngà", "Xã Long Hà", "Xã Long Phước", "Xã Long Thành", "Xã Lộc Hưng", "Xã Lộc Ninh", "Xã Lộc Quang", "Xã Lộc Thành", "Xã Lộc Thạnh", "Xã Lộc Tấn", "Xã Minh Đức", "Xã Nam Cát Tiên", "Xã Nghĩa Trung", "Xã Nha Bích", "Xã Nhơn Trạch", "Xã Phú Hòa", "Xã Phú Lâm", "Xã Phú Lý", "Xã Phú Nghĩa", "Xã Phú Riềng", "Xã Phú Trung", "Xã Phú Vinh", "Xã Phước An", "Xã Phước Sơn", "Xã Phước Thái", "Xã Sông Ray", "Xã Thanh Sơn", "Xã Thiện Hưng", "Xã Thuận Lợi", "Xã Thọ Sơn", "Xã Thống Nhất", "Xã Trảng Bom", "Xã Trị An", "Xã Tà Lài", "Xã Tân An", "Xã Tân Hưng", "Xã Tân Khai", "Xã Tân Lợi", "Xã Tân Phú", "Xã Tân Quan", "Xã Tân Tiến", "Xã Xuân Bắc", "Xã Xuân Hòa", "Xã Xuân Lộc", "Xã Xuân Phú", "Xã Xuân Quế", "Xã Xuân Thành", "Xã Xuân Đông", "Xã Xuân Đường", "Xã Xuân Định", "Xã Đa Kia", "Xã Đak Lua", "Xã Đak Nhau", "Xã Đăk Ơ", "Xã Đại Phước", "Xã Định Quán", "Xã Đồng Phú", "Xã Đồng Tâm"], "79": ["Phường  An Nhơn", "Phường An Hội Tây", "Phường An Hội Đông", "Phường An Lạc", "Phường Bảy Hiền", "Phường Bình Hưng Hòa", "Phường Bình Trị Đông", "Phường Bình Tân", "Phường Gò Vấp", "Phường Hạnh Thông", "Phường Khánh Hội", "Phường Thông Tây Hội", "Phường Tân Bình", "Phường Tân Hòa", "Phường Tân Sơn", "Phường Tân Sơn Hòa", "Phường Tân Sơn Nhất", "Phường Tân Tạo", "Phường Vĩnh Hội", "Phường Xóm Chiếu", "Phường  Rạch Dừa", "Phường An Khánh", "Phường An Phú", "Phường An Phú Đông", "Phường An Đông", "Phường Bà Rịa", "Phường Bàn Cờ", "Phường Bình Cơ", "Phường Bình Dương", "Phường Bình Hòa", "Phường Bình Lợi Trung", "Phường Bình Phú", "Phường Bình Quới", "Phường Bình Thạnh", "Phường Bình Thới", "Phường Bình Tiên", "Phường Bình Trưng", "Phường Bình Tây", "Phường Bình Đông", "Phường Bến Cát", "Phường Bến Thành", "Phường Chánh Hiệp", "Phường Chánh Hưng", "Phường Chánh Phú Hòa", "Phường Chợ Lớn", "Phường Chợ Quán", "Phường Cát Lái", "Phường Cầu Kiệu", "Phường Cầu Ông Lãnh", "Phường Diên Hồng", "Phường Dĩ An", "Phường Gia Định", "Phường Hiệp Bình", "Phường Hòa Bình", "Phường Hòa Hưng", "Phường Hòa Lợi", "Phường Linh Xuân", "Phường Long Bình", "Phường Long Hương", "Phường Long Nguyên", "Phường Long Phước", "Phường Long Trường", "Phường Lái Thiêu", "Phường Minh Phụng", "Phường Nhiêu Lộc", "Phường Phú An", "Phường Phú Lâm", "Phường Phú Lợi", "Phường Phú Mỹ", "Phường Phú Nhuận", "Phường Phú Thuận", "Phường Phú Thạnh", "Phường Phú Thọ", "Phường Phú Thọ Hòa", "Phường Phú Định", "Phường Phước Long", "Phường Phước Thắng", "Phường Sài Gòn", "Phường Tam Bình", "Phường Tam Long", "Phường Tam Thắng", "Phường Thuận An", "Phường Thuận Giao", "Phường Thạnh Mỹ Tây", "Phường Thới An", "Phường Thới Hòa", "Phường Thủ Dầu Một", "Phường Thủ Đức", "Phường Trung Mỹ Tây", "Phường Tân Hiệp", "Phường Tân Hưng", "Phường Tân Hải", "Phường Tân Khánh", "Phường Tân Mỹ", "Phường Tân Phú", "Phường Tân Phước", "Phường Tân Sơn Nhì", "Phường Tân Thuận", "Phường Tân Thành", "Phường Tân Thới Hiệp", "Phường Tân Uyên", "Phường Tân Đông Hiệp", "Phường Tân Định", "Phường Tây Nam", "Phường Tây Thạnh", "Phường Tăng Nhơn Phú", "Phường Vĩnh Tân", "Phường Vũng Tàu", "Phường Vườn Lài", "Phường Xuân Hòa", "Phường Đông Hòa", "Phường Đông Hưng Thuận", "Phường Đức Nhuận", "Xã An Long", "Xã An Nhơn Tây", "Xã An Thới Đông", "Xã Bà Điểm", "Xã Bàu Bàng", "Xã Bàu Lâm", "Xã Bình Chánh", "Xã Bình Châu", "Xã Bình Giã", "Xã Bình Hưng", "Xã Bình Khánh", "Xã Bình Lợi", "Xã Bình Mỹ", "Xã Bắc Tân Uyên", "Xã Châu Pha", "Xã Châu Đức", "Xã Cần Giờ", "Xã Củ Chi", "Xã Dầu Tiếng", "Xã Hiệp Phước", "Xã Hòa Hiệp", "Xã Hòa Hội", "Xã Hóc Môn", "Xã Hưng Long", "Xã Hồ Tràm", "Xã Kim Long", "Xã Long Hòa", "Xã Long Hải", "Xã Long Sơn", "Xã Long Điền", "Xã Minh Thạnh", "Xã Nghĩa Thành", "Xã Ngãi Giao", "Xã Nhuận Đức", "Xã Nhà Bè", "Xã Phú Giáo", "Xã Phú Hòa Đông", "Xã Phước Hòa", "Xã Phước Hải", "Xã Phước Thành", "Xã Thanh An", "Xã Thái Mỹ", "Xã Thường Tân", "Xã Thạnh An", "Xã Trừ Văn Thố", "Xã Tân An Hội", "Xã Tân Nhựt", "Xã Tân Vĩnh Lộc", "Xã Vĩnh Lộc", "Xã Xuyên Mộc", "Xã Xuân Sơn", "Xã Xuân Thới Sơn", "Xã Đông Thạnh", "Xã Đất Đỏ", "Đặc khu Côn Đảo"], "80": ["Phường An Tịnh", "Phường Bình Minh", "Phường Gia Lộc", "Phường Gò Dầu", "Phường Hòa Thành", "Phường Khánh Hậu", "Phường Kiến Tường", "Phường Long An", "Phường Long Hoa", "Phường Ninh Thạnh", "Phường Thanh Điền", "Phường Trảng Bàng", "Phường Tân An", "Phường Tân Ninh", "Xã An Lục Long", "Xã An Ninh", "Xã Bình Hiệp", "Xã Bình Hòa", "Xã Bình Thành", "Xã Bình Đức", "Xã Bến Cầu", "Xã Bến Lức", "Xã Châu Thành", "Xã Cần Giuộc", "Xã Cần Đước", "Xã Cầu Khởi", "Xã Dương Minh Châu", "Xã Hiệp Hòa", "Xã Hòa Hội", "Xã Hòa Khánh", "Xã Hưng Thuận", "Xã Hưng Điền", "Xã Hảo Đước", "Xã Hậu Nghĩa", "Xã Hậu Thạnh", "Xã Khánh Hưng", "Xã Long Cang", "Xã Long Chữ", "Xã Long Hựu", "Xã Long Thuận", "Xã Lương Hòa", "Xã Lộc Ninh", "Xã Mộc Hóa", "Xã Mỹ An", "Xã Mỹ Hạnh", "Xã Mỹ Lệ", "Xã Mỹ Lộc", "Xã Mỹ Quý", "Xã Mỹ Thạnh", "Xã Mỹ Yên", "Xã Nhơn Hòa Lập", "Xã Nhơn Ninh", "Xã Nhựt Tảo", "Xã Ninh Điền", "Xã Phước Chỉ", "Xã Phước Lý", "Xã Phước Thạnh", "Xã Phước Vinh", "Xã Phước Vĩnh Tây", "Xã Rạch Kiến", "Xã Thuận Mỹ", "Xã Thạnh Bình", "Xã Thạnh Hóa", "Xã Thạnh Lợi", "Xã Thạnh Phước", "Xã Thạnh Đức", "Xã Thủ Thừa", "Xã Truông Mít", "Xã Trà Vong", "Xã Tuyên Bình", "Xã Tuyên Thạnh", "Xã Tân Biên", "Xã Tân Châu", "Xã Tân Hòa", "Xã Tân Hưng", "Xã Tân Hội", "Xã Tân Long", "Xã Tân Lân", "Xã Tân Lập", "Xã Tân Phú", "Xã Tân Thành", "Xã Tân Thạnh", "Xã Tân Trụ", "Xã Tân Tây", "Xã Tân Tập", "Xã Tân Đông", "Xã Tầm Vu", "Xã Vàm Cỏ", "Xã Vĩnh Châu", "Xã Vĩnh Công", "Xã Vĩnh Hưng", "Xã Vĩnh Thạnh", "Xã Đông Thành", "Xã Đức Huệ", "Xã Đức Hòa", "Xã Đức Lập"], "82": ["Phường An Bình", "Phường Bình Xuân", "Phường Cai Lậy", "Phường Cao Lãnh", "Phường Gò Công", "Phường Hồng Ngự", "Phường Long Thuận", "Phường Mỹ Ngãi", "Phường Mỹ Phong", "Phường Mỹ Phước Tây", "Phường Mỹ Tho", "Phường Mỹ Trà", "Phường Nhị Quý", "Phường Sa Đéc", "Phường Sơn Qui", "Phường Thanh Hòa", "Phường Thường Lạc", "Phường Thới Sơn", "Phường Trung An", "Phường Đạo Thạnh", "Xã An Hòa", "Xã An Hữu", "Xã An Long", "Xã An Phước", "Xã An Thạnh Thủy", "Xã Ba Sao", "Xã Bình Hàng Trung", "Xã Bình Ninh", "Xã Bình Phú", "Xã Bình Thành", "Xã Bình Trưng", "Xã Châu Thành", "Xã Chợ Gạo", "Xã Cái Bè", "Xã Gia Thuận", "Xã Gò Công Đông", "Xã Hiệp Đức", "Xã Hòa Long", "Xã Hưng Thạnh", "Xã Hậu Mỹ", "Xã Hội Cư", "Xã Kim Sơn", "Xã Lai Vung", "Xã Long Bình", "Xã Long Hưng", "Xã Long Khánh", "Xã Long Phú Thuận", "Xã Long Tiên", "Xã Long Định", "Xã Lương Hòa Lạc", "Xã Lấp Vò", "Xã Mỹ An Hưng", "Xã Mỹ Hiệp", "Xã Mỹ Lợi", "Xã Mỹ Quí", "Xã Mỹ Thiện", "Xã Mỹ Thành", "Xã Mỹ Thọ", "Xã Mỹ Tịnh An", "Xã Mỹ Đức Tây", "Xã Ngũ Hiệp", "Xã Phong Hòa", "Xã Phong Mỹ", "Xã Phú Cường", "Xã Phú Hựu", "Xã Phú Thành", "Xã Phú Thọ", "Xã Phương Thịnh", "Xã Tam Nông", "Xã Thanh Bình", "Xã Thanh Hưng", "Xã Thanh Mỹ", "Xã Tháp Mười", "Xã Thường Phước", "Xã Thạnh Phú", "Xã Tràm Chim", "Xã Trường Xuân", "Xã Tân Dương", "Xã Tân Hòa", "Xã Tân Hương", "Xã Tân Hồng", "Xã Tân Hộ Cơ", "Xã Tân Khánh Trung", "Xã Tân Long", "Xã Tân Nhuận Đông", "Xã Tân Phú", "Xã Tân Phú Trung", "Xã Tân Phú Đông", "Xã Tân Phước 1", "Xã Tân Phước 2", "Xã Tân Phước 3", "Xã Tân Thuận Bình", "Xã Tân Thành", "Xã Tân Thạnh", "Xã Tân Thới", "Xã Tân Điền", "Xã Tân Đông", "Xã Vĩnh Bình", "Xã Vĩnh Hựu", "Xã Vĩnh Kim", "Xã Đốc Binh Kiều", "Xã Đồng Sơn"], "86": ["Phường Long Châu", "Phường Phước Hậu", "Phường Thanh Đức", "Phường An Hội", "Phường Bình Minh", "Phường Bến Tre", "Phường Cái Vồn", "Phường Duyên Hải", "Phường Hòa Thuận", "Phường Long Đức", "Phường Nguyệt Hóa", "Phường Phú Khương", "Phường Phú Tân", "Phường Sơn Đông", "Phường Trà Vinh", "Phường Trường Long Hòa", "Phường Tân Hạnh", "Phường Tân Ngãi", "Phường Đông Thành", "Xã An Bình", "Xã An Hiệp", "Xã An Ngãi Trung", "Xã An Phú Tân", "Xã An Qui", "Xã An Trường", "Xã An Định", "Xã Ba Tri", "Xã Bình Phước", "Xã Bình Phú", "Xã Bình Đại", "Xã Bảo Thạnh", "Xã Châu Hòa", "Xã Châu Hưng", "Xã Châu Thành", "Xã Chợ Lách", "Xã Càng Long", "Xã Cái Ngang", "Xã Cái Nhum", "Xã Cầu Kè", "Xã Cầu Ngang", "Xã Giao Long", "Xã Giồng Trôm", "Xã Hiếu Phụng", "Xã Hiếu Thành", "Xã Hiệp Mỹ", "Xã Hàm Giang", "Xã Hòa Bình", "Xã Hòa Hiệp", "Xã Hòa Minh", "Xã Hùng Hòa", "Xã Hưng Khánh Trung", "Xã Hưng Mỹ", "Xã Hưng Nhượng", "Xã Hương Mỹ", "Xã Long Hiệp", "Xã Long Hòa", "Xã Long Hồ", "Xã Long Hữu", "Xã Long Thành", "Xã Long Vĩnh", "Xã Lưu Nghiệp Anh", "Xã Lương Hòa", "Xã Lương Phú", "Xã Lộc Thuận", "Xã Lục Sĩ Thành", "Xã Mỏ Cày", "Xã Mỹ Chánh Hòa", "Xã Mỹ Long", "Xã Mỹ Thuận", "Xã Ngãi Tứ", "Xã Ngũ Lạc", "Xã Nhuận Phú Tân", "Xã Nhơn Phú", "Xã Nhị Long", "Xã Nhị Trường", "Xã Phong Thạnh", "Xã Phú Phụng", "Xã Phú Quới", "Xã Phú Thuận", "Xã Phú Túc", "Xã Phước Long", "Xã Phước Mỹ Trung", "Xã Quới An", "Xã Quới Thiện", "Xã Quới Điền", "Xã Song Lộc", "Xã Song Phú", "Xã Tam Bình", "Xã Tam Ngãi", "Xã Thành Thới", "Xã Thạnh Hải", "Xã Thạnh Phong", "Xã Thạnh Phú", "Xã Thạnh Phước", "Xã Thạnh Trị", "Xã Thới Thuận", "Xã Tiên Thủy", "Xã Tiểu Cần", "Xã Trung Hiệp", "Xã Trung Ngãi", "Xã Trung Thành", "Xã Trà Côn", "Xã Trà Cú", "Xã Trà Ôn", "Xã Tân An", "Xã Tân Hào", "Xã Tân Hòa", "Xã Tân Long Hội", "Xã Tân Lược", "Xã Tân Phú", "Xã Tân Quới", "Xã Tân Thành Bình", "Xã Tân Thủy", "Xã Tân Xuân", "Xã Tập Ngãi", "Xã Tập Sơn", "Xã Vinh Kim", "Xã Vĩnh Xuân", "Xã Vĩnh Thành", "Xã Đôn Châu", "Xã Đông Hải", "Xã Đại An", "Xã Đại Điền", "Xã Đồng Khởi"], "91": ["Phường Bình Đức", "Phường Chi Lăng", "Phường Châu Đốc", "Phường Hà Tiên", "Phường Long Phú", "Phường Long Xuyên", "Phường Mỹ Thới", "Phường Rạch Giá", "Phường Thới Sơn", "Phường Tân Châu", "Phường Tô Châu", "Phường Tịnh Biên", "Phường Vĩnh Thông", "Phường Vĩnh Tế", "Xã An Biên", "Xã An Châu", "Xã An Cư", "Xã An Minh", "Xã An Phú", "Xã Ba Chúc", "Xã Bình An", "Xã Bình Giang", "Xã Bình Hòa", "Xã Bình Mỹ", "Xã Bình Sơn", "Xã Bình Thạnh Đông", "Xã Châu Phong", "Xã Châu Phú", "Xã Châu Thành", "Xã Chợ Mới", "Xã Chợ Vàm", "Xã Cô Tô", "Xã Cù Lao Giêng", "Xã Cần Đăng", "Xã Giang Thành", "Xã Giồng Riềng", "Xã Gò Quao", "Xã Hòa Hưng", "Xã Hòa Lạc", "Xã Hòa Thuận", "Xã Hòa Điền", "Xã Hòn Nghệ", "Xã Hòn Đất", "Xã Hội An", "Xã Khánh Bình", "Xã Kiên Lương", "Xã Long Kiến", "Xã Long Thạnh", "Xã Long Điền", "Xã Mỹ Hòa Hưng", "Xã Mỹ Thuận", "Xã Mỹ Đức", "Xã Ngọc Chúc", "Xã Nhơn Hội", "Xã Nhơn Mỹ", "Xã Núi Cấm", "Xã Phú An", "Xã Phú Hòa", "Xã Phú Hữu", "Xã Phú Lâm", "Xã Phú Tân", "Xã Sơn Hải", "Xã Sơn Kiên", "Xã Thoại Sơn", "Xã Thạnh Hưng", "Xã Thạnh Lộc", "Xã Thạnh Mỹ Tây", "Xã Thạnh Đông", "Xã Tiên Hải", "Xã Tri Tôn", "Xã Tân An", "Xã Tân Hiệp", "Xã Tân Hội", "Xã Tân Thạnh", "Xã Tây Phú", "Xã Tây Yên", "Xã U Minh Thượng", "Xã Vân Khánh", "Xã Vĩnh An", "Xã Vĩnh Bình", "Xã Vĩnh Gia", "Xã Vĩnh Hanh", "Xã Vĩnh Hòa", "Xã Vĩnh Hòa Hưng", "Xã Vĩnh Hậu", "Xã Vĩnh Phong", "Xã Vĩnh Thuận", "Xã Vĩnh Thạnh Trung", "Xã Vĩnh Trạch", "Xã Vĩnh Tuy", "Xã Vĩnh Xương", "Xã Vĩnh Điều", "Xã Óc Eo", "Xã Ô Lâm", "Xã Đông Hòa", "Xã Đông Hưng", "Xã Đông Thái", "Xã Định Hòa", "Xã Định Mỹ", "Đặc khu Kiên Hải", "Đặc khu Phú Quốc", "Đặc khu Thổ Châu"], "92": ["Phường An Bình", "Phường Bình Thủy", "Phường Cái Khế", "Phường Cái Răng", "Phường Hưng Phú", "Phường Khánh Hòa", "Phường Long Bình", "Phường Long Mỹ", "Phường Long Phú 1", "Phường Long Tuyền", "Phường Mỹ Quới", "Phường Mỹ Xuyên", "Phường Ngã Bảy", "Phường Ngã Năm", "Phường Ninh Kiều", "Phường Phú Lợi", "Phường Phước Thới", "Phường Sóc Trăng", "Phường Thuận Hưng", "Phường Thốt Nốt", "Phường Thới An Đông", "Phường Thới Long", "Phường Trung Nhứt", "Phường Tân An", "Phường Tân Lộc", "Phường Vĩnh Châu", "Phường Vĩnh Phước", "Phường Vị Thanh", "Phường Vị Tân", "Phường Ô Môn", "Phường Đại Thành", "Xã  Phú Hữu", "Xã  Đại Hải", "Xã An Lạc Thôn", "Xã An Ninh", "Xã An Thạnh", "Xã Châu Thành", "Xã Cù Lao Dung", "Xã Cờ Đỏ", "Xã Gia Hòa", "Xã Hiệp Hưng", "Xã Hòa An", "Xã Hòa Tú", "Xã Hỏa Lựu", "Xã Hồ Đắc Kiện", "Xã Kế Sách", "Xã Lai Hòa", "Xã Liêu Tú", "Xã Long Hưng", "Xã Long Phú", "Xã Lâm Tân", "Xã Lương Tâm", "Xã Lịch Hội Thượng", "Xã Mỹ Hương", "Xã Mỹ Phước", "Xã Mỹ Tú", "Xã Ngọc Tố", "Xã Nhu Gia", "Xã Nhơn Mỹ", "Xã Nhơn Ái", "Xã Phong Nẫm", "Xã Phong Điền", "Xã Phú Lộc", "Xã Phú Tâm", "Xã Phương Bình", "Xã Phụng Hiệp", "Xã Thuận Hòa", "Xã Thạnh An", "Xã Thạnh Hòa", "Xã Thạnh Phú", "Xã Thạnh Quới", "Xã Thạnh Thới An", "Xã Thạnh Xuân", "Xã Thới An Hội", "Xã Thới Hưng", "Xã Thới Lai", "Xã Trung Hưng", "Xã Trường Khánh", "Xã Trường Long", "Xã Trường Long Tây", "Xã Trường Thành", "Xã Trường Xuân", "Xã Trần Đề", "Xã Tài Văn", "Xã Tân Bình", "Xã Tân Hòa", "Xã Tân Long", "Xã Tân Phước Hưng", "Xã Tân Thạnh", "Xã Vĩnh Hải", "Xã Vĩnh Lợi", "Xã Vĩnh Thuận Đông", "Xã Vĩnh Thạnh", "Xã Vĩnh Trinh", "Xã Vĩnh Tường", "Xã Vĩnh Viễn", "Xã Vị Thanh 1", "Xã Vị Thủy", "Xã Xà Phiên", "Xã Đông Hiệp", "Xã Đông Phước", "Xã Đông Thuận", "Xã Đại Ngãi"], "96": ["Phường An Xuyên", "Phường Bạc Liêu", "Phường Giá Rai", "Phường Hiệp Thành", "Phường Hòa Thành", "Phường Láng Tròn", "Phường Lý Văn Lâm", "Phường Tân Thành", "Phường Vĩnh Trạch", "Xã An Trạch", "Xã Biển Bạch", "Xã Châu Thới", "Xã Cái Nước", "Xã Cái Đôi Vàm", "Xã Gành Hào", "Xã Hòa Bình", "Xã Hưng Hội", "Xã Hưng Mỹ", "Xã Hồ Thị Kỷ", "Xã Hồng Dân", "Xã Khánh An", "Xã Khánh Bình", "Xã Khánh Hưng", "Xã Khánh Lâm", "Xã Long Điền", "Xã Lương Thế Trân", "Xã Nguyễn Phích", "Xã Nguyễn Việt Khái", "Xã Ninh Quới", "Xã Ninh Thạnh Lợi", "Xã Năm Căn", "Xã Phan Ngọc Hiển", "Xã Phong Hiệp", "Xã Phong Thạnh", "Xã Phú Mỹ", "Xã Phú Tân", "Xã Phước Long", "Xã Quách Phẩm", "Xã Sông Đốc", "Xã Tam Giang", "Xã Thanh Tùng", "Xã Thới Bình", "Xã Trí Phải", "Xã Trần Phán", "Xã Trần Văn Thời", "Xã Tân Hưng", "Xã Tân Lộc", "Xã Tân Thuận", "Xã Tân Tiến", "Xã Tân Ân", "Xã Tạ An Khương", "Xã U Minh", "Xã Vĩnh Hậu", "Xã Vĩnh Lộc", "Xã Vĩnh Lợi", "Xã Vĩnh Mỹ", "Xã Vĩnh Phước", "Xã Vĩnh Thanh", "Xã Đá Bạc", "Xã Đông Hải", "Xã Đất Mũi", "Xã Đất Mới", "Xã Đầm Dơi", "Xã Định Thành"]}};
+const HS_HEADERS = ["STT", "Mã lớp", "Mã học sinh", "Họ tên", "Ngày sinh", "Giới tính", "Trạng thái HS", "Ngày nhập trạng thái", "Chuyển đi", "Chuyển đến từ Tỉnh/Thành Phố", "Chuyển đến từ Xã", "Lý do thôi học", "Dân tộc", "Quốc tịch", "Tôn giáo", "Tỉnh/Thành phố\n(Theo địa chỉ thường trú)", "", "Xã/Phường\n(Theo địa chỉ thường trú)", "Tổ/Thôn/Xóm (Theo địa chỉ thường trú)", "Tỉnh/Thành phố\n(Theo quê quán)", "", "Xã/Phường\n(Theo quê quán)", "Tổ/Thôn/Xóm (Theo quê quán)", "Tỉnh/Thành Phố\n(Theo nơi sinh)", "", "Nơi sinh", "Chỗ ở hiện nay", "Số điện thoại liên hệ", "Khu vực", "Loại khuyết tật", "Đối tượng chính sách", "Miễn học phí", "Giảm học phí", "Hỗ trợ chi phí học tập", "Hỗ trợ nhà ở", "Cấp tiền hàng tháng", "Cấp gạo", "Hướng nghiệp, dạy nghề", "Học sinh biết bơi", "Bệnh về mắt", "P.huynh có Smartphone", "P.huynh có M.tính kết nối Internet", "Số CMTND/TCC", "Nơi cấp", "Ngày cấp", "Số định danh cá nhân", "Đội viên", "Đoàn viên", "Học tiếng dân tộc", "Tiếng dân tộc", "Số buổi học trên tuần", "Học chương trình giáo dục của Bộ", "Học sinh bán trú", "Học bán trú", "Có mẹ dân tộc", "Có cha dân tộc", "Lưu ban năm trước", "Tư vấn giáo dục hướng nghiệp", "Họ tên cha", "Nghề nghiệp cha", "Năm sinh cha", "Số CCCD/CMND cha", "Họ tên mẹ", "Nghề nghiệp mẹ", "Năm sinh mẹ", "Số CCCD/CMND mẹ", "Họ tên người giám hộ", "Nghề nghiệp người giám hộ", "Năm sinh người giám hộ", "Số CCCD/CMND người giám hộ"]; // 70 cột, đúng thứ tự file mẫu (giữ cả 3 cột trống do merge)
+
+const HS_YESNO = ["Có","Không"];
+const HS_FIELDS = {
+  6:  {label:"Trạng thái học sinh", type:"select", opts:HS_LOOKUPS.TRANG_THAI, def:"Đang học"},
+  7:  {label:"Ngày nhập trạng thái", type:"date"},
+  8:  {label:"Chuyển đi (ghi rõ chuyển đến trường/nơi nào)", type:"text"},
+  9:  {label:"Chuyển đến từ Tỉnh/Thành phố", type:"select", opts:HS_LOOKUPS.TINH.map(t=>t.ten)},
+  10: {label:"Chuyển đến từ Xã", type:"select", opts:[], dependsOn:9},
+  11: {label:"Lý do thôi học", type:"select", opts:HS_LOOKUPS.LD_THOI_HOC},
+  12: {label:"Dân tộc", type:"select", opts:HS_LOOKUPS.DAN_TOC},
+  13: {label:"Quốc tịch", type:"select", opts:HS_LOOKUPS.QUOC_TICH, def:"Việt Nam"},
+  14: {label:"Tôn giáo", type:"text", def:"Không"},
+
+  15: {label:"Tỉnh/Thành phố (theo địa chỉ thường trú)", type:"select", opts:HS_LOOKUPS.TINH.map(t=>t.ten), def:"Tỉnh An Giang"},
+  17: {label:"Xã/Phường (theo địa chỉ thường trú)", type:"select", opts:[], dependsOn:15},
+  18: {label:"Tổ/Thôn/Xóm (theo địa chỉ thường trú)", type:"text"},
+  19: {label:"Tỉnh/Thành phố (theo quê quán)", type:"select", opts:HS_LOOKUPS.TINH.map(t=>t.ten)},
+  21: {label:"Xã/Phường (theo quê quán)", type:"select", opts:[], dependsOn:19},
+  22: {label:"Tổ/Thôn/Xóm (theo quê quán)", type:"text"},
+  23: {label:"Tỉnh/Thành phố (theo nơi sinh)", type:"select", opts:HS_LOOKUPS.TINH.map(t=>t.ten)},
+  25: {label:"Nơi sinh (VD: Bệnh viện ... / Xã ...)", type:"text"},
+  26: {label:"Chỗ ở hiện nay", type:"text"},
+  27: {label:"Số điện thoại liên hệ", type:"tel"},
+
+  28: {label:"Khu vực", type:"select", opts:HS_LOOKUPS.KHU_VUC},
+  29: {label:"Loại khuyết tật", type:"select", opts:["Không",...HS_LOOKUPS.KHUYET_TAT], def:"Không"},
+  30: {label:"Đối tượng chính sách", type:"select", opts:["Không",...HS_LOOKUPS.DOI_TUONG_CS], def:"Không"},
+  31: {label:"Miễn học phí", type:"select", opts:HS_YESNO},
+  32: {label:"Giảm học phí", type:"select", opts:HS_YESNO},
+  33: {label:"Hỗ trợ chi phí học tập", type:"select", opts:HS_YESNO},
+  34: {label:"Hỗ trợ nhà ở", type:"select", opts:HS_YESNO},
+  35: {label:"Cấp tiền hàng tháng", type:"select", opts:HS_YESNO},
+  36: {label:"Cấp gạo", type:"select", opts:HS_YESNO},
+  37: {label:"Hướng nghiệp, dạy nghề", type:"select", opts:["Không",...HS_LOOKUPS.HUONG_NGHIEP_DN], def:"Không"},
+  38: {label:"Học sinh biết bơi", type:"select", opts:HS_YESNO},
+  39: {label:"Bệnh về mắt", type:"select", opts:["Không",...HS_LOOKUPS.BENH_VE_MAT], def:"Không"},
+  40: {label:"Phụ huynh có Smartphone", type:"select", opts:HS_YESNO},
+  41: {label:"Phụ huynh có máy tính kết nối Internet", type:"select", opts:HS_YESNO},
+
+  42: {label:"Số CMTND/TCC", type:"text"},
+  43: {label:"Nơi cấp", type:"text"},
+  44: {label:"Ngày cấp", type:"date"},
+  45: {label:"Số định danh cá nhân", type:"text"},
+
+  46: {label:"Đội viên", type:"select", opts:HS_YESNO},
+  47: {label:"Đoàn viên", type:"select", opts:HS_YESNO},
+  48: {label:"Học tiếng dân tộc", type:"select", opts:HS_YESNO},
+  49: {label:"Tiếng dân tộc", type:"select", opts:HS_LOOKUPS.TIENG_DAN_TOC},
+  50: {label:"Số buổi học trên tuần", type:"select", opts:HS_LOOKUPS.SO_BUOI_HOC_TREN_TUAN},
+  51: {label:"Học chương trình giáo dục của Bộ", type:"select", opts:HS_YESNO},
+  52: {label:"Học sinh bán trú", type:"select", opts:HS_YESNO},
+  53: {label:"Học bán trú (diện)", type:"select", opts:HS_LOOKUPS.BAN_TRU},
+  54: {label:"Có mẹ dân tộc", type:"select", opts:HS_YESNO},
+  55: {label:"Có cha dân tộc", type:"select", opts:HS_YESNO},
+  56: {label:"Lưu ban năm trước", type:"select", opts:HS_YESNO},
+  57: {label:"Tư vấn giáo dục hướng nghiệp", type:"select", opts:HS_YESNO},
+
+  58: {label:"Họ tên cha", type:"text"},
+  59: {label:"Nghề nghiệp cha", type:"text"},
+  60: {label:"Năm sinh cha", type:"number"},
+  61: {label:"Số CCCD/CMND cha", type:"text"},
+  62: {label:"Họ tên mẹ", type:"text"},
+  63: {label:"Nghề nghiệp mẹ", type:"text"},
+  64: {label:"Năm sinh mẹ", type:"number"},
+  65: {label:"Số CCCD/CMND mẹ", type:"text"},
+  66: {label:"Họ tên người giám hộ", type:"text"},
+  67: {label:"Nghề nghiệp người giám hộ", type:"text"},
+  68: {label:"Năm sinh người giám hộ", type:"number"},
+  69: {label:"Số CCCD/CMND người giám hộ", type:"text"},
+};
+const HS_KHONG_CAN_NGAY = ["Đang học","Chuyển đến trong hè","Chuyển đi trong hè","Thôi học trong hè"];
+const HS_SECTIONS = [
+  {title:"Trạng thái & hồ sơ gốc", cols:[6,7,8,9,10,11,12,13,14]},
+  {title:"Địa chỉ", cols:[15,17,18,19,21,22,23,25,26,27]},
+  {title:"Khu vực & chính sách hỗ trợ", cols:[28,29,30,31,32,33,34,35,36,37,38,39,40,41]},
+  {title:"Giấy tờ tùy thân", cols:[42,43,44,45]},
+  {title:"Đoàn – Đội & học tập", cols:[46,47,48,49,50,51,52,53,54,55,56,57]},
+  {title:"Thông tin cha", cols:[58,59,60,61]},
+  {title:"Thông tin mẹ", cols:[62,63,64,65]},
+  {title:"Người giám hộ (nếu có)", cols:[66,67,68,69]},
+];
+
+/* Firebase RTDB tự ý chuyển object có toàn key số nguyên liền nhau thành MẢNG khi lưu.
+   Để tránh lệch dữ liệu, luôn lưu dưới dạng key chuỗi "c0","c1"... rồi quy đổi lại khi đọc. */
+function hsRaDangFirebase(d){
+  const out = {};
+  Object.keys(d).forEach(k=>{
+    if(k==="savedAt" || k==="uid") out[k] = d[k];
+    else out["c"+k] = d[k];
+  });
+  return out;
+}
+function hsTuDangFirebase(r){
+  if(!r) return null;
+  const out = {};
+  Object.keys(r).forEach(k=>{
+    if(k==="savedAt" || k==="uid") out[k] = r[k];
+    else if(k[0]==="c") out[Number(k.slice(1))] = r[k];
+  });
+  return out;
+}
+function hsNgayToIso(s){
+  if(!s) return "";
+  const m = String(s).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(!m) return "";
+  return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+}
+function hsIsoToNgay(s){
+  if(!s) return "";
+  const m = String(s).trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(!m) return "";
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
+/* Dựng khung form 1 lần khi tải trang (không phụ thuộc đăng nhập) */
+(function xayDungFormHoSo(){
+  HS_LOOKUPS.GIOI_TINH.forEach(o=>{ const op=document.createElement("option"); op.value=o; op.textContent=o; $('hs_gioitinh').appendChild(op); });
+
+  const host = $('hsSectionsHost');
+  host.innerHTML = HS_SECTIONS.map(sec=>{
+    const fields = sec.cols.map(col=>{
+      const def = HS_FIELDS[col];
+      const id = 'hs_' + col;
+      let inner;
+      if(def.type==='select') inner = `<select id="${id}"><option value="">— Chọn —</option></select>`;
+      else if(def.type==='date') inner = `<input type="date" id="${id}">`;
+      else if(def.type==='tel') inner = `<input type="tel" id="${id}" inputmode="numeric">`;
+      else if(def.type==='number') inner = `<input type="number" id="${id}" min="1930" max="2015">`;
+      else inner = `<input type="text" id="${id}" maxlength="120">`;
+      return `<div class="field" id="wrap_${id}"><label>${esc(def.label)}</label>${inner}</div>`;
+    }).join('');
+    return `<div class="section-title">${esc(sec.title)}</div>${fields}`;
+  }).join('');
+
+  Object.keys(HS_FIELDS).map(Number).forEach(col=>{
+    const def = HS_FIELDS[col];
+    if(def.type!=='select') return;
+    const el = $('hs_'+col);
+    if(!def.dependsOn) def.opts.forEach(o=>{ const op=document.createElement('option'); op.value=o; op.textContent=o; el.appendChild(op); });
+    el.addEventListener('change', ()=> hsThayDoiTruong(col));
+  });
+  [9,15,19].forEach(hsCapNhatXa);
+  hsCapNhatHienThi();
+})();
+
+function hsCapNhatXa(colTinh){
+  const colXa = Object.keys(HS_FIELDS).map(Number).find(c=> HS_FIELDS[c].dependsOn===colTinh);
+  if(colXa==null) return;
+  const elTinh = $('hs_'+colTinh), elXa = $('hs_'+colXa);
+  if(!elTinh || !elXa) return;
+  const tinh = HS_LOOKUPS.TINH.find(t=> t.ten===elTinh.value);
+  const dsXa = tinh ? (HS_LOOKUPS.XA_PHUONG_BY_TINH[tinh.ma]||[]) : [];
+  const cu = elXa.value;
+  elXa.innerHTML = '<option value="">— Chọn —</option>' + dsXa.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
+  if(dsXa.includes(cu)) elXa.value = cu;
+}
+function hsThayDoiTruong(col){
+  if([9,15,19].includes(col)) hsCapNhatXa(col);
+  if(col===6 || col===48 || col===52) hsCapNhatHienThi();
+}
+function hsHienAn(col, hien){ const w=$('wrap_hs_'+col); if(w) w.style.display = hien? '':'none'; }
+function hsCapNhatHienThi(){
+  const tt = $('hs_6').value;
+  hsHienAn(7, tt && !HS_KHONG_CAN_NGAY.includes(tt));
+  hsHienAn(8, /Chuyển đi/.test(tt));
+  hsHienAn(9, /Chuyển đến/.test(tt));
+  hsHienAn(10, /Chuyển đến/.test(tt));
+  hsHienAn(11, tt==='Thôi học kỳ 1' || tt==='Thôi học kỳ 2');
+  hsHienAn(49, $('hs_48').value==='Có');
+  hsHienAn(53, $('hs_52').value==='Có');
+}
+
+function hsDienGiaTri(data){
+  $('hs_hoten').value = (data && data[3]) || '';
+  $('hs_ngaysinh').value = hsNgayToIso(data && data[4]);
+  $('hs_gioitinh').value = (data && data[5]) || '';
+  Object.keys(HS_FIELDS).map(Number).forEach(col=>{
+    const def = HS_FIELDS[col], el = $('hs_'+col);
+    if(!el) return;
+    let v = (data && data[col]!=null) ? data[col] : (def.def || '');
+    if(def.type==='date') v = hsNgayToIso(v);
+    if(def.type==='select' && def.dependsOn) hsCapNhatXa(def.dependsOn);
+    el.value = v;
+  });
+  hsCapNhatHienThi();
+}
+function hsLayGiaTri(){
+  const data = {};
+  Object.keys(HS_FIELDS).map(Number).forEach(col=>{
+    const def = HS_FIELDS[col], el = $('hs_'+col);
+    if(!el) return;
+    let v = el.value || '';
+    if(def.type==='date') v = hsIsoToNgay(v);
+    data[col] = v;
+  });
+  data[3] = $('hs_hoten').value.trim();
+  data[4] = hsIsoToNgay($('hs_ngaysinh').value);
+  data[5] = $('hs_gioitinh').value;
+  return data;
+}
+
+async function napHoSoCuaToi(){
+  if(!myUid){ hsDienGiaTri(null); return; }
+  try{ hosoCuaToi = hsTuDangFirebase((await hosoRef.child(myUid).once('value')).val()); }
+  catch(e){ hosoCuaToi = null; }
+  hsDienGiaTri(hosoCuaToi);
+  $('hsXoaBtn').style.display = hosoCuaToi ? 'inline-block' : 'none';
+}
+
+$('hsForm').onsubmit = async e=>{
+  e.preventDefault();
+  if(!myUid){ showMsg($('hsMsg'),'Đang kết nối, thử lại sau vài giây.','info'); return; }
+  const hoten = $('hs_hoten').value.trim();
+  const ngaysinh = $('hs_ngaysinh').value;
+  const gioitinh = $('hs_gioitinh').value;
+  if(!hoten){ showMsg($('hsMsg'),'Vui lòng nhập họ tên.','err'); return; }
+  if(!ngaysinh){ showMsg($('hsMsg'),'Vui lòng nhập ngày sinh.','err'); return; }
+  if(!gioitinh){ showMsg($('hsMsg'),'Vui lòng chọn giới tính.','err'); return; }
+  const tt = $('hs_6').value;
+  if(!tt){ showMsg($('hsMsg'),'Vui lòng chọn Trạng thái học sinh.','err'); return; }
+  if(!$('hs_12').value){ showMsg($('hsMsg'),'Vui lòng chọn Dân tộc.','err'); return; }
+  if(!$('hs_15').value){ showMsg($('hsMsg'),'Vui lòng chọn Tỉnh/Thành phố (thường trú).','err'); return; }
+  if(tt && !HS_KHONG_CAN_NGAY.includes(tt) && !$('hs_7').value){ showMsg($('hsMsg'),"Trạng thái này cần nhập Ngày nhập trạng thái.",'err'); return; }
+
+  const data = hsLayGiaTri();
+  data[1] = "10A1";
+  data.uid = myUid;
+  data.savedAt = new Date().toISOString();
+  try{
+    await hosoRef.child(myUid).set(hsRaDangFirebase(data));
+    hosoCuaToi = data;
+    $('hsXoaBtn').style.display = 'inline-block';
+    showMsg($('hsMsg'),'✅ Đã lưu hồ sơ. Vào lại đúng máy này bất cứ lúc nào để xem/sửa lại.','ok');
+  }catch(err){ showMsg($('hsMsg'), baoLoi(err),'err'); }
+};
+
+$('hsXoaBtn').onclick = async ()=>{
+  if(!confirm('Xoá hồ sơ đầu năm đã nộp?')) return;
+  try{
+    await hosoRef.child(myUid).remove();
+    hosoCuaToi = null;
+    $('hsForm').reset();
+    hsDienGiaTri(null);
+    $('hsXoaBtn').style.display = 'none';
+    showMsg($('hsMsg'),'Đã xoá hồ sơ.','ok');
+  }catch(e){ showMsg($('hsMsg'), baoLoi(e),'err'); }
+};
+
+/* -------------------- GIÁO VIÊN: đối chiếu + xuất Excel -------------------- */
+async function napHoSoTatCa(){
+  if(!isAdmin){ hosoTatCa = []; return; }
+  try{
+    const v = (await hosoRef.once('value')).val() || {};
+    hosoTatCa = Object.keys(v).map(uid=> ({ uid, ...hsTuDangFirebase(v[uid]) }));
+  }catch(e){ hosoTatCa = []; }
+}
+
+function renderAdminHoSo(){
+  if(!isAdmin) return;
+  $('hsCountBadge').textContent = hosoTatCa.length;
+
+  let h1 = `<tr><th>STT</th><th>Họ tên</th><th>Ngày sinh</th></tr>`;
+  if(!roster.length){
+    h1 += `<tr><td colspan="3" style="text-align:center;color:var(--ink-soft);">Cần nạp danh sách lớp để đối chiếu.</td></tr>`;
+  } else {
+    const daNop = new Set(hosoTatCa.map(r=> chuanTen(r[3])));
+    const thieu = roster.filter(st=> !daNop.has(chuanTen(st.name)));
+    if(!thieu.length) h1 += `<tr><td colspan="3" style="text-align:center;color:var(--leaf-dark);font-weight:700;">🎉 Cả lớp đã nộp hồ sơ đầu năm!</td></tr>`;
+    else thieu.forEach((st,i)=> h1 += `<tr style="background:#fdecea;"><td>${i+1}</td><td>${esc(st.name)}</td><td>${esc(st.dob)}</td></tr>`);
+  }
+  $('hsMissingTable').innerHTML = h1;
+
+  let h2 = `<tr><th>#</th><th>Họ tên</th><th>Ngày sinh</th><th>Trạng thái</th><th>Nộp lúc</th><th></th></tr>`;
+  if(!hosoTatCa.length){
+    h2 += `<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);">Chưa có em nào nộp.</td></tr>`;
+  } else {
+    hosoTatCa.forEach((r,i)=> h2 += `<tr>
+      <td>${i+1}</td><td>${esc(r[3])}</td><td>${esc(r[4])}</td><td>${esc(r[6])}</td>
+      <td>${r.savedAt ? new Date(r.savedAt).toLocaleString('vi-VN') : '—'}</td>
+      <td><button class="btn btn-ghost btn-sm" data-xoaHs="${r.uid}">Xóa</button></td></tr>`);
+  }
+  $('hsAdminTable').innerHTML = h2;
+  document.querySelectorAll('[data-xoaHs]').forEach(b=> b.onclick = async ()=>{
+    if(!confirm('Xóa hồ sơ đầu năm này?')) return;
+    try{ await hosoRef.child(b.getAttribute('data-xoaHs')).remove(); await napHoSoTatCa(); renderAdminHoSo(); }
+    catch(e){ showMsg($('adminMsg'), baoLoi(e),'err'); }
+  });
+}
+
+$('exportHsBtn').onclick = async ()=>{
+  const btn = $('exportHsBtn');
+  btn.disabled = true;
+  try{
+    await napHoSoTatCa();
+    const rows = [HS_HEADERS.slice()];
+    hosoTatCa.forEach(r=>{
+      const row = new Array(HS_HEADERS.length).fill('');
+      for(let c=0;c<HS_HEADERS.length;c++) row[c] = (r[c]!=null) ? r[c] : '';
+      rows.push(row);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = HS_HEADERS.map(()=>({wch:16}));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+    XLSX.writeFile(wb, `ho-so-dau-nam-10A1-${new Date().toISOString().slice(0,10)}.xlsx`);
+    showMsg($('adminMsg'), 'Đã xuất file Excel — kiểm tra thư mục tải xuống.', 'ok');
+  }catch(e){ showMsg($('adminMsg'), baoLoi(e), 'err'); }
+  btn.disabled = false;
+};
+
+/* ================================================================
    KHU VỰC GIÁO VIÊN
    ================================================================ */
 async function napHoTroTatCa(){
@@ -1451,6 +1833,8 @@ function renderAdmin(){
       await napHoTroTatCa(); renderAdmin();
     }catch(e){ showMsg($('adminMsg'), baoLoi(e),'err'); }
   });
+
+  renderAdminHoSo();
 
   /* Đổi chỗ nhanh */
   const opts = allSeatIds().map(id=>
