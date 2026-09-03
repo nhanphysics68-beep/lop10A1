@@ -184,12 +184,19 @@
 
   /* ---------- Bảng tin ---------- */
   .bai{background:#fff; border:1.5px solid var(--line); border-radius:12px;
-    padding:16px 18px; margin-bottom:14px;}
+    padding:16px 18px; margin-bottom:14px; transition:box-shadow .4s, border-color .4s;}
   .bai.cua-toi{border-color:var(--clay); background:#fffdf8;}
+  .bai.bai-noi-bat{border-color:var(--blue); box-shadow:0 0 0 3px #bcd6f2;}
   .bai h3{margin:0 0 6px; font-size:16.5px; color:var(--leaf-dark); line-height:1.35;}
   .bai .meta{font-size:12.5px; color:var(--ink-soft); margin-bottom:10px;
     display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
   .bai .noi-dung{font-size:14px; line-height:1.75; white-space:pre-wrap; word-break:break-word;}
+  .bai .noi-dung a{color:var(--blue); text-decoration:underline; word-break:break-all;}
+  .the-link{display:flex; align-items:center; gap:8px; margin-top:10px; padding:10px 14px;
+    background:#eaf1fb; border:1.5px solid #bcd6f2; border-radius:10px; text-decoration:none;
+    font-size:13px; color:var(--blue); font-weight:700; transition:.15s; word-break:break-all;}
+  .the-link:hover{background:#dcebfa; border-color:var(--blue);}
+  .the-link-icon{font-size:16px; flex:none;}
   .bai .anh-hang{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
   .bai .anh-hang img{width:130px; height:130px; object-fit:cover; border-radius:9px;
     border:1px solid var(--line); cursor:zoom-in; transition:transform .12s;}
@@ -207,6 +214,10 @@
     font-family:inherit; transition:.15s;}
   .btn-cx:hover{border-color:var(--leaf); color:var(--leaf-dark); background:#f4fbf6;}
   .btn-cx.da-chon{color:var(--leaf-dark); border-color:var(--leaf); background:#eaf5ee;}
+  .btn-chiase{background:#fff; border:1.5px solid var(--line); border-radius:8px;
+    padding:6px 12px; font-size:13px; font-weight:700; color:var(--ink-soft); cursor:pointer;
+    font-family:inherit; transition:.15s;}
+  .btn-chiase:hover{border-color:var(--blue); color:var(--blue); background:#eaf1fb;}
   .rong-cam-xuc{position:absolute; bottom:calc(100% + 8px); left:0; background:#fff;
     border:1px solid var(--line); border-radius:30px; box-shadow:0 8px 20px rgba(20,83,45,.18);
     padding:6px 8px; display:flex; gap:2px; z-index:20;}
@@ -507,6 +518,10 @@
             placeholder="Nhập nội dung bài đăng..."></textarea>
         </div>
         <div class="field">
+          <label for="btLink">Đính kèm liên kết <span style="font-weight:400;color:var(--ink-soft);">(không bắt buộc — link Google Form, video, Zalo...)</span></label>
+          <input type="text" id="btLink" placeholder="https://..." maxlength="300">
+        </div>
+        <div class="field">
           <label>Ảnh đính kèm <span id="btAnhLabel">(tối đa 10 ảnh)</span></label>
           <label class="nut-chon-anh" for="btFiles">📷 Chọn ảnh từ máy</label>
           <input type="file" id="btFiles" accept="image/*" multiple hidden>
@@ -708,6 +723,8 @@ const BAI_TOI_DA   = 25;     // số bài hiển thị trên bảng tin, giữ t
 
 let seats={}, swaps=[], roster=[], regs=[], tv={};
 let htCuaToi=null, htTatCa=[], baiViet=[], anhDangChon=[];
+let cuonToiBaiSauKhiTai = null; // id bài cần cuộn tới sau khi tải xong (dùng cho link chia sẻ từ bên ngoài)
+let baiDangNoiBat = null; // id bài đang tô sáng tạm thời — giữ nguyên qua mọi lần vẽ lại cho tới khi hết giờ
 let camXucState={}, binhLuanState={};
 const daGanNgheBai = new Set();
 let pickerCamXucMo = null;
@@ -765,6 +782,13 @@ document.querySelectorAll('.tab').forEach(t=>{
 });
 (function moTheoHash(){
   const h = (location.hash||'').replace('#','');
+  const mBai = h.match(/^bangtin-bai=(.+)$/);
+  if(mBai){
+    cuonToiBaiSauKhiTai = decodeURIComponent(mBai[1]);
+    const t = document.querySelector('.tab[data-tab="bangtin"]');
+    if(t) t.click();
+    return;
+  }
   const t = document.querySelector(`.tab[data-tab="${h}"]`);
   if(t) t.click();
 })();
@@ -1281,10 +1305,16 @@ $('btForm').onsubmit = async e=>{
   const author  = $('btAuthor').value.trim();
   const title   = $('btTitle').value.trim();
   const content = $('btContent').value.trim();
+  const linkGoc = $('btLink').value.trim();
 
   if(!author){ showMsg($('btMsg'),'Vui lòng nhập tên người đăng.','err'); return; }
   if(!title){ showMsg($('btMsg'),'Vui lòng nhập tiêu đề.','err'); return; }
   if(!content && !anhDangChon.length){ showMsg($('btMsg'),'Bài đăng cần có nội dung hoặc ít nhất một ảnh.','err'); return; }
+  let link = '';
+  if(linkGoc){
+    link = chuanHoaLink(linkGoc);
+    if(link === null){ showMsg($('btMsg'),'Liên kết không hợp lệ, kiểm tra lại nhé.','err'); return; }
+  }
 
   const nut = $('btSubmit');
   nut.disabled = true; nut.textContent = 'Đang đăng...';
@@ -1293,6 +1323,7 @@ $('btForm').onsubmit = async e=>{
     const bai = { title, content, author, uid: myUid,
                   soAnh: anhDangChon.length, luc: Date.now(),
                   time: new Date().toLocaleString('vi-VN') };
+    if(link) bai.link = link;
 
     if(anhDangChon.length && dungDrive()){
       /* Mỗi bài đăng có một thư mục riêng trên Drive, đặt tên theo thời gian đăng */
@@ -1379,13 +1410,17 @@ function renderBaiViet(){
     const cuaToi = (b.uid === myUid);
     const suaDuoc = cuaToi || isAdmin;
     const div = document.createElement('div');
-    div.className = 'bai' + (cuaToi ? ' cua-toi' : '');
+    div.className = 'bai' + (cuaToi ? ' cua-toi' : '') + (b.id===baiDangNoiBat ? ' bai-noi-bat' : '');
+    div.id = 'bai-' + b.id;
     /* Bài mới dùng ảnh trên Drive, bài cũ dùng ảnh lưu trong Firebase */
     const nguonAnh = (b.anhIds && b.anhIds.length)
       ? b.anhIds.map(id=> anhDriveNho(id))
       : (b.anhNho || []);
     const anh = nguonAnh.map((src,i)=>
       `<img src="${src}" alt="Ảnh ${i+1}" loading="lazy" data-xemanh="${b.id}|${i}">`).join('');
+    const linkHtml = b.link ? `<a class="the-link" href="${esc(b.link)}" target="_blank" rel="noopener noreferrer">
+        <span class="the-link-icon">🔗</span><span class="the-link-text">${esc(tenMienCuaLink(b.link))}</span>
+      </a>` : '';
 
     /* ---- Cảm xúc ---- */
     const cx = tomTatCamXuc(b.id);
@@ -1429,7 +1464,8 @@ function renderBaiViet(){
         <span>🕒 ${esc(b.time)}</span>
         ${b.soAnh ? `<span>📷 ${b.soAnh} ảnh</span>` : ''}
       </div>
-      ${b.content ? `<div class="noi-dung">${esc(b.content)}</div>` : ''}
+      ${b.content ? `<div class="noi-dung">${noiDungCoLink(b.content)}</div>` : ''}
+      ${linkHtml}
       ${anh ? `<div class="anh-hang">${anh}</div>` : ''}
       ${suaDuoc ? `<div class="thao-tac">
         <button class="btn btn-blue btn-sm" data-suabai="${b.id}">Sửa</button>
@@ -1442,10 +1478,24 @@ function renderBaiViet(){
           </button>
           ${pickerHtml}
         </div>
+        <button type="button" class="btn-chiase" data-chia-se="${b.id}">🔗 Chia sẻ</button>
       </div>
       ${blHtml}`;
     feed.appendChild(div);
   });
+
+  if(cuonToiBaiSauKhiTai){
+    const el = document.getElementById('bai-' + cuonToiBaiSauKhiTai);
+    if(el){
+      if(el.scrollIntoView) el.scrollIntoView({behavior:'smooth', block:'center'});
+      baiDangNoiBat = cuonToiBaiSauKhiTai;
+      cuonToiBaiSauKhiTai = null;
+      /* Đặt lại sau 2.5s — vẽ lại để bỏ tô sáng, dù giữa chừng có bao nhiêu lần vẽ lại khác
+         (do cảm xúc/bình luận cập nhật realtime) thì trạng thái tô sáng vẫn giữ đúng vì nó
+         nằm trong biến trạng thái baiDangNoiBat, không phải một class gắn tạm trên DOM. */
+      setTimeout(()=>{ baiDangNoiBat = null; renderBaiViet(); }, 2500);
+    }
+  }
 
   feed.querySelectorAll('[data-xemanh]').forEach(im=> im.onclick = ()=> moAnhLon(im.getAttribute('data-xemanh')));
   feed.querySelectorAll('[data-suabai]').forEach(b=> b.onclick = ()=> modalSuaBai(b.getAttribute('data-suabai')));
@@ -1463,6 +1513,7 @@ function renderBaiViet(){
     }catch(e){ showMsg($('btMsg'), baoLoi(e),'err'); }
   });
 
+  feed.querySelectorAll('[data-chia-se]').forEach(b=> b.onclick = ()=> chiaSeBai(b.getAttribute('data-chia-se')));
   feed.querySelectorAll('[data-mo-cx]').forEach(b=> b.onclick = e=>{
     e.stopPropagation();
     const id = b.getAttribute('data-mo-cx');
@@ -1638,6 +1689,8 @@ function modalSuaBai(id){
     <label style="font-size:12.5px;font-weight:700;">Nội dung</label>
     <textarea id="sContent" maxlength="3000" style="width:100%;min-height:130px;padding:10px 12px;
       border:1.5px solid var(--line);border-radius:8px;font-family:inherit;font-size:14px;">${esc(b.content||'')}</textarea>
+    <label style="font-size:12.5px;font-weight:700;">Liên kết đính kèm (không bắt buộc)</label>
+    <input type="text" id="sLink" value="${esc(b.link||'')}" maxlength="300" placeholder="https://...">
     <p style="font-size:12.5px;margin-top:8px;">Ảnh đính kèm giữ nguyên. Muốn đổi ảnh thì xóa bài rồi đăng lại.</p>
     <div id="sErr" class="msg err"></div>
     <div class="modal-btns">
@@ -1648,10 +1701,54 @@ function modalSuaBai(id){
   $('sLuu').onclick = async ()=>{
     const title = $('sTitle').value.trim();
     const content = $('sContent').value.trim();
+    const linkGoc = $('sLink').value.trim();
     if(!title){ showMsg($('sErr'),'Tiêu đề không được để trống.','err'); return; }
-    try{ await btRef.child(id).update({ title, content }); closeModal(); }
+    let link = '';
+    if(linkGoc){
+      link = chuanHoaLink(linkGoc);
+      if(link === null){ showMsg($('sErr'),'Liên kết không hợp lệ, kiểm tra lại nhé.','err'); return; }
+    }
+    try{ await btRef.child(id).update({ title, content, link: link || null }); closeModal(); }
     catch(e){ showMsg($('sErr'), baoLoi(e),'err'); }
   };
+}
+
+/* ================================================================
+   LIÊN KẾT & CHIA SẺ BÀI ĐĂNG
+   ================================================================ */
+/* Thêm https:// nếu thiếu, trả về null nếu không phải link hợp lệ */
+function chuanHoaLink(s){
+  let v = (s||'').trim();
+  if(!v) return '';
+  if(!/^https?:\/\//i.test(v)) v = 'https://' + v;
+  try{ new URL(v); return v; }catch(e){ return null; }
+}
+function tenMienCuaLink(url){
+  try{ return new URL(url).hostname.replace(/^www\./,''); }catch(e){ return url; }
+}
+/* Tự biến URL trong nội dung thành liên kết bấm được (chạy SAU khi đã esc để tránh lộ HTML thật) */
+function noiDungCoLink(text){
+  return esc(text).replace(/((https?:\/\/|www\.)[^\s]+)/gi, m=>{
+    const href = /^https?:\/\//i.test(m) ? m : 'https://' + m;
+    return `<a href="${href}" target="_blank" rel="noopener noreferrer">${m}</a>`;
+  });
+}
+
+async function chiaSeBai(baiId){
+  const bai = baiViet.find(b=> b.id===baiId);
+  if(!bai) return;
+  const url = `${location.origin}${location.pathname}#bangtin-bai=${encodeURIComponent(baiId)}`;
+  if(navigator.share){
+    try{ await navigator.share({ title: bai.title || 'Bảng tin lớp 10A1', text: bai.content ? bai.content.slice(0,150) : '', url }); }
+    catch(e){ /* người dùng bấm hủy hộp thoại chia sẻ — không phải lỗi */ }
+    return;
+  }
+  try{
+    await navigator.clipboard.writeText(url);
+    showMsg($('btMsg'), '🔗 Đã sao chép liên kết bài đăng — dán vào Zalo/Messenger để chia sẻ.', 'ok');
+  }catch(e){
+    prompt('Sao chép liên kết bên dưới để chia sẻ:', url);
+  }
 }
 
 /* ================================================================
