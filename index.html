@@ -38,6 +38,25 @@
   .tab .ico{font-size:17px; display:block; margin-bottom:2px;}
   .panel{display:none;} .panel.active{display:block;}
 
+  /* ---------- Thẻ con (subtabs) trong 1 nhóm ---------- */
+  .subtabs{display:none; gap:6px; flex-wrap:wrap; margin:-6px 0 16px; padding:10px;
+    background:#eef5f0; border-radius:12px;}
+  .subtabs.active{display:flex;}
+  .subtab{background:#fff; border:1.5px solid var(--line); border-radius:9px;
+    padding:8px 13px; cursor:pointer; font-weight:700; font-size:12.5px; color:var(--ink-soft);
+    font-family:inherit; transition:.15s; display:inline-flex; align-items:center; gap:5px;}
+  .subtab .ico{font-size:14px;}
+  .subtab:hover{border-color:var(--leaf); color:var(--leaf-dark);}
+  .subtab.active{background:var(--leaf-dark); border-color:var(--leaf-dark); color:#fff;}
+
+  /* ---------- Ban cán sự lớp ---------- */
+  .bcs-item{display:flex; align-items:center; gap:12px; background:#f7fbf8; border:1px solid var(--line);
+    border-radius:10px; padding:10px 16px; margin-bottom:8px;}
+  .bcs-chucvu{font-weight:800; color:var(--leaf-dark); min-width:150px; font-size:13.5px;}
+  .bcs-hoten{font-size:14px; color:var(--ink);}
+  .bcs-admin-item{display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:#fff; border:1px solid var(--line); border-radius:8px; padding:8px 12px; margin-bottom:6px; font-size:13px;}
+
   .card{background:var(--paper); border:1px solid var(--line); border-radius:14px;
         box-shadow:var(--shadow); padding:20px; margin-bottom:20px;}
   .card h2{font-size:16px; color:var(--leaf-dark); margin:0 0 6px;}
@@ -317,17 +336,25 @@
   </div>
 
   <div class="tabs">
-    <button class="tab active" data-tab="sodo"><span class="ico">📍</span>Sơ đồ lớp</button>
-    <button class="tab" data-tab="laodong"><span class="ico">🧹</span>Đăng ký lao động</button>
-    <button class="tab" data-tab="khaigiang"><span class="ico">📺</span>Chuẩn bị khai giảng</button>
-    <button class="tab" data-tab="hotro"><span class="ico">🤝</span>Nhận hỗ trợ</button>
+    <button class="tab active" data-tab="thongtin"><span class="ico">🏫</span>Thông tin lớp 10A1</button>
+    <button class="tab" data-tab="hoatdong"><span class="ico">🙋</span>Các hoạt động của lớp</button>
     <button class="tab" data-tab="bangtin"><span class="ico">📰</span>Bảng tin lớp</button>
-    <button class="tab" data-tab="hoso"><span class="ico">🧾</span>Hồ sơ đầu năm</button>
     <button class="tab" data-tab="confession"><span class="ico">🎭</span>Confession</button>
   </div>
 
+  <div class="subtabs active" id="subtabs-thongtin" data-group="thongtin">
+    <button class="subtab active" data-subtab="sodo"><span class="ico">📍</span>Sơ đồ lớp</button>
+    <button class="subtab" data-subtab="hoso"><span class="ico">🧾</span>Hồ sơ đầu năm</button>
+    <button class="subtab" data-subtab="bancansu"><span class="ico">👥</span>Ban cán sự lớp</button>
+  </div>
+  <div class="subtabs" id="subtabs-hoatdong" data-group="hoatdong">
+    <button class="subtab active" data-subtab="laodong"><span class="ico">🧹</span>Đăng ký lao động</button>
+    <button class="subtab" data-subtab="khaigiang"><span class="ico">📺</span>Chuẩn bị khai giảng</button>
+    <button class="subtab" data-subtab="hotro"><span class="ico">🤝</span>Nhận hỗ trợ</button>
+  </div>
+
   <!-- ============ THẺ 1: SƠ ĐỒ LỚP ============ -->
-  <div class="panel active" id="panel-sodo">
+  <div class="panel active" id="panel-sodo" data-group="thongtin">
     <div class="card">
       <div class="guide">
         🌱 <b>Cách dùng:</b> Chạm vào ô trống → nhập tên → xong. Chỗ đó tự động thuộc về em,
@@ -357,7 +384,7 @@
   </div>
 
   <!-- ============ THẺ 2: ĐĂNG KÝ LAO ĐỘNG ============ -->
-  <div class="panel" id="panel-laodong">
+  <div class="panel" id="panel-laodong" data-group="hoatdong">
     <div class="card">
       <h2>Phiếu đăng ký dụng cụ lao động</h2>
       <p class="section-note">
@@ -416,7 +443,7 @@
   </div>
 
   <!-- ============ THẺ 3: CHUẨN BỊ KHAI GIẢNG ============ -->
-  <div class="panel" id="panel-khaigiang">
+  <div class="panel" id="panel-khaigiang" data-group="hoatdong">
     <div class="card">
       <h2>Chuẩn bị tivi cho lễ khai giảng <span class="count-badge" id="tvCountBadge">0/9</span></h2>
       <p class="section-note">Mỗi tivi cần tối đa <b>3 bạn</b> phụ trách. Mỗi em chỉ nhận một nhiệm vụ.</p>
@@ -444,7 +471,7 @@
   </div>
 
   <!-- ============ THẺ 4: DANH SÁCH NHẬN HỖ TRỢ ============ -->
-  <div class="panel" id="panel-hotro">
+  <div class="panel" id="panel-hotro" data-group="hoatdong">
     <div class="card">
       <h2>Đăng ký nhận hỗ trợ</h2>
 
@@ -562,7 +589,7 @@
   </div>
 
   <!-- ============ THẺ 6: HỒ SƠ HỌC SINH ĐẦU NĂM ============ -->
-  <div class="panel" id="panel-hoso">
+  <div class="panel" id="panel-hoso" data-group="thongtin">
     <div class="card">
       <h2>Hồ sơ học sinh đầu năm 2026–2027</h2>
       <div class="rieng-tu">
@@ -597,18 +624,19 @@
     </div>
   </div>
 
+  <!-- ============ THẺ MỚI: BAN CÁN SỰ LỚP (thuộc nhóm Thông tin lớp 10A1) ============ -->
+  <div class="panel" id="panel-bancansu" data-group="thongtin">
+    <div class="card">
+      <h2>👥 Ban cán sự lớp 10A1</h2>
+      <div id="bcsList"></div>
+      <div id="bcsEmpty" class="empty" style="display:none;">Chưa có thông tin ban cán sự lớp.</div>
+    </div>
+  </div>
+
   <!-- ============ THẺ 7: 10A1 CONFESSION (ẨN DANH, CÓ KIỂM DUYỆT) ============ -->
   <div class="panel" id="panel-confession">
     <div class="card">
       <h2>🎭 10A1 Confession</h2>
-      <div class="rieng-tu">
-        🎭 <b>Ẩn danh hoàn toàn với các bạn trong lớp.</b> Viết điều em muốn nói mà ngại nói trực tiếp —
-        lời khen, góp ý, chuyện vui, tâm sự... Mỗi bài <b>phải qua thầy duyệt</b> trước khi hiện công khai;
-        bài mang tính xúc phạm, bêu xấu, công kích đích danh người khác sẽ bị từ chối, không hiện lên.
-        <br>⚠ Ẩn danh với bạn bè, nhưng <b>không ẩn danh tuyệt đối với thầy</b> — nếu nội dung có dấu hiệu
-        đe dọa, nguy hiểm hoặc cần can thiệp khẩn, thầy có cách truy vết để hỗ trợ kịp thời. Đây không phải
-        để theo dõi thường xuyên, chỉ dùng khi thật sự cần đảm bảo an toàn cho học sinh.
-      </div>
       <form id="cfForm">
         <div class="field">
           <textarea id="cfContent" maxlength="2000" style="min-height:120px;"
@@ -680,6 +708,16 @@
         Dữ liệu nhạy cảm (CCCD, chính sách, khuyết tật...) — chỉ tài khoản giáo viên đọc được. Không chia sẻ bảng này ra ngoài.
       </p>
       <div class="scroll-x"><table id="hsAdminTable"></table></div>
+
+      <div class="section-title">👥 Ban cán sự lớp</div>
+      <div id="bcsAdminList"></div>
+      <div class="grid2">
+        <div class="field"><label>Chức vụ</label><input type="text" id="bcsChucVu" placeholder="VD: Lớp trưởng" maxlength="60"></div>
+        <div class="field"><label>Họ và tên</label><input type="text" id="bcsHoTen" placeholder="Họ và tên" maxlength="60"></div>
+      </div>
+      <div class="field" style="max-width:160px;"><label>Thứ tự hiển thị</label><input type="number" id="bcsThuTu" placeholder="1, 2, 3..." min="0"></div>
+      <button class="btn btn-primary btn-sm" id="bcsThemBtn">+ Thêm vào danh sách</button>
+      <div id="bcsMsg" class="msg"></div>
 
       <div class="section-title">🎭 Confession chờ duyệt <span class="count-badge" id="cfChoDuyetBadge">0</span></div>
       <p class="section-note" style="margin:0 0 6px;">
@@ -779,6 +817,7 @@ const cfChoDuyetRef = db.ref('confession2026/cho_duyet');
 const cfDaDuyetRef  = db.ref('confession2026/da_duyet');
 const cfCamBienRef  = db.ref('confession2026/cambien');
 const cfBinhLuanRef = db.ref('confession2026/binhluan');
+const bcsRef = db.ref('lop10a1/bancansu');  // ban cán sự lớp — công khai đọc, chỉ giáo viên ghi
 const hosoRef   = db.ref('hoso2026/hoso');         // riêng tư: khóa theo uid, giống hotro2026
 
 const LANES     = [ {id:1,desks:7}, {id:2,desks:6}, {id:3,desks:6}, {id:4,desks:6} ];
@@ -796,6 +835,7 @@ const BAI_TOI_DA   = 25;     // số bài hiển thị trên bảng tin, giữ t
 let seats={}, swaps=[], roster=[], regs=[], tv={};
 let htCuaToi=null, htTatCa=[], baiViet=[], anhDangChon=[];
 let confessionDaDuyet=[], confessionChoDuyet=[];
+let banCanSu = [];
 let cfCamXucState={}, cfBinhLuanState={};
 const cfDaGanNgheBai = new Set();
 let cfPickerCamXucMo = null;
@@ -848,27 +888,56 @@ function seatLabel(id){
 function mySeatId(){ for(const id in seats){ if(seats[id] && seats[id].uid===myUid) return id; } return null; }
 function myRegId(){ const r = regs.find(x=> x.uid===myUid); return r? r.id : null; }
 
-/* -------------------- THẺ CHUYỂN TRANG -------------------- */
-document.querySelectorAll('.tab').forEach(t=>{
-  t.onclick = ()=>{
-    document.querySelectorAll('.tab').forEach(x=> x.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(x=> x.classList.remove('active'));
-    t.classList.add('active');
-    $('panel-' + t.dataset.tab).classList.add('active');
-    location.hash = t.dataset.tab;
-  };
+/* -------------------- THẺ CHUYỂN TRANG (có nhóm/thẻ con) -------------------- */
+const NHOM_TAB = {
+  thongtin: ['sodo', 'hoso', 'bancansu'],
+  hoatdong: ['laodong', 'khaigiang', 'hotro'],
+};
+/* Map link cũ (trước khi gộp nhóm) -> đúng nhóm mới, để link/bookmark cũ vẫn mở đúng chỗ */
+const TAB_CU_SANG_NHOM = {};
+Object.keys(NHOM_TAB).forEach(nhom=> NHOM_TAB[nhom].forEach(muc=> TAB_CU_SANG_NHOM[muc] = nhom));
+
+function moTab(tabId, subId){
+  document.querySelectorAll('.tab').forEach(x=> x.classList.remove('active'));
+  document.querySelectorAll('.subtabs').forEach(x=> x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(x=> x.classList.remove('active'));
+
+  const tabBtn = document.querySelector(`.tab[data-tab="${tabId}"]`);
+  if(!tabBtn) return;
+  tabBtn.classList.add('active');
+
+  if(NHOM_TAB[tabId]){
+    const thanhSub = $('subtabs-' + tabId);
+    thanhSub.classList.add('active');
+    const chon = (subId && NHOM_TAB[tabId].includes(subId)) ? subId : NHOM_TAB[tabId][0];
+    thanhSub.querySelectorAll('.subtab').forEach(x=> x.classList.toggle('active', x.dataset.subtab === chon));
+    $('panel-' + chon).classList.add('active');
+    location.hash = tabId + '-' + chon;
+  } else {
+    $('panel-' + tabId).classList.add('active');
+    location.hash = tabId;
+  }
+}
+
+document.querySelectorAll('.tab').forEach(t=> t.onclick = ()=> moTab(t.dataset.tab));
+document.querySelectorAll('.subtab').forEach(st=>{
+  st.onclick = ()=> moTab(st.closest('.subtabs').dataset.group, st.dataset.subtab);
 });
+
 (function moTheoHash(){
   const h = (location.hash||'').replace('#','');
+
   const mBai = h.match(/^bangtin-bai=(.+)$/);
-  if(mBai){
-    cuonToiBaiSauKhiTai = decodeURIComponent(mBai[1]);
-    const t = document.querySelector('.tab[data-tab="bangtin"]');
-    if(t) t.click();
-    return;
-  }
-  const t = document.querySelector(`.tab[data-tab="${h}"]`);
-  if(t) t.click();
+  if(mBai){ cuonToiBaiSauKhiTai = decodeURIComponent(mBai[1]); moTab('bangtin'); return; }
+
+  // Link/bookmark cũ dạng "#sodo", "#laodong"... (trước khi gộp nhóm)
+  if(TAB_CU_SANG_NHOM[h]){ moTab(TAB_CU_SANG_NHOM[h], h); return; }
+
+  // Link mới dạng "#thongtin-sodo", "#hoatdong-hotro"...
+  const mNhom = h.match(/^(thongtin|hoatdong)-(.+)$/);
+  if(mNhom){ moTab(mNhom[1], mNhom[2]); return; }
+
+  if(document.querySelector(`.tab[data-tab="${h}"]`)){ moTab(h); return; }
 })();
 
 /* -------------------- MODAL -------------------- */
@@ -2451,6 +2520,50 @@ function renderAiLog(items){
 $('cfLamMoiLogBtn').onclick = napAiLog;
 
 /* ================================================================
+   BAN CÁN SỰ LỚP — công khai đọc, chỉ giáo viên thêm/xoá
+   ================================================================ */
+function renderBanCanSu(){
+  const host = $('bcsList');
+  if(!host) return;
+  const ds = banCanSu.slice().sort((a,b)=> (a.thuTu||0) - (b.thuTu||0));
+  $('bcsEmpty').style.display = ds.length ? 'none' : 'block';
+  host.innerHTML = ds.map(x=> `
+    <div class="bcs-item">
+      <span class="bcs-chucvu">${esc(x.chucVu)}</span>
+      <span class="bcs-hoten">${esc(x.hoTen)}</span>
+    </div>`).join('');
+}
+
+function renderBcsAdmin(){
+  const host = $('bcsAdminList');
+  if(!host) return;
+  const ds = banCanSu.slice().sort((a,b)=> (a.thuTu||0) - (b.thuTu||0));
+  if(!ds.length){ host.innerHTML = `<p class="section-note">Chưa có ai trong danh sách.</p>`; return; }
+  host.innerHTML = ds.map(x=> `
+    <div class="bcs-admin-item">
+      <span><b>${esc(x.chucVu)}</b> — ${esc(x.hoTen)} <span style="color:var(--ink-soft);">(thứ tự ${x.thuTu||0})</span></span>
+      <button class="btn btn-ghost btn-sm" data-bcs-xoa="${x.id}">Xóa</button>
+    </div>`).join('');
+  host.querySelectorAll('[data-bcs-xoa]').forEach(b=> b.onclick = async ()=>{
+    if(!confirm('Xóa mục này khỏi Ban cán sự lớp?')) return;
+    try{ await bcsRef.child(b.getAttribute('data-bcs-xoa')).remove(); }
+    catch(e){ showMsg($('bcsMsg'), baoLoi(e),'err'); }
+  });
+}
+
+$('bcsThemBtn').onclick = async ()=>{
+  const chucVu = $('bcsChucVu').value.trim();
+  const hoTen = $('bcsHoTen').value.trim();
+  const thuTu = parseInt($('bcsThuTu').value, 10) || 0;
+  if(!chucVu || !hoTen){ showMsg($('bcsMsg'), 'Vui lòng nhập đủ Chức vụ và Họ tên.', 'err'); return; }
+  try{
+    await bcsRef.push({ chucVu, hoTen, thuTu });
+    $('bcsChucVu').value = ''; $('bcsHoTen').value = ''; $('bcsThuTu').value = '';
+    showMsg($('bcsMsg'), 'Đã thêm.', 'ok');
+  }catch(e){ showMsg($('bcsMsg'), baoLoi(e),'err'); }
+};
+
+/* ================================================================
    KHU VỰC GIÁO VIÊN
    ================================================================ */
 async function napHoTroTatCa(){
@@ -2567,6 +2680,7 @@ function renderAdmin(){
 
   renderAdminHoSo();
   renderConfessionChoDuyet();
+  renderBcsAdmin();
 
   /* Đổi chỗ nhanh */
   const opts = allSeatIds().map(id=>
@@ -2672,6 +2786,14 @@ cfDaDuyetRef.on('value', s=>{
   const v = s.val()||{};
   confessionDaDuyet = Object.keys(v).map(k=> Object.assign({id:k}, v[k]));
   renderConfessionFeed();
+});
+
+/* Ban cán sự lớp: công khai cho mọi người */
+bcsRef.on('value', s=>{
+  const v = s.val()||{};
+  banCanSu = Object.keys(v).map(k=> Object.assign({id:k}, v[k]));
+  renderBanCanSu();
+  if(isAdmin) renderBcsAdmin();
 });
 
 /* Danh sách hỗ trợ không dùng lắng nghe liên tục vì là dữ liệu riêng tư —
