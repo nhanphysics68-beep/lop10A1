@@ -158,6 +158,18 @@
   .swap-tool{display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
   .swap-tool select{padding:8px; border:1.5px solid var(--line); border-radius:8px; font-size:12.5px; font-family:inherit;}
 
+  /* ---------- Confession chờ duyệt ---------- */
+  .cf-cho-duyet-item{background:#fff7ea; border:1.5px solid var(--clay); border-radius:10px;
+    padding:12px 14px; margin-bottom:10px;}
+  .cf-cho-duyet-noidung{font-size:13.5px; line-height:1.6; white-space:pre-wrap; word-break:break-word; margin-bottom:8px;}
+  .cf-cho-duyet-meta{font-size:11.5px; color:var(--ink-soft); margin-bottom:8px;}
+  .cf-cho-duyet-nut{display:flex; gap:8px; flex-wrap:wrap;}
+  .cf-ai-log-item{background:#f7fbf8; border:1px solid var(--line); border-radius:10px;
+    padding:10px 14px; margin-bottom:8px; font-size:12.5px;}
+  .cf-ai-log-top{font-weight:700; color:var(--leaf-dark); margin-bottom:4px;}
+  .cf-ai-log-noidung{color:var(--ink-soft); font-style:italic; margin-bottom:3px; word-break:break-word;}
+  .cf-ai-log-lydo{color:var(--ink-soft);}
+
   /* ---------- Danh sách nhận hỗ trợ ---------- */
   .rieng-tu{background:#fff7ea; border:1.5px solid var(--clay); border-radius:10px;
     padding:12px 16px; font-size:13px; color:#8a5200; margin-bottom:16px; line-height:1.7;}
@@ -311,6 +323,7 @@
     <button class="tab" data-tab="hotro"><span class="ico">🤝</span>Nhận hỗ trợ</button>
     <button class="tab" data-tab="bangtin"><span class="ico">📰</span>Bảng tin lớp</button>
     <button class="tab" data-tab="hoso"><span class="ico">🧾</span>Hồ sơ đầu năm</button>
+    <button class="tab" data-tab="confession"><span class="ico">🎭</span>Confession</button>
   </div>
 
   <!-- ============ THẺ 1: SƠ ĐỒ LỚP ============ -->
@@ -584,6 +597,35 @@
     </div>
   </div>
 
+  <!-- ============ THẺ 7: 10A1 CONFESSION (ẨN DANH, CÓ KIỂM DUYỆT) ============ -->
+  <div class="panel" id="panel-confession">
+    <div class="card">
+      <h2>🎭 10A1 Confession</h2>
+      <div class="rieng-tu">
+        🎭 <b>Ẩn danh hoàn toàn với các bạn trong lớp.</b> Viết điều em muốn nói mà ngại nói trực tiếp —
+        lời khen, góp ý, chuyện vui, tâm sự... Mỗi bài <b>phải qua thầy duyệt</b> trước khi hiện công khai;
+        bài mang tính xúc phạm, bêu xấu, công kích đích danh người khác sẽ bị từ chối, không hiện lên.
+        <br>⚠ Ẩn danh với bạn bè, nhưng <b>không ẩn danh tuyệt đối với thầy</b> — nếu nội dung có dấu hiệu
+        đe dọa, nguy hiểm hoặc cần can thiệp khẩn, thầy có cách truy vết để hỗ trợ kịp thời. Đây không phải
+        để theo dõi thường xuyên, chỉ dùng khi thật sự cần đảm bảo an toàn cho học sinh.
+      </div>
+      <form id="cfForm">
+        <div class="field">
+          <textarea id="cfContent" maxlength="2000" style="min-height:120px;"
+            placeholder="Viết điều em muốn nói ẩn danh..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" id="cfSubmit">Gửi ẩn danh</button>
+        <div id="cfMsg" class="msg"></div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Đã duyệt <span class="count-badge" id="cfCountBadge">0</span></h2>
+      <div id="cfFeed"></div>
+      <div id="cfEmpty" class="empty" style="display:none;">Chưa có confession nào được duyệt. 🎭</div>
+    </div>
+  </div>
+
   <!-- ============ KHU VỰC GIÁO VIÊN ============ -->
   <details class="admin" id="adminDetails">
     <summary>🔒 Khu vực giáo viên / quản trị</summary>
@@ -638,6 +680,19 @@
         Dữ liệu nhạy cảm (CCCD, chính sách, khuyết tật...) — chỉ tài khoản giáo viên đọc được. Không chia sẻ bảng này ra ngoài.
       </p>
       <div class="scroll-x"><table id="hsAdminTable"></table></div>
+
+      <div class="section-title">🎭 Confession chờ duyệt <span class="count-badge" id="cfChoDuyetBadge">0</span></div>
+      <p class="section-note" style="margin:0 0 6px;">
+        Bài chưa duyệt chỉ mình thầy thấy được. Duyệt để hiện công khai (ẩn danh), hoặc từ chối để xoá hẳn.
+      </p>
+      <div id="cfChoDuyetList"></div>
+
+      <div class="section-title">📋 Nhật ký AI duyệt tự động (30 gần nhất)</div>
+      <p class="section-note" style="margin:0 0 6px;">
+        Nếu Thầy đã bật Apps Script kiểm duyệt tự động bằng Gemini, mọi quyết định của AI đều hiện ở đây để đối chiếu.
+      </p>
+      <div id="cfAiLogList"></div>
+      <button class="btn btn-blue btn-sm" id="cfLamMoiLogBtn" style="margin-bottom:10px;">🔄 Làm mới nhật ký</button>
 
       <div class="section-title">Công cụ</div>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -716,6 +771,14 @@ const btRef     = db.ref('bangtin2026/baiviet');   // bài đăng, ảnh nhỏ n
 const btAnhRef  = db.ref('bangtin2026/anh');       // ảnh cỡ lớn, chỉ tải khi bấm xem
 const cambienRef  = db.ref('bangtin2026/cambien');   // thả cảm xúc — đọc công khai, mỗi người 1 dòng theo uid của mình
 const binhluanRef = db.ref('bangtin2026/binhluan');  // bình luận theo từng bài — đọc công khai
+/* Confession ẩn danh có kiểm duyệt: bài mới nằm ở cho_duyet (chỉ thầy đọc được danh sách),
+   thầy duyệt thì admin chuyển dữ liệu sang da_duyet (ai cũng đọc được, KHÔNG có tên/định danh
+   hiển thị). uid vẫn được lưu kèm ở tầng dữ liệu chỉ thầy đọc được, để truy vết khi thật sự
+   cần vì lý do an toàn — không hiện ở giao diện dưới bất kỳ hình thức nào. */
+const cfChoDuyetRef = db.ref('confession2026/cho_duyet');
+const cfDaDuyetRef  = db.ref('confession2026/da_duyet');
+const cfCamBienRef  = db.ref('confession2026/cambien');
+const cfBinhLuanRef = db.ref('confession2026/binhluan');
 const hosoRef   = db.ref('hoso2026/hoso');         // riêng tư: khóa theo uid, giống hotro2026
 
 const LANES     = [ {id:1,desks:7}, {id:2,desks:6}, {id:3,desks:6}, {id:4,desks:6} ];
@@ -732,6 +795,11 @@ const BAI_TOI_DA   = 25;     // số bài hiển thị trên bảng tin, giữ t
 
 let seats={}, swaps=[], roster=[], regs=[], tv={};
 let htCuaToi=null, htTatCa=[], baiViet=[], anhDangChon=[];
+let confessionDaDuyet=[], confessionChoDuyet=[];
+let cfCamXucState={}, cfBinhLuanState={};
+const cfDaGanNgheBai = new Set();
+let cfPickerCamXucMo = null;
+const cfDuThaoBinhLuan = {};
 let cuonToiBaiSauKhiTai = null; // id bài cần cuộn tới sau khi tải xong (dùng cho link chia sẻ từ bên ngoài)
 let baiDangNoiBat = null; // id bài đang tô sáng tạm thời — giữ nguyên qua mọi lần vẽ lại cho tới khi hết giờ
 let camXucState={}, binhLuanState={};
@@ -837,12 +905,14 @@ auth.onAuthStateChanged(async user=>{
     await loadRoster();
     await napHoTroTatCa();
     await napHoSoTatCa();
+    await napConfessionChoDuyet();
+    await napAiLog();
     renderAdmin();
-  } else { roster = []; htTatCa = []; hosoTatCa = []; }
+  } else { roster = []; htTatCa = []; hosoTatCa = []; confessionChoDuyet = []; }
 
   await napHoTroCuaToi();
   await napHoSoCuaToi();
-  renderSeats(); renderRegs(); renderTv(); renderBaiViet();
+  renderSeats(); renderRegs(); renderTv(); renderBaiViet(); renderConfessionFeed();
 });
 
 $('adminUnlockBtn').onclick = async ()=>{
@@ -2135,6 +2205,252 @@ $('exportHsBtn').onclick = async ()=>{
 };
 
 /* ================================================================
+   THẺ 7 — 10A1 CONFESSION (ẨN DANH, CÓ KIỂM DUYỆT)
+   ================================================================ */
+$('cfForm').onsubmit = async e=>{
+  e.preventDefault();
+  if(!myUid){ showMsg($('cfMsg'), 'Đang kết nối, thử lại sau vài giây.', 'info'); return; }
+  const content = $('cfContent').value.trim();
+  if(!content){ showMsg($('cfMsg'), 'Vui lòng nhập nội dung.', 'err'); return; }
+  const nut = $('cfSubmit');
+  nut.disabled = true;
+  try{
+    const ref = cfChoDuyetRef.push();
+    await ref.set({ content, uid: myUid, luc: Date.now(), time: new Date().toLocaleString('vi-VN') });
+    $('cfForm').reset();
+    showMsg($('cfMsg'), '🎭 Đã gửi ẩn danh — chờ thầy duyệt trước khi hiện công khai.', 'ok');
+  }catch(e){ showMsg($('cfMsg'), baoLoi(e),'err'); }
+  nut.disabled = false;
+};
+
+/* ---- Cảm xúc + bình luận cho confession (giống bảng tin, nhưng người bình luận cũng luôn ẩn danh) ---- */
+function tomTatCamXucCf(baiId){
+  const ds = cfCamXucState[baiId] || {};
+  const dem = {};
+  Object.values(ds).forEach(v=> dem[v] = (dem[v]||0) + 1);
+  const tong = Object.keys(ds).length;
+  const noiBat = Object.keys(dem).sort((a,b)=> dem[b]-dem[a]).slice(0,3)
+    .map(id=> (timCamXuc(id)||{}).icon || '👍').join('');
+  return { tong, noiBat };
+}
+function camXucCuaToiCf(baiId){
+  const ds = cfCamXucState[baiId] || {};
+  return myUid ? (ds[myUid] || null) : null;
+}
+async function datCamXucCf(baiId, id){
+  if(!myUid) return;
+  const hienTai = camXucCuaToiCf(baiId);
+  cfPickerCamXucMo = null;
+  renderConfessionFeed();
+  try{
+    if(hienTai === id) await cfCamBienRef.child(baiId).child(myUid).remove();
+    else await cfCamBienRef.child(baiId).child(myUid).set(id);
+  }catch(e){ showMsg($('cfMsg'), baoLoi(e),'err'); }
+}
+document.addEventListener('click', e=>{
+  if(cfPickerCamXucMo && !e.target.closest('.nut-cam-xuc-wrap')){ cfPickerCamXucMo = null; renderConfessionFeed(); }
+});
+
+async function guiBinhLuanCf(baiId){
+  if(!myUid){ showMsg($('cfMsg'), 'Đang kết nối, thử lại sau vài giây.', 'info'); return; }
+  const noiDungEl = $('cfBl_'+baiId);
+  const noiDung = (noiDungEl.value||'').trim();
+  if(!noiDung) return;
+  try{
+    await cfBinhLuanRef.child(baiId).push({ content: noiDung, uid: myUid, luc: Date.now(), time: new Date().toLocaleString('vi-VN') });
+    delete cfDuThaoBinhLuan[baiId];
+  }catch(e){ showMsg($('cfMsg'), baoLoi(e),'err'); }
+}
+
+function ganNgheConfession(baiId){
+  if(cfDaGanNgheBai.has(baiId)) return;
+  cfDaGanNgheBai.add(baiId);
+  cfCamBienRef.child(baiId).on('value', s=>{ cfCamXucState[baiId] = s.val()||{}; renderConfessionFeed(); },
+    err=> console.error('Lỗi đọc cambien confession:', err));
+  cfBinhLuanRef.child(baiId).on('value', s=>{ cfBinhLuanState[baiId] = s.val()||{}; renderConfessionFeed(); },
+    err=> console.error('Lỗi đọc binhluan confession:', err));
+}
+function thaoNgheConfession(baiId){
+  cfCamBienRef.child(baiId).off();
+  cfBinhLuanRef.child(baiId).off();
+  cfDaGanNgheBai.delete(baiId);
+  delete cfCamXucState[baiId];
+  delete cfBinhLuanState[baiId];
+}
+
+function renderConfessionFeed(){
+  const feed = $('cfFeed');
+  if(!feed) return;
+  feed.innerHTML = '';
+  $('cfCountBadge').textContent = confessionDaDuyet.length;
+  $('cfEmpty').style.display = confessionDaDuyet.length ? 'none' : 'block';
+
+  confessionDaDuyet.slice().sort((a,b)=> (b.luc||0)-(a.luc||0)).forEach(b=>{
+    ganNgheConfession(b.id);
+    const div = document.createElement('div');
+    div.className = 'bai';
+    div.id = 'cf-' + b.id;
+
+    const cx = tomTatCamXucCf(b.id);
+    const cxCuaToi = camXucCuaToiCf(b.id);
+    const cxHienThi = cxCuaToi ? timCamXuc(cxCuaToi) : null;
+    const pickerHtml = cfPickerCamXucMo===b.id ? `<div class="rong-cam-xuc">${CAM_XUC.map(c=>
+        `<button type="button" class="nut-cam-xuc" data-cf-chon-cx="${b.id}|${c.id}" title="${esc(c.nhan)}">${c.icon}</button>`
+      ).join('')}</div>` : '';
+
+    const dsBinhLuan = Object.keys(cfBinhLuanState[b.id]||{})
+      .map(k=> Object.assign({id:k}, cfBinhLuanState[b.id][k]))
+      .sort((x,y)=> (x.luc||0)-(y.luc||0));
+
+    const blHtml = `
+      <div class="khoi-binh-luan">
+        <div class="nhan-binh-luan">💬 ${dsBinhLuan.length ? dsBinhLuan.length + ' bình luận' : 'Bình luận'}</div>
+        <div class="ds-binh-luan">
+          ${dsBinhLuan.length ? dsBinhLuan.map(c=>{
+            const xoaDuoc = (c.uid===myUid) || isAdmin;
+            return `<div class="binh-luan">
+              <div class="bl-noi-dung"><b>🎭 Ẩn danh</b><br>${esc(c.content)}</div>
+              <div class="bl-meta"><span>${esc(c.time)}</span>${xoaDuoc?`<span class="bl-xoa" data-cf-xoa-bl="${b.id}|${c.id}">Xóa</span>`:''}</div>
+            </div>`;
+          }).join('') : `<div class="bl-trong">Chưa có bình luận nào — hãy là người đầu tiên!</div>`}
+        </div>
+        <div class="form-binh-luan">
+          <div class="bl-hang-nhap">
+            <input type="text" class="bl-noidung" id="cfBl_${b.id}" placeholder="Bình luận ẩn danh..." maxlength="500"
+              value="${esc(cfDuThaoBinhLuan[b.id]||'')}">
+            <button type="button" class="btn btn-primary btn-sm" data-cf-gui-bl="${b.id}">Gửi</button>
+          </div>
+        </div>
+      </div>`;
+
+    div.innerHTML = `
+      <div class="meta"><span>🎭 <b>Ẩn danh</b></span><span>🕒 ${esc(b.time)}</span></div>
+      <div class="noi-dung">${esc(b.content)}</div>
+      ${isAdmin ? `<div class="thao-tac"><button class="btn btn-ghost btn-sm" data-cf-xoa-bai="${b.id}">Xóa (quyền thầy)</button></div>` : ''}
+      <div class="hang-tuong-tac">
+        <div class="tom-tat-cx">${cx.tong ? `<span class="icon-cx">${cx.noiBat}</span> ${cx.tong}` : ''}</div>
+        <div class="nut-cam-xuc-wrap">
+          <button type="button" class="btn-cx ${cxCuaToi?'da-chon':''}" data-cf-mo-cx="${b.id}">
+            ${cxHienThi ? cxHienThi.icon+' '+esc(cxHienThi.nhan) : '👍 Thích'}
+          </button>
+          ${pickerHtml}
+        </div>
+      </div>
+      ${blHtml}`;
+    feed.appendChild(div);
+  });
+
+  feed.querySelectorAll('[data-cf-mo-cx]').forEach(b=> b.onclick = e=>{
+    e.stopPropagation();
+    const id = b.getAttribute('data-cf-mo-cx');
+    cfPickerCamXucMo = (cfPickerCamXucMo===id) ? null : id;
+    renderConfessionFeed();
+  });
+  feed.querySelectorAll('[data-cf-chon-cx]').forEach(b=> b.onclick = e=>{
+    e.stopPropagation();
+    const [baiId, cxId] = b.getAttribute('data-cf-chon-cx').split('|');
+    datCamXucCf(baiId, cxId);
+  });
+  feed.querySelectorAll('.bl-noidung').forEach(el=>{
+    el.oninput = ()=> { cfDuThaoBinhLuan[el.id.replace('cfBl_','')] = el.value; };
+    el.addEventListener('keydown', e=>{
+      if(e.key==='Enter'){ e.preventDefault(); guiBinhLuanCf(el.id.replace('cfBl_','')); }
+    });
+  });
+  feed.querySelectorAll('[data-cf-gui-bl]').forEach(b=> b.onclick = ()=> guiBinhLuanCf(b.getAttribute('data-cf-gui-bl')));
+  feed.querySelectorAll('[data-cf-xoa-bl]').forEach(el=> el.onclick = async ()=>{
+    const [baiId, cmtId] = el.getAttribute('data-cf-xoa-bl').split('|');
+    if(!confirm('Xóa bình luận này?')) return;
+    try{ await cfBinhLuanRef.child(baiId).child(cmtId).remove(); }
+    catch(e){ showMsg($('cfMsg'), baoLoi(e),'err'); }
+  });
+  feed.querySelectorAll('[data-cf-xoa-bai]').forEach(b=> b.onclick = async ()=>{
+    if(!confirm('Xóa confession này khỏi trang công khai?')) return;
+    const id = b.getAttribute('data-cf-xoa-bai');
+    try{
+      await cfDaDuyetRef.child(id).remove();
+      thaoNgheConfession(id);
+    }catch(e){ showMsg($('adminMsg'), baoLoi(e),'err'); }
+  });
+}
+
+/* -------------------- GIÁO VIÊN: duyệt / từ chối -------------------- */
+async function napConfessionChoDuyet(){
+  if(!isAdmin){ confessionChoDuyet = []; return; }
+  try{
+    const v = (await cfChoDuyetRef.once('value')).val() || {};
+    confessionChoDuyet = Object.keys(v).map(k=> Object.assign({id:k}, v[k]));
+  }catch(e){ confessionChoDuyet = []; }
+}
+function renderConfessionChoDuyet(){
+  const host = $('cfChoDuyetList');
+  if(!host) return;
+  $('cfChoDuyetBadge').textContent = confessionChoDuyet.length;
+  if(!confessionChoDuyet.length){
+    host.innerHTML = `<p class="section-note">Không có bài nào đang chờ duyệt.</p>`;
+    return;
+  }
+  host.innerHTML = confessionChoDuyet.slice().sort((a,b)=> (a.luc||0)-(b.luc||0)).map(b=> `
+    <div class="cf-cho-duyet-item">
+      <div class="cf-cho-duyet-noidung">${esc(b.content)}</div>
+      <div class="cf-cho-duyet-meta">Gửi lúc ${esc(b.time)}</div>
+      <div class="cf-cho-duyet-nut">
+        <button class="btn btn-primary btn-sm" data-cf-duyet="${b.id}">✅ Duyệt, hiện công khai</button>
+        <button class="btn btn-ghost btn-sm" data-cf-tuchoi="${b.id}">🚫 Từ chối, xoá</button>
+      </div>
+    </div>`).join('');
+
+  host.querySelectorAll('[data-cf-duyet]').forEach(b=> b.onclick = async ()=>{
+    const id = b.getAttribute('data-cf-duyet');
+    const bai = confessionChoDuyet.find(x=> x.id===id);
+    if(!bai) return;
+    try{
+      await cfDaDuyetRef.child(id).set({ content: bai.content, uid: bai.uid, luc: bai.luc, time: bai.time });
+      await cfChoDuyetRef.child(id).remove();
+      await napConfessionChoDuyet();
+      renderConfessionChoDuyet();
+      showMsg($('adminMsg'), 'Đã duyệt, bài hiện công khai (ẩn danh).', 'ok');
+    }catch(e){ showMsg($('adminMsg'), baoLoi(e),'err'); }
+  });
+  host.querySelectorAll('[data-cf-tuchoi]').forEach(b=> b.onclick = async ()=>{
+    if(!confirm('Từ chối và xoá hẳn bài chờ duyệt này?')) return;
+    const id = b.getAttribute('data-cf-tuchoi');
+    try{
+      await cfChoDuyetRef.child(id).remove();
+      await napConfessionChoDuyet();
+      renderConfessionChoDuyet();
+    }catch(e){ showMsg($('adminMsg'), baoLoi(e),'err'); }
+  });
+}
+
+/* Nhật ký AI duyệt tự động — chỉ để XEM, không có nút thao tác nào ở đây (mọi quyết định
+   AI đã xử lý xong trước đó qua Apps Script). Trang web KHÔNG bao giờ tự gọi Gemini từ
+   trình duyệt, vì làm vậy sẽ lộ khóa API cho bất kỳ ai xem mã nguồn trang. */
+async function napAiLog(){
+  if(!isAdmin) return;
+  try{
+    const snap = await db.ref('confession2026/ai_log').once('value');
+    const v = snap.val() || {};
+    const items = Object.keys(v).map(k=> Object.assign({id:k}, v[k]))
+      .sort((a,b)=> (b.luc||0)-(a.luc||0)).slice(0,30);
+    renderAiLog(items);
+  }catch(e){ console.error('Lỗi đọc ai_log:', e); }
+}
+function renderAiLog(items){
+  const host = $('cfAiLogList');
+  if(!host) return;
+  if(!items.length){ host.innerHTML = `<p class="section-note">Chưa có nhật ký nào — có thể do chưa bật Apps Script kiểm duyệt tự động.</p>`; return; }
+  const nhan = { DUYET:'✅ Duyệt', TU_CHOI:'🚫 Từ chối', GIU_LAI:'🟡 Giữ lại cho thầy' };
+  host.innerHTML = items.map(x=> `
+    <div class="cf-ai-log-item">
+      <div class="cf-ai-log-top">${nhan[x.quyetDinh] || x.quyetDinh} · ${x.luc ? new Date(x.luc).toLocaleString('vi-VN') : ''}</div>
+      <div class="cf-ai-log-noidung">"${esc(x.noiDungTomTat||'')}"</div>
+      <div class="cf-ai-log-lydo">Lý do AI: ${esc(x.lyDo||'')}</div>
+    </div>`).join('');
+}
+$('cfLamMoiLogBtn').onclick = napAiLog;
+
+/* ================================================================
    KHU VỰC GIÁO VIÊN
    ================================================================ */
 async function napHoTroTatCa(){
@@ -2250,6 +2566,7 @@ function renderAdmin(){
   });
 
   renderAdminHoSo();
+  renderConfessionChoDuyet();
 
   /* Đổi chỗ nhanh */
   const opts = allSeatIds().map(id=>
@@ -2348,6 +2665,13 @@ btRef.limitToLast(BAI_TOI_DA).on('value', s=>{
   baiViet = Object.keys(v).map(k=> Object.assign({id:k}, v[k]))
               .sort((a,b)=> (b.luc||0) - (a.luc||0));
   renderBaiViet();
+});
+
+/* Confession đã duyệt: công khai cho mọi người, không giới hạn số lượng vì nội dung ngắn và ít hình */
+cfDaDuyetRef.on('value', s=>{
+  const v = s.val()||{};
+  confessionDaDuyet = Object.keys(v).map(k=> Object.assign({id:k}, v[k]));
+  renderConfessionFeed();
 });
 
 /* Danh sách hỗ trợ không dùng lắng nghe liên tục vì là dữ liệu riêng tư —
