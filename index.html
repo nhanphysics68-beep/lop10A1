@@ -78,6 +78,16 @@
     padding:0; transition:.15s; flex:none;}
   .btn-diem.cong:hover{border-color:var(--leaf); background:#eaf5ee;}
   .btn-diem.tru:hover{border-color:var(--red); background:#fdecea;}
+
+  /* ---------- Dữ liệu cá nhân học sinh ---------- */
+  .chs-anh-xemtruoc{margin-bottom:12px; font-size:12.5px; color:var(--ink-soft);}
+  .chs-anh-xemtruoc img{max-width:160px; max-height:200px; border-radius:10px; border:2px solid var(--line);
+    display:block; object-fit:cover;}
+  .chs-admin-row{display:flex; align-items:center; gap:12px; background:#fff; border:1px solid var(--line);
+    border-radius:8px; padding:8px 12px; margin-bottom:6px; font-size:12.5px;}
+  .chs-admin-anh{width:36px; height:44px; border-radius:5px; object-fit:cover; flex:none; background:#eee;}
+  .chs-admin-info{flex:1; min-width:0;}
+  .chs-admin-thieu{color:var(--red); font-size:11px;}
   @media (max-width:560px){ .clb-top{flex-wrap:wrap;} .clb-top .btn{margin-left:40px;} }
 
   .card{background:var(--paper); border:1px solid var(--line); border-radius:14px;
@@ -370,6 +380,7 @@
     <button class="subtab" data-subtab="hoso"><span class="ico">🧾</span>Hồ sơ đầu năm</button>
     <button class="subtab" data-subtab="bancansu"><span class="ico">👥</span>Ban cán sự lớp</button>
     <button class="subtab" data-subtab="caulacbo"><span class="ico">🎨</span>Các câu lạc bộ</button>
+    <button class="subtab" data-subtab="canhanhs"><span class="ico">👤</span>Dữ liệu cá nhân</button>
   </div>
   <div class="subtabs" id="subtabs-hoatdong" data-group="hoatdong">
     <button class="subtab active" data-subtab="laodong"><span class="ico">🧹</span>Đăng ký lao động</button>
@@ -668,6 +679,56 @@
     </div>
   </div>
 
+  <!-- ============ THẺ MỚI: DỮ LIỆU CÁ NHÂN HỌC SINH (thuộc nhóm Thông tin lớp 10A1) ============ -->
+  <div class="panel" id="panel-canhanhs" data-group="thongtin">
+    <div class="card">
+      <h2>👤 Dữ liệu cá nhân học sinh</h2>
+      <div class="rieng-tu">
+        🔒 <b>Riêng tư</b> — giống mục Hồ sơ đầu năm. Số CCCD và ảnh thẻ chỉ mình em và thầy xem được,
+        không công khai với bạn khác. Vào lại đúng máy này để xem/sửa lại bất cứ lúc nào.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>1. Thông tin cá nhân</h2>
+      <p class="section-note" id="chsTuDongNote" style="display:none;">
+        ✨ Đã tự động lấy từ hồ sơ đầu năm em đã nộp — kiểm tra lại rồi sửa nếu cần.
+      </p>
+      <div class="field"><label>Họ và tên</label><input type="text" id="chsHoTen" maxlength="60"></div>
+      <div class="grid2">
+        <div class="field"><label>Ngày sinh</label><input type="date" id="chsNgaySinh"></div>
+        <div class="field"><label>Giới tính</label>
+          <select id="chsGioiTinh"><option value="Nam">Nam</option><option value="Nữ">Nữ</option></select>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Dân tộc</label><input type="text" id="chsDanToc" maxlength="60"></div>
+        <div class="field"><label>Số CCCD / Định danh cá nhân</label>
+          <input type="text" id="chsCccd" maxlength="20" inputmode="numeric">
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm" id="chsLuuBtn">💾 Lưu thông tin</button>
+      <div id="chsMsg" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <h2>2. Ảnh thẻ</h2>
+      <div id="chsAnhXemTruoc" class="chs-anh-xemtruoc">Chưa có ảnh thẻ.</div>
+      <input type="file" id="chsAnhInput" accept="image/*" style="display:none;">
+      <button class="btn btn-blue btn-sm" id="chsChonAnhBtn">📷 Chọn / Đổi ảnh thẻ</button>
+      <div id="chsAnhMsg" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <h2>3. Thành tích cá nhân</h2>
+      <div class="field">
+        <textarea id="chsThanhTich" maxlength="1000" style="min-height:100px;"
+          placeholder="VD: Giải Nhì HSG Toán cấp trường năm lớp 9, thành viên đội tuyển bóng đá trường..."></textarea>
+      </div>
+      <button class="btn btn-primary btn-sm" id="chsThanhTichBtn">💾 Lưu thành tích</button>
+    </div>
+  </div>
+
   <!-- ============ THẺ 7: 10A1 CONFESSION (ẨN DANH, CÓ KIỂM DUYỆT) ============ -->
   <div class="panel" id="panel-confession">
     <div class="card">
@@ -754,6 +815,13 @@
       <button class="btn btn-primary btn-sm" id="bcsThemBtn">+ Thêm vào danh sách</button>
       <div id="bcsMsg" class="msg"></div>
 
+      <div class="section-title">👤 Dữ liệu cá nhân học sinh (riêng tư) <span class="count-badge" id="chsCountBadge">0</span></div>
+      <p class="section-note" style="margin:0 0 6px;">
+        CCCD và ảnh thẻ chỉ hiện ở đây, không công khai. Bấm Xuất Excel để có file dạng hồ sơ từng trang.
+      </p>
+      <div id="chsAdminList"></div>
+      <button class="btn btn-clay btn-sm" id="chsXuatExcelBtn" style="margin:8px 0 16px;">📊 Xuất hồ sơ cá nhân (Excel, mỗi HS 1 trang)</button>
+
       <div class="section-title">🎭 Confession chờ duyệt <span class="count-badge" id="cfChoDuyetBadge">0</span></div>
       <p class="section-note" style="margin:0 0 6px;">
         Bài chưa duyệt chỉ mình thầy thấy được. Duyệt để hiện công khai (ẩn danh), hoặc từ chối để xoá hẳn.
@@ -797,7 +865,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script>
 /* =========================================================
    LỚP 10A1 — trang gộp: Sơ đồ lớp + Đăng ký lao động + Khai giảng
@@ -855,6 +923,7 @@ const cfBinhLuanRef = db.ref('confession2026/binhluan');
 const bcsRef = db.ref('lop10a1/bancansu');  // ban cán sự lớp — công khai đọc, chỉ giáo viên ghi
 const clbRef = db.ref('clb2026');           // các câu lạc bộ — công khai đọc, mỗi người tự ghi đúng phần của mình
 const clbDiemRef = db.ref('clbDiem2026');   // điểm uy tín đóng góp — công khai đọc, CHỈ giáo viên ghi được
+const chsRef = db.ref('hosocanhan2026');    // dữ liệu cá nhân học sinh — riêng tư, giống hoso2026
 const hosoRef   = db.ref('hoso2026/hoso');         // riêng tư: khóa theo uid, giống hotro2026
 
 const LANES     = [ {id:1,desks:7}, {id:2,desks:6}, {id:3,desks:6}, {id:4,desks:6} ];
@@ -875,6 +944,7 @@ let confessionDaDuyet=[], confessionChoDuyet=[];
 let banCanSu = [];
 let clbState = {};
 let clbDiemState = {};
+let chsAdminData = {}; // toàn bộ dữ liệu cá nhân (chỉ admin nạp được), dùng cho danh sách + xuất Excel
 const CAC_CLB = [
   {id:'khkt',        icon:'🔬', ten:'Khoa học kỹ thuật, Đổi mới sáng tạo', moTa:'Nghiên cứu khoa học, dự án kỹ thuật, ý tưởng sáng tạo, thi VISEF...'},
   {id:'cdsai',       icon:'🤖', ten:'Chuyển đổi số và Trí tuệ nhân tạo',   moTa:'Tìm hiểu công nghệ, AI, lập trình, ứng dụng chuyển đổi số vào học tập và đời sống.'},
@@ -936,7 +1006,7 @@ function myRegId(){ const r = regs.find(x=> x.uid===myUid); return r? r.id : nul
 
 /* -------------------- THẺ CHUYỂN TRANG (có nhóm/thẻ con) -------------------- */
 const NHOM_TAB = {
-  thongtin: ['sodo', 'hoso', 'bancansu', 'caulacbo'],
+  thongtin: ['sodo', 'hoso', 'bancansu', 'caulacbo', 'canhanhs'],
   hoatdong: ['laodong', 'khaigiang', 'hotro'],
 };
 /* Map link cũ (trước khi gộp nhóm) -> đúng nhóm mới, để link/bookmark cũ vẫn mở đúng chỗ */
@@ -1022,11 +1092,13 @@ auth.onAuthStateChanged(async user=>{
     await napHoSoTatCa();
     await napConfessionChoDuyet();
     await napAiLog();
+    await napChsAdmin();
     renderAdmin();
   } else { roster = []; htTatCa = []; hosoTatCa = []; confessionChoDuyet = []; }
 
   await napHoTroCuaToi();
   await napHoSoCuaToi();
+  await napDuLieuCaNhanCuaToi();
   renderSeats(); renderRegs(); renderTv(); renderBaiViet(); renderConfessionFeed(); renderCauLacBo();
 });
 
@@ -2689,6 +2761,218 @@ async function roiCLB(clbId){
   try{ await clbRef.child(clbId).child(myUid).remove(); }
   catch(e){ showMsg($('clbMsg'), baoLoi(e),'err'); }
 }
+
+/* ================================================================
+   DỮ LIỆU CÁ NHÂN HỌC SINH — riêng tư (giống hoso2026): chỉ chính chủ (đúng
+   máy) và giáo viên đọc/sửa được. Nếu học sinh đã nộp "Hồ sơ đầu năm", tự
+   động lấy 5 trường cơ bản sang cho khỏi nhập lại (chỉ áp dụng lần đầu, khi
+   học sinh CHƯA có dữ liệu ở mục này).
+   ================================================================ */
+const TEN_THU_MUC_ANH_THE = 'Anh-the-hoc-sinh-10A1';
+
+async function napDuLieuCaNhanCuaToi(){
+  if(!myUid) return;
+  let data = null;
+  try{ data = (await chsRef.child(myUid).once('value')).val(); }catch(e){}
+
+  let tuDongLay = false;
+  if(!data){
+    try{
+      const raw = (await hosoRef.child(myUid).once('value')).val();
+      const hoso = hsTuDangFirebase(raw);
+      if(hoso && (hoso[3] || hoso[4] || hoso[5] || hoso[12])){
+        data = { hoTen: hoso[3]||'', ngaySinh: hoso[4]||'', gioiTinh: hoso[5]||'Nam',
+                 danToc: hoso[12]||'', cccd: hoso[45]||'' };
+        tuDongLay = true;
+      }
+    }catch(e){}
+  }
+  dienDuLieuCaNhanHS(data);
+  $('chsTuDongNote').style.display = tuDongLay ? 'block' : 'none';
+}
+
+function dienDuLieuCaNhanHS(data){
+  $('chsHoTen').value = (data && data.hoTen) || '';
+  $('chsNgaySinh').value = hsNgayToIso((data && data.ngaySinh) || '');
+  $('chsGioiTinh').value = (data && data.gioiTinh) || 'Nam';
+  $('chsDanToc').value = (data && data.danToc) || '';
+  $('chsCccd').value = (data && data.cccd) || '';
+  $('chsThanhTich').value = (data && data.thanhTich) || '';
+  hienThiAnhThe($('chsAnhXemTruoc'), data && data.anhTheId);
+}
+function hienThiAnhThe(host, anhId){
+  host.innerHTML = anhId
+    ? `<img src="${anhDriveNho(anhId)}" alt="Ảnh thẻ">`
+    : 'Chưa có ảnh thẻ.';
+}
+
+$('chsLuuBtn').onclick = async ()=>{
+  if(!myUid){ showMsg($('chsMsg'), 'Đang kết nối, thử lại sau vài giây.', 'info'); return; }
+  const hoTen = $('chsHoTen').value.trim();
+  if(!hoTen){ showMsg($('chsMsg'), 'Vui lòng nhập họ tên.', 'err'); return; }
+  try{
+    const cu = (await chsRef.child(myUid).once('value')).val() || {};
+    const moi = Object.assign({}, cu, {
+      hoTen,
+      ngaySinh: hsIsoToNgay($('chsNgaySinh').value),
+      gioiTinh: $('chsGioiTinh').value,
+      danToc: $('chsDanToc').value.trim(),
+      cccd: $('chsCccd').value.trim(),
+      savedAt: new Date().toISOString()
+    });
+    await chsRef.child(myUid).set(moi);
+    showMsg($('chsMsg'), '✅ Đã lưu thông tin.', 'ok');
+  }catch(e){ showMsg($('chsMsg'), baoLoi(e),'err'); }
+};
+
+$('chsThanhTichBtn').onclick = async ()=>{
+  if(!myUid){ showMsg($('chsMsg'), 'Đang kết nối, thử lại sau vài giây.', 'info'); return; }
+  try{
+    const cu = (await chsRef.child(myUid).once('value')).val() || {};
+    const moi = Object.assign({}, cu, {
+      hoTen: cu.hoTen || $('chsHoTen').value.trim() || 'Chưa rõ tên',
+      thanhTich: $('chsThanhTich').value.trim(),
+      savedAt: new Date().toISOString()
+    });
+    await chsRef.child(myUid).set(moi);
+    showMsg($('chsMsg'), '✅ Đã lưu thành tích.', 'ok');
+  }catch(e){ showMsg($('chsMsg'), baoLoi(e),'err'); }
+};
+
+$('chsChonAnhBtn').onclick = ()=> $('chsAnhInput').click();
+$('chsAnhInput').onchange = async e=>{
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  if(!/^image\//.test(file.type)){ showMsg($('chsAnhMsg'), 'Vui lòng chọn đúng tệp ảnh.', 'err'); return; }
+  if(!myUid){ showMsg($('chsAnhMsg'), 'Đang kết nối, thử lại sau vài giây.', 'info'); return; }
+  if(!dungDrive()){ showMsg($('chsAnhMsg'), 'Chưa cấu hình nơi lưu ảnh (Drive), báo thầy kiểm tra.', 'err'); return; }
+
+  showMsg($('chsAnhMsg'), 'Đang xử lý và tải ảnh lên...', 'info');
+  try{
+    const anhNen = await nenAnh(file, 900, 0.85); // ảnh thẻ chân dung, không cần quá lớn
+    const ten = $('chsHoTen').value.trim() || 'HocSinh';
+    const kq = await guiAnhLenDrive(anhNen, ten, TEN_THU_MUC_ANH_THE);
+    const cu = (await chsRef.child(myUid).once('value')).val() || {};
+    const moi = Object.assign({}, cu, {
+      hoTen: cu.hoTen || ten,
+      anhTheId: kq.id,
+      savedAt: new Date().toISOString()
+    });
+    await chsRef.child(myUid).set(moi);
+    hienThiAnhThe($('chsAnhXemTruoc'), kq.id);
+    showMsg($('chsAnhMsg'), '✅ Đã tải ảnh thẻ lên.', 'ok');
+  }catch(err){ showMsg($('chsAnhMsg'), baoLoi(err), 'err'); }
+};
+
+/* -------------------- GIÁO VIÊN: danh sách + xuất Excel dạng hồ sơ -------------------- */
+async function napChsAdmin(){
+  if(!isAdmin) return;
+  try{
+    const v = (await chsRef.once('value')).val() || {};
+    chsAdminData = v;
+  }catch(e){ chsAdminData = {}; }
+  renderChsAdmin();
+}
+function renderChsAdmin(){
+  const host = $('chsAdminList');
+  if(!host) return;
+  const ds = Object.keys(chsAdminData).map(uid=> Object.assign({uid}, chsAdminData[uid]));
+  $('chsCountBadge').textContent = ds.length;
+  if(!ds.length){ host.innerHTML = `<p class="section-note">Chưa có học sinh nào nộp dữ liệu.</p>`; return; }
+  host.innerHTML = ds.map(x=> `
+    <div class="chs-admin-row">
+      ${x.anhTheId ? `<img class="chs-admin-anh" src="${anhDriveNho(x.anhTheId)}" alt="">` : `<div class="chs-admin-anh"></div>`}
+      <div class="chs-admin-info">
+        <b>${esc(x.hoTen || '(chưa có tên)')}</b> — ${esc(x.gioiTinh||'')}, ${esc(x.danToc||'')}
+        ${!x.cccd ? '<span class="chs-admin-thieu"> · thiếu CCCD</span>' : ''}
+        ${!x.anhTheId ? '<span class="chs-admin-thieu"> · thiếu ảnh thẻ</span>' : ''}
+      </div>
+    </div>`).join('');
+}
+
+/* Kiểu ô dùng chung khi xuất Excel (cần thư viện có hỗ trợ style: xlsx-js-style) */
+const KIEU_TIEU_DE   = { font:{bold:true, sz:16, color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'1F7A4D'}}, alignment:{horizontal:'center', vertical:'center', wrapText:true} };
+const KIEU_NHAN      = { font:{bold:true, color:{rgb:'14532D'}}, fill:{fgColor:{rgb:'EAF5EE'}}, alignment:{vertical:'center', wrapText:true} };
+const KIEU_GIATRI     = { alignment:{vertical:'center', wrapText:true} };
+const KIEU_PHU_DE     = { font:{bold:true, sz:12, color:{rgb:'FFFFFF'}}, fill:{fgColor:{rgb:'D97706'}}, alignment:{horizontal:'center', vertical:'center'} };
+const KIEU_THANH_TICH = { alignment:{vertical:'top', wrapText:true}, font:{italic:true} };
+const KIEU_LINK       = { font:{color:{rgb:'2B6CB0'}, underline:true} };
+
+function taoTrangHoSo(hs){
+  const rows = [
+    ['HỒ SƠ CÁ NHÂN — ' + (hs.hoTen || '(chưa có tên)'), '', '', ''],
+    ['', '', '', ''],
+    ['Họ và tên', hs.hoTen || '', '', ''],
+    ['Ngày sinh', hs.ngaySinh || '', 'Giới tính', hs.gioiTinh || ''],
+    ['Dân tộc', hs.danToc || '', 'Số CCCD', hs.cccd || ''],
+    ['', '', '', ''],
+    ['🎖 THÀNH TÍCH CÁ NHÂN', '', '', ''],
+    [hs.thanhTich || '(chưa cập nhật)', '', '', ''],
+    ['', '', '', ''],
+    ['Ảnh thẻ', hs.anhTheId ? 'Xem ảnh trên Drive' : '(chưa có ảnh)', '', ''],
+    ['Cập nhật lúc', hs.savedAt ? new Date(hs.savedAt).toLocaleString('vi-VN') : '', '', ''],
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:18},{wch:28},{wch:14},{wch:22}];
+  ws['!merges'] = [
+    {s:{r:0,c:0}, e:{r:0,c:3}},
+    {s:{r:2,c:1}, e:{r:2,c:3}},
+    {s:{r:6,c:0}, e:{r:6,c:3}},
+    {s:{r:7,c:0}, e:{r:7,c:3}},
+  ];
+  ws['!rows'] = [{hpt:26},{hpt:6},{hpt:20},{hpt:20},{hpt:20},{hpt:6},{hpt:20},{hpt:60},{hpt:6},{hpt:20},{hpt:20}];
+
+  const guiKieu = (addr, kieu)=>{ if(ws[addr]) ws[addr].s = kieu; };
+  guiKieu('A1', KIEU_TIEU_DE);
+  ['A3','A4','C4','A5','C5','A10','A11'].forEach(a=> guiKieu(a, KIEU_NHAN));
+  ['B3','B4','D4','B5','D5','B11'].forEach(a=> guiKieu(a, KIEU_GIATRI));
+  guiKieu('A7', KIEU_PHU_DE);
+  guiKieu('A8', KIEU_THANH_TICH);
+  guiKieu('B10', KIEU_LINK);
+  if(hs.anhTheId && ws['B10']) ws['B10'].l = { Target: anhDriveLon(hs.anhTheId) };
+  return ws;
+}
+
+function tenTrangHopLe(ten, dsDaDung){
+  let s = (ten || 'HS').replace(/[\\/?*[\]:]/g, ' ').trim().slice(0, 28) || 'HS';
+  let ketQua = s, i = 2;
+  while(dsDaDung.has(ketQua)){ ketQua = (s.slice(0,25) + ' ' + i); i++; }
+  dsDaDung.add(ketQua);
+  return ketQua;
+}
+
+$('chsXuatExcelBtn').onclick = async ()=>{
+  const btn = $('chsXuatExcelBtn');
+  btn.disabled = true;
+  try{
+    await napChsAdmin();
+    const ds = Object.keys(chsAdminData).map(uid=> Object.assign({uid}, chsAdminData[uid]))
+      .sort((a,b)=> (a.hoTen||'').localeCompare(b.hoTen||'', 'vi'));
+
+    const dsTong = ds.map((x,i)=> [i+1, x.hoTen||'', x.gioiTinh||'', x.danToc||'',
+      x.cccd?'Có':'Thiếu', x.anhTheId?'Có':'Thiếu', x.thanhTich ? 'Có' : '']);
+    const wsTong = XLSX.utils.aoa_to_sheet([
+      ['STT','Họ và tên','Giới tính','Dân tộc','CCCD','Ảnh thẻ','Thành tích'],
+      ...dsTong
+    ]);
+    wsTong['!cols'] = [{wch:5},{wch:26},{wch:10},{wch:14},{wch:9},{wch:9},{wch:10}];
+    for(let c=0;c<7;c++){ const addr = XLSX.utils.encode_cell({r:0,c}); if(wsTong[addr]) wsTong[addr].s = KIEU_NHAN; }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, wsTong, 'Danh sách');
+
+    const dsTenTrang = new Set(['Danh sách']);
+    ds.forEach(hs=>{
+      const ws = taoTrangHoSo(hs);
+      XLSX.utils.book_append_sheet(wb, ws, tenTrangHopLe(hs.hoTen, dsTenTrang));
+    });
+
+    XLSX.writeFile(wb, `ho-so-ca-nhan-10A1-${new Date().toISOString().slice(0,10)}.xlsx`);
+    showMsg($('adminMsg'), 'Đã xuất file Excel — mỗi học sinh 1 trang riêng.', 'ok');
+  }catch(e){ showMsg($('adminMsg'), baoLoi(e), 'err'); }
+  btn.disabled = false;
+};
 
 /* ================================================================
    KHU VỰC GIÁO VIÊN
