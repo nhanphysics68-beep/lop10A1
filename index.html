@@ -359,12 +359,12 @@
     <button class="subtab active" data-subtab="sodo"><span class="ico">📍</span>Sơ đồ lớp</button>
     <button class="subtab" data-subtab="hoso"><span class="ico">🧾</span>Hồ sơ đầu năm</button>
     <button class="subtab" data-subtab="bancansu"><span class="ico">👥</span>Ban cán sự lớp</button>
+    <button class="subtab" data-subtab="caulacbo"><span class="ico">🎨</span>Các câu lạc bộ</button>
   </div>
   <div class="subtabs" id="subtabs-hoatdong" data-group="hoatdong">
     <button class="subtab active" data-subtab="laodong"><span class="ico">🧹</span>Đăng ký lao động</button>
     <button class="subtab" data-subtab="khaigiang"><span class="ico">📺</span>Chuẩn bị khai giảng</button>
     <button class="subtab" data-subtab="hotro"><span class="ico">🤝</span>Nhận hỗ trợ</button>
-    <button class="subtab" data-subtab="caulacbo"><span class="ico">🎨</span>Các câu lạc bộ</button>
   </div>
 
   <!-- ============ THẺ 1: SƠ ĐỒ LỚP ============ -->
@@ -648,7 +648,7 @@
   </div>
 
   <!-- ============ THẺ MỚI: CÁC CÂU LẠC BỘ (thuộc nhóm Các hoạt động của lớp) ============ -->
-  <div class="panel" id="panel-caulacbo" data-group="hoatdong">
+  <div class="panel" id="panel-caulacbo" data-group="thongtin">
     <div class="card">
       <h2>🎨 Các câu lạc bộ lớp 10A1</h2>
       <p class="section-note">Chạm "+ Tham gia" để đăng ký câu lạc bộ em quan tâm — có thể tham gia nhiều CLB
@@ -924,8 +924,8 @@ function myRegId(){ const r = regs.find(x=> x.uid===myUid); return r? r.id : nul
 
 /* -------------------- THẺ CHUYỂN TRANG (có nhóm/thẻ con) -------------------- */
 const NHOM_TAB = {
-  thongtin: ['sodo', 'hoso', 'bancansu'],
-  hoatdong: ['laodong', 'khaigiang', 'hotro', 'caulacbo'],
+  thongtin: ['sodo', 'hoso', 'bancansu', 'caulacbo'],
+  hoatdong: ['laodong', 'khaigiang', 'hotro'],
 };
 /* Map link cũ (trước khi gộp nhóm) -> đúng nhóm mới, để link/bookmark cũ vẫn mở đúng chỗ */
 const TAB_CU_SANG_NHOM = {};
