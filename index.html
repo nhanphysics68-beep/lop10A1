@@ -66,8 +66,18 @@
   .clb-ten{font-weight:800; color:var(--leaf-dark); font-size:14.5px; margin-bottom:3px;}
   .clb-mota{font-size:12.5px; color:var(--ink-soft); line-height:1.5;}
   .clb-top .btn{flex:none; white-space:nowrap;}
-  .clb-thanhvien{font-size:12px; color:var(--ink-soft); margin-top:10px; padding-top:10px;
-    border-top:1px dashed var(--line); line-height:1.6;}
+  .clb-thanhvien-list{margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);}
+  .clb-tv-tieude{font-size:11.5px; font-weight:700; color:var(--ink-soft); margin-bottom:6px; text-transform:uppercase; letter-spacing:.3px;}
+  .clb-tv-row{display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px;}
+  .clb-tv-row:nth-child(even){background:#f7fbf8;}
+  .clb-tv-ten{flex:1; min-width:0; font-size:13.5px; color:var(--ink);}
+  .clb-tv-diem{font-weight:800; color:var(--clay); font-size:13px; white-space:nowrap;}
+  .clb-tv-trong{font-size:12.5px; color:var(--ink-soft); font-style:italic; padding:4px 8px;}
+  .btn-diem{background:#fff; border:1.5px solid var(--line); border-radius:50%; width:26px; height:26px;
+    font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
+    padding:0; transition:.15s; flex:none;}
+  .btn-diem.cong:hover{border-color:var(--leaf); background:#eaf5ee;}
+  .btn-diem.tru:hover{border-color:var(--red); background:#fdecea;}
   @media (max-width:560px){ .clb-top{flex-wrap:wrap;} .clb-top .btn{margin-left:40px;} }
 
   .card{background:var(--paper); border:1px solid var(--line); border-radius:14px;
@@ -844,6 +854,7 @@ const cfCamBienRef  = db.ref('confession2026/cambien');
 const cfBinhLuanRef = db.ref('confession2026/binhluan');
 const bcsRef = db.ref('lop10a1/bancansu');  // ban cán sự lớp — công khai đọc, chỉ giáo viên ghi
 const clbRef = db.ref('clb2026');           // các câu lạc bộ — công khai đọc, mỗi người tự ghi đúng phần của mình
+const clbDiemRef = db.ref('clbDiem2026');   // điểm uy tín đóng góp — công khai đọc, CHỈ giáo viên ghi được
 const hosoRef   = db.ref('hoso2026/hoso');         // riêng tư: khóa theo uid, giống hotro2026
 
 const LANES     = [ {id:1,desks:7}, {id:2,desks:6}, {id:3,desks:6}, {id:4,desks:6} ];
@@ -863,6 +874,7 @@ let htCuaToi=null, htTatCa=[], baiViet=[], anhDangChon=[];
 let confessionDaDuyet=[], confessionChoDuyet=[];
 let banCanSu = [];
 let clbState = {};
+let clbDiemState = {};
 const CAC_CLB = [
   {id:'khkt',        icon:'🔬', ten:'Khoa học kỹ thuật, Đổi mới sáng tạo', moTa:'Nghiên cứu khoa học, dự án kỹ thuật, ý tưởng sáng tạo, thi VISEF...'},
   {id:'cdsai',       icon:'🤖', ten:'Chuyển đổi số và Trí tuệ nhân tạo',   moTa:'Tìm hiểu công nghệ, AI, lập trình, ứng dụng chuyển đổi số vào học tập và đời sống.'},
@@ -1015,7 +1027,7 @@ auth.onAuthStateChanged(async user=>{
 
   await napHoTroCuaToi();
   await napHoSoCuaToi();
-  renderSeats(); renderRegs(); renderTv(); renderBaiViet(); renderConfessionFeed();
+  renderSeats(); renderRegs(); renderTv(); renderBaiViet(); renderConfessionFeed(); renderCauLacBo();
 });
 
 $('adminUnlockBtn').onclick = async ()=>{
@@ -2608,8 +2620,22 @@ function renderCauLacBo(){
   if(!host) return;
   host.innerHTML = CAC_CLB.map(c=>{
     const thanhVien = clbState[c.id] || {};
-    const dsTen = Object.values(thanhVien).map(x=> x.name);
+    const diemCLB = clbDiemState[c.id] || {};
+    const dsUid = Object.keys(thanhVien);
     const daThamGia = !!(myUid && thanhVien[myUid]);
+
+    const hangThanhVien = dsUid.length ? dsUid.map(uid=>{
+      const diem = (diemCLB[uid] && diemCLB[uid].diem) || 0;
+      const nutDiem = isAdmin ? `
+        <button type="button" class="btn-diem tru" data-clb-diem="${c.id}|${uid}|-1">➖</button>
+        <button type="button" class="btn-diem cong" data-clb-diem="${c.id}|${uid}|1">➕</button>` : '';
+      return `<div class="clb-tv-row">
+        <span class="clb-tv-ten">${esc(thanhVien[uid].name)}</span>
+        <span class="clb-tv-diem">🌟 ${diem}</span>
+        ${nutDiem}
+      </div>`;
+    }).join('') : `<div class="clb-tv-trong">Chưa có ai, hãy là người đầu tiên!</div>`;
+
     return `<div class="clb-card">
       <div class="clb-top">
         <div class="clb-icon">${c.icon}</div>
@@ -2621,7 +2647,10 @@ function renderCauLacBo(){
           ${daThamGia ? 'Rời CLB' : '+ Tham gia'}
         </button>
       </div>
-      <div class="clb-thanhvien">👥 ${dsTen.length} thành viên${dsTen.length ? ': ' + dsTen.map(esc).join(', ') : ' — chưa có ai, hãy là người đầu tiên!'}</div>
+      <div class="clb-thanhvien-list">
+        <div class="clb-tv-tieude">👥 ${dsUid.length} thành viên — điểm uy tín đóng góp</div>
+        ${hangThanhVien}
+      </div>
     </div>`;
   }).join('');
 
@@ -2629,6 +2658,17 @@ function renderCauLacBo(){
     const id = b.getAttribute('data-clb-toggle');
     if(myUid && (clbState[id] || {})[myUid]) roiCLB(id); else thamGiaCLB(id);
   });
+  host.querySelectorAll('[data-clb-diem]').forEach(b=> b.onclick = ()=>{
+    const [clbId, uid, buoc] = b.getAttribute('data-clb-diem').split('|');
+    capNhatDiemCLB(clbId, uid, Number(buoc));
+  });
+}
+
+async function capNhatDiemCLB(clbId, uid, buoc){
+  const hienTai = (clbDiemState[clbId] && clbDiemState[clbId][uid] && clbDiemState[clbId][uid].diem) || 0;
+  try{
+    await clbDiemRef.child(clbId).child(uid).set({ diem: hienTai + buoc, luc: Date.now() });
+  }catch(e){ showMsg($('clbMsg'), baoLoi(e),'err'); }
 }
 
 async function thamGiaCLB(clbId){
@@ -2886,6 +2926,10 @@ bcsRef.on('value', s=>{
 /* Các câu lạc bộ: công khai cho mọi người */
 clbRef.on('value', s=>{
   clbState = s.val() || {};
+  renderCauLacBo();
+});
+clbDiemRef.on('value', s=>{
+  clbDiemState = s.val() || {};
   renderCauLacBo();
 });
 
