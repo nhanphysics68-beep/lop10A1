@@ -57,6 +57,19 @@
   .bcs-admin-item{display:flex; align-items:center; justify-content:space-between; gap:10px;
     background:#fff; border:1px solid var(--line); border-radius:8px; padding:8px 12px; margin-bottom:6px; font-size:13px;}
 
+  /* ---------- Các câu lạc bộ ---------- */
+  .clb-card{background:#fff; border:1.5px solid var(--line); border-radius:12px;
+    padding:14px 16px; margin-bottom:12px;}
+  .clb-top{display:flex; align-items:flex-start; gap:12px;}
+  .clb-icon{font-size:28px; flex:none; line-height:1;}
+  .clb-thongtin{flex:1; min-width:0;}
+  .clb-ten{font-weight:800; color:var(--leaf-dark); font-size:14.5px; margin-bottom:3px;}
+  .clb-mota{font-size:12.5px; color:var(--ink-soft); line-height:1.5;}
+  .clb-top .btn{flex:none; white-space:nowrap;}
+  .clb-thanhvien{font-size:12px; color:var(--ink-soft); margin-top:10px; padding-top:10px;
+    border-top:1px dashed var(--line); line-height:1.6;}
+  @media (max-width:560px){ .clb-top{flex-wrap:wrap;} .clb-top .btn{margin-left:40px;} }
+
   .card{background:var(--paper); border:1px solid var(--line); border-radius:14px;
         box-shadow:var(--shadow); padding:20px; margin-bottom:20px;}
   .card h2{font-size:16px; color:var(--leaf-dark); margin:0 0 6px;}
@@ -351,6 +364,7 @@
     <button class="subtab active" data-subtab="laodong"><span class="ico">🧹</span>Đăng ký lao động</button>
     <button class="subtab" data-subtab="khaigiang"><span class="ico">📺</span>Chuẩn bị khai giảng</button>
     <button class="subtab" data-subtab="hotro"><span class="ico">🤝</span>Nhận hỗ trợ</button>
+    <button class="subtab" data-subtab="caulacbo"><span class="ico">🎨</span>Các câu lạc bộ</button>
   </div>
 
   <!-- ============ THẺ 1: SƠ ĐỒ LỚP ============ -->
@@ -633,6 +647,17 @@
     </div>
   </div>
 
+  <!-- ============ THẺ MỚI: CÁC CÂU LẠC BỘ (thuộc nhóm Các hoạt động của lớp) ============ -->
+  <div class="panel" id="panel-caulacbo" data-group="hoatdong">
+    <div class="card">
+      <h2>🎨 Các câu lạc bộ lớp 10A1</h2>
+      <p class="section-note">Chạm "+ Tham gia" để đăng ký câu lạc bộ em quan tâm — có thể tham gia nhiều CLB
+        cùng lúc, và rời CLB bất cứ khi nào. Lần đầu tham gia, em cần đặt tên hiển thị nếu chưa từng đặt.</p>
+      <div id="clbList"></div>
+      <div id="clbMsg" class="msg"></div>
+    </div>
+  </div>
+
   <!-- ============ THẺ 7: 10A1 CONFESSION (ẨN DANH, CÓ KIỂM DUYỆT) ============ -->
   <div class="panel" id="panel-confession">
     <div class="card">
@@ -818,6 +843,7 @@ const cfDaDuyetRef  = db.ref('confession2026/da_duyet');
 const cfCamBienRef  = db.ref('confession2026/cambien');
 const cfBinhLuanRef = db.ref('confession2026/binhluan');
 const bcsRef = db.ref('lop10a1/bancansu');  // ban cán sự lớp — công khai đọc, chỉ giáo viên ghi
+const clbRef = db.ref('clb2026');           // các câu lạc bộ — công khai đọc, mỗi người tự ghi đúng phần của mình
 const hosoRef   = db.ref('hoso2026/hoso');         // riêng tư: khóa theo uid, giống hotro2026
 
 const LANES     = [ {id:1,desks:7}, {id:2,desks:6}, {id:3,desks:6}, {id:4,desks:6} ];
@@ -836,6 +862,14 @@ let seats={}, swaps=[], roster=[], regs=[], tv={};
 let htCuaToi=null, htTatCa=[], baiViet=[], anhDangChon=[];
 let confessionDaDuyet=[], confessionChoDuyet=[];
 let banCanSu = [];
+let clbState = {};
+const CAC_CLB = [
+  {id:'khkt',        icon:'🔬', ten:'Khoa học kỹ thuật, Đổi mới sáng tạo', moTa:'Nghiên cứu khoa học, dự án kỹ thuật, ý tưởng sáng tạo, thi VISEF...'},
+  {id:'cdsai',       icon:'🤖', ten:'Chuyển đổi số và Trí tuệ nhân tạo',   moTa:'Tìm hiểu công nghệ, AI, lập trình, ứng dụng chuyển đổi số vào học tập và đời sống.'},
+  {id:'truyenthong', icon:'📢', ten:'Truyền thông',                        moTa:'Viết bài, chụp ảnh, dựng video, quản lý các kênh thông tin của lớp/trường.'},
+  {id:'nghethuat',   icon:'🎨', ten:'Nghệ thuật - Kỹ năng sống',           moTa:'Âm nhạc, hội họa, biểu diễn, rèn luyện kỹ năng mềm và kỹ năng sống.'},
+  {id:'tinhnguyen',  icon:'🤝', ten:'Tình nguyện',                         moTa:'Các hoạt động thiện nguyện, vì cộng đồng, hỗ trợ hoàn cảnh khó khăn.'},
+];
 let cfCamXucState={}, cfBinhLuanState={};
 const cfDaGanNgheBai = new Set();
 let cfPickerCamXucMo = null;
@@ -891,7 +925,7 @@ function myRegId(){ const r = regs.find(x=> x.uid===myUid); return r? r.id : nul
 /* -------------------- THẺ CHUYỂN TRANG (có nhóm/thẻ con) -------------------- */
 const NHOM_TAB = {
   thongtin: ['sodo', 'hoso', 'bancansu'],
-  hoatdong: ['laodong', 'khaigiang', 'hotro'],
+  hoatdong: ['laodong', 'khaigiang', 'hotro', 'caulacbo'],
 };
 /* Map link cũ (trước khi gộp nhóm) -> đúng nhóm mới, để link/bookmark cũ vẫn mở đúng chỗ */
 const TAB_CU_SANG_NHOM = {};
@@ -2564,6 +2598,59 @@ $('bcsThemBtn').onclick = async ()=>{
 };
 
 /* ================================================================
+   CÁC CÂU LẠC BỘ — công khai đọc, mỗi học sinh tự tham gia/rời CLB của mình.
+   Dùng chung "tên hiển thị" với mục Bảng tin/Confession (localStorage) để khỏi
+   phải nhập tên nhiều lần; nếu chưa từng đặt tên (đang là "Khách"), bắt đặt tên
+   thật trước khi tham gia, vì đây là danh sách có tên thật, không ẩn danh.
+   ================================================================ */
+function renderCauLacBo(){
+  const host = $('clbList');
+  if(!host) return;
+  host.innerHTML = CAC_CLB.map(c=>{
+    const thanhVien = clbState[c.id] || {};
+    const dsTen = Object.values(thanhVien).map(x=> x.name);
+    const daThamGia = !!(myUid && thanhVien[myUid]);
+    return `<div class="clb-card">
+      <div class="clb-top">
+        <div class="clb-icon">${c.icon}</div>
+        <div class="clb-thongtin">
+          <div class="clb-ten">${esc(c.ten)}</div>
+          <div class="clb-mota">${esc(c.moTa)}</div>
+        </div>
+        <button class="btn btn-sm ${daThamGia ? 'btn-ghost' : 'btn-primary'}" data-clb-toggle="${c.id}">
+          ${daThamGia ? 'Rời CLB' : '+ Tham gia'}
+        </button>
+      </div>
+      <div class="clb-thanhvien">👥 ${dsTen.length} thành viên${dsTen.length ? ': ' + dsTen.map(esc).join(', ') : ' — chưa có ai, hãy là người đầu tiên!'}</div>
+    </div>`;
+  }).join('');
+
+  host.querySelectorAll('[data-clb-toggle]').forEach(b=> b.onclick = ()=>{
+    const id = b.getAttribute('data-clb-toggle');
+    if(myUid && (clbState[id] || {})[myUid]) roiCLB(id); else thamGiaCLB(id);
+  });
+}
+
+async function thamGiaCLB(clbId){
+  if(!myUid){ showMsg($('clbMsg'), 'Đang kết nối, thử lại sau vài giây.', 'info'); return; }
+  let ten = layTenHienThi();
+  if(ten === 'Khách'){
+    doiTenHienThi();
+    ten = layTenHienThi();
+    if(ten === 'Khách'){ showMsg($('clbMsg'), 'Cần đặt tên thật trước khi tham gia câu lạc bộ.', 'err'); return; }
+  }
+  try{
+    await clbRef.child(clbId).child(myUid).set({ name: ten, time: new Date().toLocaleString('vi-VN') });
+  }catch(e){ showMsg($('clbMsg'), baoLoi(e),'err'); }
+}
+async function roiCLB(clbId){
+  if(!myUid) return;
+  if(!confirm('Rời khỏi câu lạc bộ này?')) return;
+  try{ await clbRef.child(clbId).child(myUid).remove(); }
+  catch(e){ showMsg($('clbMsg'), baoLoi(e),'err'); }
+}
+
+/* ================================================================
    KHU VỰC GIÁO VIÊN
    ================================================================ */
 async function napHoTroTatCa(){
@@ -2794,6 +2881,12 @@ bcsRef.on('value', s=>{
   banCanSu = Object.keys(v).map(k=> Object.assign({id:k}, v[k]));
   renderBanCanSu();
   if(isAdmin) renderBcsAdmin();
+});
+
+/* Các câu lạc bộ: công khai cho mọi người */
+clbRef.on('value', s=>{
+  clbState = s.val() || {};
+  renderCauLacBo();
 });
 
 /* Danh sách hỗ trợ không dùng lắng nghe liên tục vì là dữ liệu riêng tư —
