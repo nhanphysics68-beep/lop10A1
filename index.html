@@ -844,7 +844,11 @@
         CCCD và ảnh thẻ chỉ hiện ở đây, không công khai. Bấm Xuất Excel để có file dạng hồ sơ từng trang.
       </p>
       <div id="chsAdminList"></div>
-      <button class="btn btn-clay btn-sm" id="chsXuatExcelBtn" style="margin:8px 0 16px;">📊 Xuất hồ sơ cá nhân (Excel, mỗi HS 1 trang)</button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin:8px 0 16px;">
+        <button class="btn btn-blue btn-sm" id="chsDongBoBtn">🔄 Đồng bộ từ Hồ sơ đầu năm</button>
+        <button class="btn btn-clay btn-sm" id="chsXuatExcelBtn">📊 Xuất hồ sơ cá nhân (Excel, mỗi HS 1 trang)</button>
+      </div>
+      <div id="chsDongBoMsg" class="msg"></div>
 
       <div class="section-title">🎭 Confession chờ duyệt <span class="count-badge" id="cfChoDuyetBadge">0</span></div>
       <p class="section-note" style="margin:0 0 6px;">
@@ -3070,6 +3074,55 @@ function tenTrangHopLe(ten, dsDaDung){
   dsDaDung.add(ketQua);
   return ketQua;
 }
+
+/* Đồng bộ hàng loạt từ Hồ sơ đầu năm sang Dữ liệu cá nhân — chỉ điền chỗ còn trống,
+   KHÔNG ghi đè dữ liệu học sinh đã tự nhập/tự sửa (thanhTich, anhTheId không đụng tới). */
+$('chsDongBoBtn').onclick = async ()=>{
+  if(!confirm('Đồng bộ dữ liệu từ Hồ sơ đầu năm sang Dữ liệu cá nhân?\nChỉ điền vào chỗ còn trống, không ghi đè dữ liệu đã có.')) return;
+  const btn = $('chsDongBoBtn');
+  btn.disabled = true;
+  showMsg($('chsDongBoMsg'), 'Đang đồng bộ...', 'info');
+  try{
+    const hosoTree = (await hosoRef.once('value')).val() || {};
+    const dsUid = Object.keys(hosoTree);
+    let themMoi = 0, capNhat = 0, boQua = 0;
+
+    for(const uid of dsUid){
+      const hoso = hsTuDangFirebase(hosoTree[uid]);
+      if(!hoso || !hoso[3]){ boQua++; continue; } // không có họ tên -> bỏ qua
+
+      const hienTai = (await chsRef.child(uid).once('value')).val();
+      if(!hienTai){
+        await chsRef.child(uid).set({
+          hoTen: hoso[3] || '',
+          ngaySinh: hoso[4] || '',
+          gioiTinh: hoso[5] || '',
+          danToc: hoso[12] || '',
+          cccd: hoso[45] || '',
+          savedAt: new Date().toISOString()
+        });
+        themMoi++;
+      } else {
+        const boSung = {};
+        if(!hienTai.hoTen && hoso[3])     boSung.hoTen = hoso[3];
+        if(!hienTai.ngaySinh && hoso[4])  boSung.ngaySinh = hoso[4];
+        if(!hienTai.gioiTinh && hoso[5])  boSung.gioiTinh = hoso[5];
+        if(!hienTai.danToc && hoso[12])   boSung.danToc = hoso[12];
+        if(!hienTai.cccd && hoso[45])     boSung.cccd = hoso[45];
+        if(Object.keys(boSung).length){
+          boSung.savedAt = new Date().toISOString();
+          await chsRef.child(uid).update(boSung);
+          capNhat++;
+        }
+      }
+    }
+
+    await napChsAdmin();
+    showMsg($('chsDongBoMsg'),
+      `✅ Đồng bộ xong: ${themMoi} học sinh mới, ${capNhat} bổ sung thêm, ${boQua} bỏ qua (chưa có tên trong Hồ sơ đầu năm).`, 'ok');
+  }catch(e){ showMsg($('chsDongBoMsg'), baoLoi(e), 'err'); }
+  btn.disabled = false;
+};
 
 $('chsXuatExcelBtn').onclick = async ()=>{
   const btn = $('chsXuatExcelBtn');
