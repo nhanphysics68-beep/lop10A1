@@ -1307,10 +1307,26 @@ $('soDoLuuBtn').onclick = async ()=>{
   if(seatsNhap === null) return;
   const btn = $('soDoLuuBtn'); btn.disabled = true;
   try{
-    await seatsRef.set(seatsNhap);
-    await banXoaRef.set(banXoaNhap);
+    /* Ghi từng đường dẫn cụ thể trong 1 lượt cập nhật — đúng cách "Đổi chỗ nhanh" cũ đã
+       dùng và chạy được — thay vì ghi đè cả nhánh cha (cách trước đây có thể không được
+       Rules chấp nhận đúng như mong đợi, khiến Thầy lưu mà không thấy đổi gì). */
+    const capNhat = {};
+    const tatCaId = new Set([...Object.keys(seats), ...Object.keys(seatsNhap)]);
+    tatCaId.forEach(id=>{
+      const cu = seats[id] || null, moi = seatsNhap[id] || null;
+      if(JSON.stringify(cu) !== JSON.stringify(moi)) capNhat['lop10a1/seats/'+id] = moi;
+    });
+    const tatCaBan = new Set([...Object.keys(banXoa), ...Object.keys(banXoaNhap)]);
+    tatCaBan.forEach(key=>{
+      const cu = !!banXoa[key], moi = !!banXoaNhap[key];
+      if(cu !== moi) capNhat['lop10a1/banXoa/'+key] = moi ? true : null;
+    });
     // Các yêu cầu đổi chỗ đang chờ có thể không còn hợp lệ sau khi sắp xếp lại thủ công -> dọn hết cho sạch
-    await swapsRef.remove();
+    swaps.forEach(s=> capNhat['lop10a1/swaps/'+s.id] = null);
+
+    if(Object.keys(capNhat).length){
+      await db.ref().update(capNhat);
+    }
     seatsNhap = null; banXoaNhap = null;
     $('soDoLuuThanh').style.display = 'none';
     renderSeats();
