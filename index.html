@@ -124,6 +124,12 @@
   .row-c5{background:#f5eafc;} .row-c5 .desk-badge{color:#7c3aed;}
   .row-c6{background:#fff9e0;} .row-c6 .desk-badge{color:#b45309;}
   .row-c7{background:#e0f7fa;} .row-c7 .desk-badge{color:#0f766e;}
+  .nut-xoa-ban{background:#fff; border:1.5px solid var(--red); color:var(--red); border-radius:50%;
+    width:20px; height:20px; font-size:11px; line-height:1; cursor:pointer; flex:none;
+    display:flex; align-items:center; justify-content:center; padding:0; transition:.15s;}
+  .nut-xoa-ban:hover{background:var(--red); color:#fff;}
+  .seat[draggable="true"]{cursor:grab;}
+  .seat.dang-keo-toi{outline:3px dashed var(--blue); outline-offset:-3px; background:#eaf1fb !important;}
   .seat{flex:1; min-width:0; aspect-ratio:148/104; border-radius:clamp(6px,1.4vw,12px);
     border:2px dashed #b9d4c0; background:#fbfdfb; display:flex; flex-direction:column;
     align-items:center; justify-content:center; font-size:clamp(7px,1.7vw,13px); font-weight:700;
@@ -782,6 +788,13 @@
         <select id="swapA"></select><span>⇄</span><select id="swapB"></select>
         <button class="btn btn-blue btn-sm" id="swapBtn">Đổi chỗ</button>
       </div>
+      <p class="section-note" style="margin:6px 0 0;">
+        💡 Có thể kéo-thả trực tiếp 1 ô ghế sang ô khác ngay trên sơ đồ để đổi/chuyển chỗ nhanh hơn.
+        Mỗi bàn có nút <b>✕</b> nhỏ để xóa hẳn bàn đó khỏi sơ đồ (khôi phục được bên dưới).
+      </p>
+
+      <div class="section-title">Các bàn đã xóa khỏi sơ đồ <span class="count-badge" id="banXoaBadge">0</span></div>
+      <div id="banXoaList"></div>
 
       <div class="section-title">Đăng ký lao động — đối chiếu ai chưa nộp</div>
       <div class="scroll-x"><table id="ldMissingTable"></table></div>
@@ -932,6 +945,7 @@ const anhDriveLon = id => `https://lh3.googleusercontent.com/d/${id}=w1600`;
 /* Giữ nguyên đường dẫn cũ để không mất dữ liệu đã có */
 const seatsRef  = db.ref('lop10a1/seats');
 const swapsRef  = db.ref('lop10a1/swaps');
+const banXoaRef = db.ref('lop10a1/banXoa'); // các bàn giáo viên đã xoá khỏi sơ đồ — công khai đọc, chỉ giáo viên ghi
 const rosterRef = db.ref('lop10a1/roster');
 const regsRef   = db.ref('laodong2026/registrations');
 const tvRef     = db.ref('khaigiang2026/tivi');
@@ -968,6 +982,8 @@ const ANH_CHAT_LON = 0.75;
 const BAI_TOI_DA   = 25;     // số bài hiển thị trên bảng tin, giữ trang nhẹ cho điện thoại
 
 let seats={}, swaps=[], roster=[], regs=[], tv={};
+let banXoa = {};       // các bàn đã xoá khỏi sơ đồ (key dạng "d1-b3")
+let dangKeoSeatId = null; // seatId đang được giáo viên kéo (kéo-thả đổi/chuyển chỗ)
 let htCuaToi=null, htTatCa=[], baiViet=[], anhDangChon=[];
 let confessionDaDuyet=[], confessionChoDuyet=[];
 let banCanSu = [];
@@ -1026,7 +1042,10 @@ function baoLoi(e){
 }
 function allSeatIds(){
   const ids=[];
-  LANES.forEach(l=>{ for(let b=1;b<=l.desks;b++){ ids.push(`d${l.id}-b${b}-T`); ids.push(`d${l.id}-b${b}-P`); } });
+  LANES.forEach(l=>{ for(let b=1;b<=l.desks;b++){
+    if(banXoa[`d${l.id}-b${b}`]) continue; // bỏ qua bàn đã bị xóa khỏi sơ đồ
+    ids.push(`d${l.id}-b${b}-T`); ids.push(`d${l.id}-b${b}-P`);
+  } });
   return ids;
 }
 function seatLabel(id){
@@ -1162,11 +1181,22 @@ function renderSeats(){
     lane.className = 'lane';
     lane.innerHTML = `<div class="lane-label">Dãy ${l.id}</div>`;
     for(let b=1;b<=l.desks;b++){
+      const deskKey = `d${l.id}-b${b}`;
+      if(banXoa[deskKey]) continue; // bàn đã bị giáo viên xoá khỏi sơ đồ -> không hiện
+
       const row = document.createElement('div');
       row.className = `desk-row row-c${((b-1)%7)+1}`;
       const badge = document.createElement('div');
       badge.className='desk-badge'; badge.textContent=b;
       row.appendChild(badge);
+
+      if(isAdmin){
+        const nutXoaBan = document.createElement('button');
+        nutXoaBan.type = 'button'; nutXoaBan.className = 'nut-xoa-ban';
+        nutXoaBan.title = 'Xóa bàn này khỏi sơ đồ'; nutXoaBan.textContent = '✕';
+        nutXoaBan.onclick = e=>{ e.stopPropagation(); xoaBanKhoiSoDo(deskKey, l.id, b); };
+        row.appendChild(nutXoaBan);
+      }
 
       const desk = document.createElement('div'); desk.className='desk';
       ['T','P'].forEach(side=>{
@@ -1187,13 +1217,66 @@ function renderSeats(){
         } else {
           div.textContent='+'; div.title = seatLabel(id)+' — Trống';
         }
-        div.onclick = ()=> onSeatClick(id);
+        div.onclick = ()=>{ if(!isAdmin || dangKeoSeatId===null) onSeatClick(id); };
+
+        /* Kéo-thả đổi/chuyển chỗ — chỉ dành cho giáo viên */
+        if(isAdmin){
+          div.draggable = true;
+          div.ondragstart = e=>{
+            dangKeoSeatId = id;
+            e.dataTransfer.effectAllowed = 'move';
+            try{ e.dataTransfer.setData('text/plain', id); }catch(err){}
+          };
+          div.ondragend = ()=>{ dangKeoSeatId = null; grid.querySelectorAll('.seat.dang-keo-toi').forEach(x=> x.classList.remove('dang-keo-toi')); };
+          div.ondragover = e=>{ e.preventDefault(); e.dataTransfer.dropEffect = 'move'; div.classList.add('dang-keo-toi'); };
+          div.ondragleave = ()=> div.classList.remove('dang-keo-toi');
+          div.ondrop = e=>{
+            e.preventDefault();
+            div.classList.remove('dang-keo-toi');
+            const tuId = dangKeoSeatId;
+            dangKeoSeatId = null;
+            if(tuId && tuId !== id) keoThaDoiCho(tuId, id);
+          };
+        }
+
         desk.appendChild(div);
       });
       row.appendChild(desk); lane.appendChild(row);
     }
     grid.appendChild(lane);
   });
+}
+
+/* Kéo-thả: nếu thả vào ô trống -> CHUYỂN chỗ (dời hẳn qua); nếu thả vào ô đã có người -> ĐỔI chỗ cho nhau.
+   Dùng chung 1 phép cập nhật, tự nhiên xử lý đúng cả 2 trường hợp. */
+async function keoThaDoiCho(tuId, denId){
+  const capNhat = {};
+  capNhat['lop10a1/seats/'+denId] = seats[tuId] || null;
+  capNhat['lop10a1/seats/'+tuId]  = seats[denId] || null;
+  try{
+    await db.ref().update(capNhat);
+    await xoaYeuCau(tuId); await xoaYeuCau(denId);
+    showMsg($('adminMsg'), seats[denId] ? 'Đã đổi chỗ.' : 'Đã chuyển chỗ.', 'ok');
+  }catch(e){ showMsg($('adminMsg'), baoLoi(e),'err'); }
+}
+
+/* Xóa 1 bàn khỏi sơ đồ (cả 2 ghế trái/phải) — có thể khôi phục lại sau trong khu quản trị. */
+async function xoaBanKhoiSoDo(deskKey, laneId, banSo){
+  const idT = `d${laneId}-b${banSo}-T`, idP = `d${laneId}-b${banSo}-P`;
+  const dangCoNguoi = seats[idT] || seats[idP];
+  const xacNhan = dangCoNguoi
+    ? `Bàn ${banSo} dãy ${laneId} đang có người ngồi. Xóa bàn sẽ bỏ trống chỗ của họ. Vẫn xóa bàn này khỏi sơ đồ?`
+    : `Xóa bàn ${banSo} dãy ${laneId} khỏi sơ đồ? (khôi phục lại được trong khu quản trị)`;
+  if(!confirm(xacNhan)) return;
+  try{
+    const capNhat = {};
+    capNhat['lop10a1/seats/'+idT] = null;
+    capNhat['lop10a1/seats/'+idP] = null;
+    capNhat['lop10a1/banXoa/'+deskKey] = true;
+    await db.ref().update(capNhat);
+    await xoaYeuCau(idT); await xoaYeuCau(idP);
+    showMsg($('adminMsg'), 'Đã xóa bàn khỏi sơ đồ.', 'ok');
+  }catch(e){ showMsg($('adminMsg'), baoLoi(e),'err'); }
 }
 
 function onSeatClick(seatId){
@@ -3180,8 +3263,28 @@ async function duyetDoiCho(swapId){
   }catch(e){ showMsg($('adminMsg'), baoLoi(e),'err'); }
 }
 
+function renderBanXoa(){
+  const host = $('banXoaList');
+  if(!host) return;
+  const ds = Object.keys(banXoa);
+  $('banXoaBadge').textContent = ds.length;
+  if(!ds.length){ host.innerHTML = `<p class="section-note">Không có bàn nào bị xóa.</p>`; return; }
+  host.innerHTML = ds.map(key=>{
+    const [lPart, bPart] = key.split('-');
+    return `<div class="bcs-admin-item">
+      <span>Dãy ${lPart.slice(1)} — Bàn ${bPart.slice(1)}</span>
+      <button class="btn btn-blue btn-sm" data-khoiphuc-ban="${key}">↺ Khôi phục</button>
+    </div>`;
+  }).join('');
+  host.querySelectorAll('[data-khoiphuc-ban]').forEach(b=> b.onclick = async ()=>{
+    try{ await banXoaRef.child(b.getAttribute('data-khoiphuc-ban')).remove(); showMsg($('adminMsg'),'Đã khôi phục bàn.','ok'); }
+    catch(e){ showMsg($('adminMsg'), baoLoi(e),'err'); }
+  });
+}
+
 function renderAdmin(){
   if(!isAdmin) return;
+  renderBanXoa();
 
   /* Yêu cầu đổi chỗ */
   const cho = swaps.filter(s=> s.status==='pending');
@@ -3354,6 +3457,7 @@ function taiFile(noiDung, ten, kieu){
    LẮNG NGHE THAY ĐỔI TỪ FIREBASE
    ================================================================ */
 seatsRef.on('value', s=>{ seats = s.val()||{}; renderSeats(); if(isAdmin) renderAdmin(); });
+banXoaRef.on('value', s=>{ banXoa = s.val()||{}; renderSeats(); if(isAdmin) renderAdmin(); });
 swapsRef.on('value', s=>{
   const v = s.val()||{};
   swaps = Object.keys(v).map(k=> Object.assign({id:k}, v[k]));
