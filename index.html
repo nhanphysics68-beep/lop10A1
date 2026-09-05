@@ -418,6 +418,7 @@
         <button class="btn btn-primary btn-sm" id="soDoLuuBtn">💾 Lưu thay đổi</button>
         <button class="btn btn-ghost btn-sm" id="soDoHoanTacBtn">↺ Hoàn tác</button>
       </div>
+      <div id="soDoLuuMsg" class="msg"></div>
 
       <div class="classroom-grid" id="classroomGrid"></div>
       <div class="back-label">— CUỐI LỚP —</div>
@@ -1306,6 +1307,7 @@ function xoaBanKhoiSoDo(deskKey, laneId, banSo){
 $('soDoLuuBtn').onclick = async ()=>{
   if(seatsNhap === null) return;
   const btn = $('soDoLuuBtn'); btn.disabled = true;
+  showMsg($('soDoLuuMsg'), 'Đang lưu...', 'info');
   try{
     /* Ghi từng đường dẫn cụ thể trong 1 lượt cập nhật — đúng cách "Đổi chỗ nhanh" cũ đã
        dùng và chạy được — thay vì ghi đè cả nhánh cha (cách trước đây có thể không được
@@ -1331,8 +1333,12 @@ $('soDoLuuBtn').onclick = async ()=>{
     $('soDoLuuThanh').style.display = 'none';
     renderSeats();
     if(isAdmin) renderAdmin();
+    showMsg($('soDoLuuMsg'), '✅ Đã lưu thay đổi sơ đồ.', 'ok');
     showMsg($('adminMsg'), '✅ Đã lưu thay đổi sơ đồ.', 'ok');
-  }catch(e){ showMsg($('adminMsg'), baoLoi(e),'err'); }
+  }catch(e){
+    showMsg($('soDoLuuMsg'), baoLoi(e),'err');
+    showMsg($('adminMsg'), baoLoi(e),'err');
+  }
   btn.disabled = false;
 };
 $('soDoHoanTacBtn').onclick = ()=>{
