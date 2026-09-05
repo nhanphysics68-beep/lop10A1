@@ -130,6 +130,8 @@
   .nut-xoa-ban:hover{background:var(--red); color:#fff;}
   .seat[draggable="true"]{cursor:grab;}
   .seat.dang-keo-toi{outline:3px dashed var(--blue); outline-offset:-3px; background:#eaf1fb !important;}
+  .so-do-luu-thanh{display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:#fff8ec;
+    border:1.5px solid var(--clay); border-radius:10px; padding:10px 14px; margin-bottom:14px; font-size:13px; color:#7a4a05;}
   .seat{flex:1; min-width:0; aspect-ratio:148/104; border-radius:clamp(6px,1.4vw,12px);
     border:2px dashed #b9d4c0; background:#fbfdfb; display:flex; flex-direction:column;
     align-items:center; justify-content:center; font-size:clamp(7px,1.7vw,13px); font-weight:700;
@@ -409,6 +411,12 @@
         <div class="front-box door"><span class="icon">🚪</span>CỬA RA VÀO</div>
         <div class="front-box podium"><span class="icon">🧑‍🏫</span>BỤC GIẢNG<div class="board">BẢNG LỚP</div></div>
         <div class="front-box teacher-desk"><span class="icon">🗄️</span>BÀN GIÁO VIÊN</div>
+      </div>
+
+      <div id="soDoLuuThanh" class="so-do-luu-thanh" style="display:none;">
+        <span>⚠️ Có thay đổi kéo-thả/xóa bàn chưa lưu.</span>
+        <button class="btn btn-primary btn-sm" id="soDoLuuBtn">💾 Lưu thay đổi</button>
+        <button class="btn btn-ghost btn-sm" id="soDoHoanTacBtn">↺ Hoàn tác</button>
       </div>
 
       <div class="classroom-grid" id="classroomGrid"></div>
@@ -982,8 +990,24 @@ const ANH_CHAT_LON = 0.75;
 const BAI_TOI_DA   = 25;     // số bài hiển thị trên bảng tin, giữ trang nhẹ cho điện thoại
 
 let seats={}, swaps=[], roster=[], regs=[], tv={};
-let banXoa = {};       // các bàn đã xoá khỏi sơ đồ (key dạng "d1-b3")
+let banXoa = {};       // các bàn đã xoá khỏi sơ đồ (key dạng "d1-b3") — dữ liệu ĐÃ LƯU trên Firebase
+let seatsNhap = null;  // bản NHÁP cục bộ khi giáo viên đang kéo-thả/xóa bàn (null = chưa có gì chưa lưu)
+let banXoaNhap = null; // bản nháp tương ứng cho danh sách bàn đã xóa
 let dangKeoSeatId = null; // seatId đang được giáo viên kéo (kéo-thả đổi/chuyển chỗ)
+
+/* Luôn dùng 2 hàm này khi HIỂN THỊ sơ đồ — tự động ưu tiên bản nháp nếu đang có thay đổi
+   chưa lưu, để kéo-thả nhiều bước liên tiếp không bị ghi lên Firebase giữa chừng (tránh vừa
+   kéo vừa bị vẽ lại do dữ liệu realtime, từng khiến một số lượt kéo bị "trượt"/không ăn). */
+function seatsHienTai(){ return seatsNhap !== null ? seatsNhap : seats; }
+function banXoaHienTai(){ return banXoaNhap !== null ? banXoaNhap : banXoa; }
+function batDauNhapNeuChua(){
+  if(seatsNhap === null){
+    seatsNhap = JSON.parse(JSON.stringify(seats));
+    banXoaNhap = JSON.parse(JSON.stringify(banXoa));
+  }
+  const thanh = $('soDoLuuThanh');
+  if(thanh) thanh.style.display = 'flex';
+}
 let htCuaToi=null, htTatCa=[], baiViet=[], anhDangChon=[];
 let confessionDaDuyet=[], confessionChoDuyet=[];
 let banCanSu = [];
@@ -1042,8 +1066,9 @@ function baoLoi(e){
 }
 function allSeatIds(){
   const ids=[];
+  const banXoaXem = banXoaHienTai();
   LANES.forEach(l=>{ for(let b=1;b<=l.desks;b++){
-    if(banXoa[`d${l.id}-b${b}`]) continue; // bỏ qua bàn đã bị xóa khỏi sơ đồ
+    if(banXoaXem[`d${l.id}-b${b}`]) continue; // bỏ qua bàn đã bị xóa khỏi sơ đồ
     ids.push(`d${l.id}-b${b}-T`); ids.push(`d${l.id}-b${b}-P`);
   } });
   return ids;
@@ -1175,6 +1200,8 @@ function renderSeats(){
   const grid = $('classroomGrid');
   grid.innerHTML = '';
   const cuaToi = mySeatId();
+  const seatsXem = seatsHienTai();
+  const banXoaXem = banXoaHienTai();
 
   LANES.forEach(l=>{
     const lane = document.createElement('div');
@@ -1182,7 +1209,7 @@ function renderSeats(){
     lane.innerHTML = `<div class="lane-label">Dãy ${l.id}</div>`;
     for(let b=1;b<=l.desks;b++){
       const deskKey = `d${l.id}-b${b}`;
-      if(banXoa[deskKey]) continue; // bàn đã bị giáo viên xoá khỏi sơ đồ -> không hiện
+      if(banXoaXem[deskKey]) continue; // bàn đã bị giáo viên xoá khỏi sơ đồ -> không hiện
 
       const row = document.createElement('div');
       row.className = `desk-row row-c${((b-1)%7)+1}`;
@@ -1201,7 +1228,7 @@ function renderSeats(){
       const desk = document.createElement('div'); desk.className='desk';
       ['T','P'].forEach(side=>{
         const id = `d${l.id}-b${b}-${side}`;
-        const data = seats[id];
+        const data = seatsXem[id];
         const div = document.createElement('div');
         div.className='seat';
         const coYeuCau = swaps.some(s=> s.status==='pending' && (s.fromSeatId===id || s.toSeatId===id));
@@ -1219,7 +1246,9 @@ function renderSeats(){
         }
         div.onclick = ()=>{ if(!isAdmin || dangKeoSeatId===null) onSeatClick(id); };
 
-        /* Kéo-thả đổi/chuyển chỗ — chỉ dành cho giáo viên */
+        /* Kéo-thả đổi/chuyển chỗ — chỉ dành cho giáo viên. Chỉ thay đổi bản NHÁP cục bộ,
+           không ghi Firebase ngay, để kéo nhiều bước liên tiếp không bị vẽ lại giữa chừng
+           do dữ liệu realtime (nguyên nhân khiến trước đây có lượt kéo bị "trượt"). */
         if(isAdmin){
           div.draggable = true;
           div.ondragstart = e=>{
@@ -1248,36 +1277,56 @@ function renderSeats(){
 }
 
 /* Kéo-thả: nếu thả vào ô trống -> CHUYỂN chỗ (dời hẳn qua); nếu thả vào ô đã có người -> ĐỔI chỗ cho nhau.
-   Dùng chung 1 phép cập nhật, tự nhiên xử lý đúng cả 2 trường hợp. */
-async function keoThaDoiCho(tuId, denId){
-  const capNhat = {};
-  capNhat['lop10a1/seats/'+denId] = seats[tuId] || null;
-  capNhat['lop10a1/seats/'+tuId]  = seats[denId] || null;
-  try{
-    await db.ref().update(capNhat);
-    await xoaYeuCau(tuId); await xoaYeuCau(denId);
-    showMsg($('adminMsg'), seats[denId] ? 'Đã đổi chỗ.' : 'Đã chuyển chỗ.', 'ok');
-  }catch(e){ showMsg($('adminMsg'), baoLoi(e),'err'); }
+   CHỈ sửa bản nháp cục bộ (seatsNhap) — chưa ghi lên Firebase, Thầy cần bấm "Lưu thay đổi" mới thật sự áp dụng. */
+function keoThaDoiCho(tuId, denId){
+  batDauNhapNeuChua();
+  const tam = seatsNhap[denId] || null;
+  if(seatsNhap[tuId]) seatsNhap[denId] = seatsNhap[tuId]; else delete seatsNhap[denId];
+  if(tam) seatsNhap[tuId] = tam; else delete seatsNhap[tuId];
+  renderSeats();
+  if(isAdmin) renderAdmin();
 }
 
-/* Xóa 1 bàn khỏi sơ đồ (cả 2 ghế trái/phải) — có thể khôi phục lại sau trong khu quản trị. */
-async function xoaBanKhoiSoDo(deskKey, laneId, banSo){
+/* Xóa 1 bàn khỏi sơ đồ (cả 2 ghế trái/phải) — cũng chỉ sửa bản nháp, Lưu mới áp dụng thật. */
+function xoaBanKhoiSoDo(deskKey, laneId, banSo){
   const idT = `d${laneId}-b${banSo}-T`, idP = `d${laneId}-b${banSo}-P`;
-  const dangCoNguoi = seats[idT] || seats[idP];
+  const xem = seatsHienTai();
+  const dangCoNguoi = xem[idT] || xem[idP];
   const xacNhan = dangCoNguoi
     ? `Bàn ${banSo} dãy ${laneId} đang có người ngồi. Xóa bàn sẽ bỏ trống chỗ của họ. Vẫn xóa bàn này khỏi sơ đồ?`
-    : `Xóa bàn ${banSo} dãy ${laneId} khỏi sơ đồ? (khôi phục lại được trong khu quản trị)`;
+    : `Xóa bàn ${banSo} dãy ${laneId} khỏi sơ đồ? (nhớ bấm "Lưu thay đổi" để áp dụng thật, khôi phục được trong khu quản trị)`;
   if(!confirm(xacNhan)) return;
-  try{
-    const capNhat = {};
-    capNhat['lop10a1/seats/'+idT] = null;
-    capNhat['lop10a1/seats/'+idP] = null;
-    capNhat['lop10a1/banXoa/'+deskKey] = true;
-    await db.ref().update(capNhat);
-    await xoaYeuCau(idT); await xoaYeuCau(idP);
-    showMsg($('adminMsg'), 'Đã xóa bàn khỏi sơ đồ.', 'ok');
-  }catch(e){ showMsg($('adminMsg'), baoLoi(e),'err'); }
+  batDauNhapNeuChua();
+  delete seatsNhap[idT]; delete seatsNhap[idP];
+  banXoaNhap[deskKey] = true;
+  renderSeats();
+  if(isAdmin) renderAdmin();
 }
+
+$('soDoLuuBtn').onclick = async ()=>{
+  if(seatsNhap === null) return;
+  const btn = $('soDoLuuBtn'); btn.disabled = true;
+  try{
+    await seatsRef.set(seatsNhap);
+    await banXoaRef.set(banXoaNhap);
+    // Các yêu cầu đổi chỗ đang chờ có thể không còn hợp lệ sau khi sắp xếp lại thủ công -> dọn hết cho sạch
+    await swapsRef.remove();
+    seatsNhap = null; banXoaNhap = null;
+    $('soDoLuuThanh').style.display = 'none';
+    renderSeats();
+    if(isAdmin) renderAdmin();
+    showMsg($('adminMsg'), '✅ Đã lưu thay đổi sơ đồ.', 'ok');
+  }catch(e){ showMsg($('adminMsg'), baoLoi(e),'err'); }
+  btn.disabled = false;
+};
+$('soDoHoanTacBtn').onclick = ()=>{
+  if(seatsNhap === null) return;
+  if(!confirm('Hủy toàn bộ thay đổi kéo-thả/xóa bàn chưa lưu, quay về đúng trạng thái đã lưu gần nhất?')) return;
+  seatsNhap = null; banXoaNhap = null;
+  $('soDoLuuThanh').style.display = 'none';
+  renderSeats();
+  if(isAdmin) renderAdmin();
+};
 
 function onSeatClick(seatId){
   if(!myUid){ showMsg($('pageMsg'),'Đang kết nối, thử lại sau vài giây.','info'); return; }
@@ -3303,15 +3352,19 @@ function renderAdmin(){
   });
 
   /* Chỗ ngồi */
+  const dangCoNhap = (seatsNhap !== null);
   const daCo = allSeatIds().filter(id=> seats[id]).sort();
   let h2 = `<tr><th>STT</th><th>Vị trí</th><th>Họ tên</th><th></th></tr>`;
   daCo.forEach((id,i)=> h2 += `<tr><td>${i+1}</td><td>${seatLabel(id)}</td>
-    <td><input type="text" id="an-${id}" value="${esc(seats[id].name)}" maxlength="60"
+    <td><input type="text" id="an-${id}" value="${esc(seats[id].name)}" maxlength="60" ${dangCoNhap?'disabled':''}
         style="width:100%;padding:5px 7px;border:1px solid var(--line);border-radius:5px;font-family:inherit;"></td>
     <td style="white-space:nowrap;">
-      <button class="btn btn-primary btn-sm" data-luuGhe="${id}">Lưu</button>
-      <button class="btn btn-ghost btn-sm" data-xoaGhe="${id}">Xóa</button></td></tr>`);
+      <button class="btn btn-primary btn-sm" data-luuGhe="${id}" ${dangCoNhap?'disabled':''}>Lưu</button>
+      <button class="btn btn-ghost btn-sm" data-xoaGhe="${id}" ${dangCoNhap?'disabled':''}>Xóa</button></td></tr>`);
   if(!daCo.length) h2 += `<tr><td colspan="4" style="text-align:center;color:var(--ink-soft);">Chưa có ai đăng ký.</td></tr>`;
+  if(dangCoNhap) h2 = `<tr><td colspan="4" style="text-align:center;color:#7a4a05;background:#fff8ec;padding:8px;">
+      ⚠️ Đang có thay đổi kéo-thả/xóa bàn chưa lưu ở sơ đồ phía trên — Lưu hoặc Hoàn tác trước khi sửa bảng này.
+    </td></tr>` + h2;
   $('adminTable').innerHTML = h2;
   document.querySelectorAll('[data-luuGhe]').forEach(b=> b.onclick = async ()=>{
     const id=b.getAttribute('data-luuGhe'), name=$('an-'+id).value.trim();
@@ -3382,6 +3435,8 @@ function renderAdmin(){
   const opts = allSeatIds().map(id=>
     `<option value="${id}">${seatLabel(id)}${seats[id]? ' — '+esc(seats[id].name):' (trống)'}</option>`).join('');
   $('swapA').innerHTML = opts; $('swapB').innerHTML = opts;
+  $('swapA').disabled = dangCoNhap; $('swapB').disabled = dangCoNhap; $('swapBtn').disabled = dangCoNhap;
+  $('swapBtn').title = dangCoNhap ? 'Lưu hoặc Hoàn tác thay đổi kéo-thả ở sơ đồ trước' : '';
 }
 
 $('swapBtn').onclick = async ()=>{
@@ -3456,8 +3511,14 @@ function taiFile(noiDung, ten, kieu){
 /* ================================================================
    LẮNG NGHE THAY ĐỔI TỪ FIREBASE
    ================================================================ */
-seatsRef.on('value', s=>{ seats = s.val()||{}; renderSeats(); if(isAdmin) renderAdmin(); });
-banXoaRef.on('value', s=>{ banXoa = s.val()||{}; renderSeats(); if(isAdmin) renderAdmin(); });
+seatsRef.on('value', s=>{
+  seats = s.val()||{};
+  if(seatsNhap === null){ renderSeats(); if(isAdmin) renderAdmin(); } // đang có nháp chưa lưu -> không vẽ đè
+});
+banXoaRef.on('value', s=>{
+  banXoa = s.val()||{};
+  if(seatsNhap === null){ renderSeats(); if(isAdmin) renderAdmin(); }
+});
 swapsRef.on('value', s=>{
   const v = s.val()||{};
   swaps = Object.keys(v).map(k=> Object.assign({id:k}, v[k]));
