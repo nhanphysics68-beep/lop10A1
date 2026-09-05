@@ -804,8 +804,36 @@
       <div class="section-title">👥 Ban cán sự lớp</div>
       <div id="bcsAdminList"></div>
       <div class="grid2">
-        <div class="field"><label>Chức vụ</label><input type="text" id="bcsChucVu" placeholder="VD: Lớp trưởng" maxlength="60"></div>
-        <div class="field"><label>Họ và tên</label><input type="text" id="bcsHoTen" placeholder="Họ và tên" maxlength="60"></div>
+        <div class="field">
+          <label>Chức vụ</label>
+          <select id="bcsChucVu">
+            <option value="">— Chọn chức vụ —</option>
+            <option>Lớp trưởng</option>
+            <option>Lớp phó học tập</option>
+            <option>Lớp phó lao động</option>
+            <option>Lớp phó văn thể mỹ</option>
+            <option>Bí thư chi đoàn</option>
+            <option>Phó bí thư chi đoàn</option>
+            <option>Thủ quỹ</option>
+            <option>Thư ký</option>
+            <option>Tổ trưởng tổ 1</option>
+            <option>Tổ trưởng tổ 2</option>
+            <option>Tổ trưởng tổ 3</option>
+            <option>Tổ trưởng tổ 4</option>
+            <option>Tổ phó tổ 1</option>
+            <option>Tổ phó tổ 2</option>
+            <option>Tổ phó tổ 3</option>
+            <option>Tổ phó tổ 4</option>
+            <option value="__khac__">Khác (tự nhập)...</option>
+          </select>
+          <input type="text" id="bcsChucVuKhac" placeholder="Nhập chức vụ khác" maxlength="60" style="display:none; margin-top:6px;">
+        </div>
+        <div class="field">
+          <label>Họ và tên</label>
+          <select id="bcsHoTen">
+            <option value="">— Chọn tên học sinh —</option>
+          </select>
+        </div>
       </div>
       <div class="field" style="max-width:160px;"><label>Thứ tự hiển thị</label><input type="number" id="bcsThuTu" placeholder="1, 2, 3..." min="0"></div>
       <button class="btn btn-primary btn-sm" id="bcsThemBtn">+ Thêm vào danh sách</button>
@@ -2652,9 +2680,19 @@ function renderBanCanSu(){
     </div>`).join('');
 }
 
+function capNhatDropdownTenBCS(){
+  const sel = $('bcsHoTen');
+  if(!sel) return;
+  const dangChon = sel.value;
+  sel.innerHTML = '<option value="">— Chọn tên học sinh —</option>' +
+    roster.map(r=> `<option value="${esc(r.name)}">${esc(r.name)}</option>`).join('');
+  if(roster.some(r=> r.name === dangChon)) sel.value = dangChon;
+}
+
 function renderBcsAdmin(){
   const host = $('bcsAdminList');
   if(!host) return;
+  capNhatDropdownTenBCS();
   const ds = banCanSu.slice().sort((a,b)=> (a.thuTu||0) - (b.thuTu||0));
   if(!ds.length){ host.innerHTML = `<p class="section-note">Chưa có ai trong danh sách.</p>`; return; }
   host.innerHTML = ds.map(x=> `
@@ -2669,14 +2707,21 @@ function renderBcsAdmin(){
   });
 }
 
+$('bcsChucVu').onchange = ()=>{
+  $('bcsChucVuKhac').style.display = ($('bcsChucVu').value === '__khac__') ? 'block' : 'none';
+};
+
 $('bcsThemBtn').onclick = async ()=>{
-  const chucVu = $('bcsChucVu').value.trim();
-  const hoTen = $('bcsHoTen').value.trim();
+  const chonChucVu = $('bcsChucVu').value;
+  const chucVu = (chonChucVu === '__khac__') ? $('bcsChucVuKhac').value.trim() : chonChucVu;
+  const hoTen = $('bcsHoTen').value;
   const thuTu = parseInt($('bcsThuTu').value, 10) || 0;
-  if(!chucVu || !hoTen){ showMsg($('bcsMsg'), 'Vui lòng nhập đủ Chức vụ và Họ tên.', 'err'); return; }
+  if(!chucVu){ showMsg($('bcsMsg'), 'Vui lòng chọn hoặc nhập Chức vụ.', 'err'); return; }
+  if(!hoTen){ showMsg($('bcsMsg'), 'Vui lòng chọn Họ và tên.', 'err'); return; }
   try{
     await bcsRef.push({ chucVu, hoTen, thuTu });
-    $('bcsChucVu').value = ''; $('bcsHoTen').value = ''; $('bcsThuTu').value = '';
+    $('bcsChucVu').value = ''; $('bcsChucVuKhac').value = ''; $('bcsChucVuKhac').style.display = 'none';
+    $('bcsHoTen').value = ''; $('bcsThuTu').value = '';
     showMsg($('bcsMsg'), 'Đã thêm.', 'ok');
   }catch(e){ showMsg($('bcsMsg'), baoLoi(e),'err'); }
 };
