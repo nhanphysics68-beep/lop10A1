@@ -1529,13 +1529,35 @@ async function luuSoDoNgay(){
     showMsg($('soDoLuuMsg'), '✅ Hoàn thành — đã lưu thay đổi sơ đồ.', 'ok');
     showMsg($('adminMsg'), '✅ Hoàn thành — đã lưu thay đổi sơ đồ.', 'ok');
   }catch(e){
-    /* Hiện NGUYÊN VĂN lỗi kỹ thuật (không dịch) — thường có ghi rõ đúng đường dẫn nào bị từ
-       chối, giúp chẩn đoán mà không cần mở Console trình duyệt. */
-    const chiTiet = 'Lỗi khi lưu (' + Object.keys(capNhat).length + ' đường dẫn): ' + (e && e.message ? e.message : e);
-    console.error(chiTiet, capNhat);
-    showMsg($('soDoLuuMsg'), chiTiet, 'err');
-    showMsg($('adminMsg'), chiTiet, 'err');
-    return; // đã lỗi ở phần chính thì không dọn yêu cầu đổi chỗ nữa
+    /* Ghi gộp bị từ chối — thử lại TỪNG đường dẫn riêng lẻ để biết chính xác đường nào là
+       thủ phạm, đồng thời các đường hợp lệ vẫn được lưu thay vì mất hết vì 1 lỗi. */
+    const duongLoi = [];
+    for(const duongDan of Object.keys(capNhat)){
+      try{ await db.ref(duongDan).set(capNhat[duongDan]); }
+      catch(e2){ duongLoi.push(duongDan + ' → ' + (e2 && e2.message ? e2.message : e2)); }
+    }
+    const uidThat = (auth.currentUser && auth.currentUser.uid) || '(không đăng nhập / hết phiên)';
+    const khopUid = uidThat === ADMIN_UID;
+    let chiTiet;
+    if(duongLoi.length){
+      chiTiet = `Đã lưu ${Object.keys(capNhat).length - duongLoi.length}/${Object.keys(capNhat).length} thay đổi. `
+        + `Riêng ${duongLoi.length} đường dẫn này bị từ chối: ${duongLoi.join(' ; ')} `
+        + `| UID đang đăng nhập: ${uidThat}${khopUid ? ' (khớp admin ✅)' : ' (KHÔNG khớp admin ❌)'}`;
+      showMsg($('soDoLuuMsg'), chiTiet, 'err');
+      showMsg($('adminMsg'), chiTiet, 'err');
+      console.error(chiTiet);
+      // Bản nháp (seatsNhap/banXoaNhap) được giữ nguyên để Thầy có thể xem lại và thử lưu lại.
+      return;
+    }
+    // Không đường nào lỗi khi thử lại riêng lẻ (hiếm khi xảy ra, có thể do lỗi mạng thoáng qua) -> coi như thành công
+    const chiTietOk = `✅ Đã lưu xong (phải thử lại từng phần do lần ghi gộp đầu bị lỗi thoáng qua).`;
+    console.warn(chiTietOk, e);
+    seatsNhap = null; banXoaNhap = null;
+    $('soDoLuuThanh').style.display = 'none';
+    renderSeats();
+    if(isAdmin) renderAdmin();
+    showMsg($('soDoLuuMsg'), chiTietOk, 'ok');
+    return;
   }
 
   /* Dọn các yêu cầu đổi chỗ đang chờ (có thể không còn hợp lệ sau khi sắp xếp lại thủ công) —
