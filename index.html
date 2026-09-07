@@ -18,15 +18,11 @@
   .wrap{max-width:1200px; margin:0 auto; padding:24px 24px 60px;}
   @media (max-width:640px){ .wrap{padding:14px 10px 40px;} .card{padding:14px;} }
 
-  /* ---------- Đầu trang ---------- */
-  .page-header{display:flex; align-items:center; gap:18px; margin-bottom:10px;}
-  .page-logo{width:96px; height:auto; flex:none; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.15));}
-  .header-text{flex:1; min-width:0; text-align:center;}
-  .logo-spacer{width:96px; flex:none;}
-  @media (max-width:640px){ .page-header{gap:10px;} .page-logo,.logo-spacer{width:56px;} }
-  h1.title{color:var(--leaf-dark); font-size:clamp(20px,4vw,30px); letter-spacing:1px;
-    margin:4px 0; text-transform:uppercase; font-weight:800;}
-  p.subtitle{color:var(--ink-soft); margin:0; font-size:13.5px;}
+  /* ---------- Đầu trang: banner theo màu huy hiệu trường ---------- */
+  .page-header{position:relative; margin-bottom:10px; text-align:center;}
+  .page-banner-anh{width:100%; height:auto; display:block; border-radius:16px;
+    box-shadow:0 10px 26px rgba(20,83,45,.22);}
+  .ph-khauhieu{color:var(--ink-soft); margin:8px 0 0; font-size:12.5px; font-style:italic;}
 
   /* ---------- Thẻ chuyển trang ---------- */
   .tabs{display:flex; gap:8px; flex-wrap:wrap; margin:18px 0 16px;}
@@ -34,10 +30,10 @@
   /* ---------- Thời khóa biểu ---------- */
   .tkb-card{margin-top:16px;}
   .tkb-nhan{font-weight:800; color:var(--leaf-dark); font-size:13.5px; margin-bottom:8px;}
-  .tkb-table td input{width:100%; padding:5px 6px; border:1.5px solid var(--leaf); border-radius:6px;
+  .tkb-table td input{width:100%; padding:3px 6px; border:1.5px solid var(--leaf); border-radius:6px;
     font-family:inherit; font-size:12.5px; text-align:center; background:#fffdf5;}
   .tkb-table{width:100%; border-collapse:collapse; font-size:13px; min-width:560px;}
-  .tkb-table th, .tkb-table td{border:1px solid var(--line); padding:8px 10px; text-align:center;}
+  .tkb-table th, .tkb-table td{border:1px solid var(--line); padding:4px 10px; text-align:center;}
   .tkb-table thead th{background:var(--leaf); color:#fff; font-size:12.5px; white-space:nowrap;}
   .tkb-table thead th:first-child{background:var(--leaf-dark);}
   .tkb-table tbody th{background:#eaf5ee; color:var(--leaf-dark); font-weight:800; white-space:nowrap;}
@@ -385,12 +381,10 @@
 <div class="wrap">
 
   <div class="page-header">
-    <img src="1.png" alt="Logo Trường THCS &amp; THPT Hòa Thuận" class="page-logo">
-    <div class="header-text">
-      <h1 class="title">Lớp 10A1</h1>
-      <p class="subtitle">Trường THCS &amp; THPT Hòa Thuận · Năm học 2026–2027</p>
-    </div>
-    <div class="logo-spacer"></div>
+    <img src="Blue_And_Orange_Modern_Thailand_magic_Exploration_Biilboard_Web_Ad.png"
+         alt="Banner Lớp 10A1 — Trường THCS &amp; THPT Hòa Thuận — Năm học 2026-2027 — GVCN Nguyễn Thanh Nhân"
+         class="page-banner-anh">
+    <p class="ph-khauhieu">🌱 Sạch hôm nay · Xanh ngày mai · Đẹp trường, đẹp lớp</p>
   </div>
 
   <div class="card tkb-card">
