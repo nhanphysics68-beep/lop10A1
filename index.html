@@ -466,8 +466,8 @@
       </div>
 
       <div id="soDoLuuThanh" class="so-do-luu-thanh" style="display:none;">
-        <span>⚠️ Có thay đổi kéo-thả/xóa bàn chưa lưu.</span>
-        <button class="btn btn-primary btn-sm" id="soDoLuuBtn">💾 Lưu thay đổi</button>
+        <span>💾 Đang tự động lưu thay đổi kéo-thả/xóa bàn...</span>
+        <button class="btn btn-primary btn-sm" id="soDoLuuBtn">💾 Lưu ngay</button>
         <button class="btn btn-ghost btn-sm" id="soDoHoanTacBtn">↺ Hoàn tác</button>
       </div>
       <div id="soDoLuuMsg" class="msg"></div>
@@ -1469,7 +1469,9 @@ function renderSeats(){
 }
 
 /* Kéo-thả: nếu thả vào ô trống -> CHUYỂN chỗ (dời hẳn qua); nếu thả vào ô đã có người -> ĐỔI chỗ cho nhau.
-   CHỈ sửa bản nháp cục bộ (seatsNhap) — chưa ghi lên Firebase, Thầy cần bấm "Lưu thay đổi" mới thật sự áp dụng. */
+   Sửa bản nháp cục bộ trước để hiện ngay lập tức, sau đó TỰ ĐỘNG lưu lên Firebase sau một
+   khoảng ngắn (không cần bấm nút) — chờ 1 chút để nếu Thầy thao tác nhiều bước liên tiếp thật
+   nhanh thì gộp lại thành 1 lần ghi duy nhất, tránh ghi dồn dập gây lỗi. */
 function keoThaDoiCho(tuId, denId){
   batDauNhapNeuChua();
   const tam = seatsNhap[denId] || null;
@@ -1477,32 +1479,33 @@ function keoThaDoiCho(tuId, denId){
   if(tam) seatsNhap[tuId] = tam; else delete seatsNhap[tuId];
   renderSeats();
   if(isAdmin) renderAdmin();
+  lenLichTuDongLuuSoDo();
 }
 
-/* Xóa 1 bàn khỏi sơ đồ (cả 2 ghế trái/phải) — cũng chỉ sửa bản nháp, Lưu mới áp dụng thật. */
+/* Xóa 1 bàn khỏi sơ đồ (cả 2 ghế trái/phải) — cũng tự động lưu như trên. */
 function xoaBanKhoiSoDo(deskKey, laneId, banSo){
   const idT = `d${laneId}-b${banSo}-T`, idP = `d${laneId}-b${banSo}-P`;
   const xem = seatsHienTai();
   const dangCoNguoi = xem[idT] || xem[idP];
   const xacNhan = dangCoNguoi
     ? `Bàn ${banSo} dãy ${laneId} đang có người ngồi. Xóa bàn sẽ bỏ trống chỗ của họ. Vẫn xóa bàn này khỏi sơ đồ?`
-    : `Xóa bàn ${banSo} dãy ${laneId} khỏi sơ đồ? (nhớ bấm "Lưu thay đổi" để áp dụng thật, khôi phục được trong khu quản trị)`;
+    : `Xóa bàn ${banSo} dãy ${laneId} khỏi sơ đồ? (tự động lưu ngay, khôi phục được trong khu quản trị)`;
   if(!confirm(xacNhan)) return;
   batDauNhapNeuChua();
   delete seatsNhap[idT]; delete seatsNhap[idP];
   banXoaNhap[deskKey] = true;
   renderSeats();
   if(isAdmin) renderAdmin();
+  lenLichTuDongLuuSoDo();
 }
 
-$('soDoLuuBtn').onclick = async ()=>{
+/* Ghi từng đường dẫn cụ thể trong 1 lượt cập nhật — đúng cách "Đổi chỗ nhanh" cũ đã dùng và
+   chạy được — thay vì ghi đè cả nhánh cha (cách ghi đè nhánh cha trước đây có thể không được
+   Rules chấp nhận đúng như mong đợi). */
+async function luuSoDoNgay(){
   if(seatsNhap === null) return;
-  const btn = $('soDoLuuBtn'); btn.disabled = true;
-  showMsg($('soDoLuuMsg'), 'Đang lưu...', 'info');
+  showMsg($('soDoLuuMsg'), 'Đang tự động lưu...', 'info');
   try{
-    /* Ghi từng đường dẫn cụ thể trong 1 lượt cập nhật — đúng cách "Đổi chỗ nhanh" cũ đã
-       dùng và chạy được — thay vì ghi đè cả nhánh cha (cách trước đây có thể không được
-       Rules chấp nhận đúng như mong đợi, khiến Thầy lưu mà không thấy đổi gì). */
     const capNhat = {};
     const tatCaId = new Set([...Object.keys(seats), ...Object.keys(seatsNhap)]);
     tatCaId.forEach(id=>{
@@ -1524,17 +1527,28 @@ $('soDoLuuBtn').onclick = async ()=>{
     $('soDoLuuThanh').style.display = 'none';
     renderSeats();
     if(isAdmin) renderAdmin();
-    showMsg($('soDoLuuMsg'), '✅ Đã lưu thay đổi sơ đồ.', 'ok');
-    showMsg($('adminMsg'), '✅ Đã lưu thay đổi sơ đồ.', 'ok');
+    showMsg($('soDoLuuMsg'), '✅ Đã tự động lưu.', 'ok');
   }catch(e){
     showMsg($('soDoLuuMsg'), baoLoi(e),'err');
     showMsg($('adminMsg'), baoLoi(e),'err');
   }
+}
+let soDoTuLuuTimer = null;
+function lenLichTuDongLuuSoDo(){
+  if(soDoTuLuuTimer) clearTimeout(soDoTuLuuTimer);
+  soDoTuLuuTimer = setTimeout(luuSoDoNgay, 700);
+}
+
+$('soDoLuuBtn').onclick = async ()=>{
+  if(soDoTuLuuTimer){ clearTimeout(soDoTuLuuTimer); soDoTuLuuTimer=null; }
+  const btn = $('soDoLuuBtn'); btn.disabled = true;
+  await luuSoDoNgay();
   btn.disabled = false;
 };
 $('soDoHoanTacBtn').onclick = ()=>{
   if(seatsNhap === null) return;
   if(!confirm('Hủy toàn bộ thay đổi kéo-thả/xóa bàn chưa lưu, quay về đúng trạng thái đã lưu gần nhất?')) return;
+  if(soDoTuLuuTimer){ clearTimeout(soDoTuLuuTimer); soDoTuLuuTimer=null; }
   seatsNhap = null; banXoaNhap = null;
   $('soDoLuuThanh').style.display = 'none';
   renderSeats();
