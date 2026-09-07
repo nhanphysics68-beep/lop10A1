@@ -74,6 +74,49 @@
     font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0;}
   .btn-len-xuong:hover{border-color:var(--leaf); background:#eaf5ee;}
   .btn-len-xuong:disabled{opacity:.3; cursor:default;}
+
+  /* ---------- Trò chơi: Quay chọn tên (đua bò) ---------- */
+  .qt-dieukhien{display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; margin-bottom:18px;}
+  .qt-dieukhien select{padding:9px 12px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13.5px;}
+  #qtSanDua{display:flex; flex-direction:column; gap:10px; margin-bottom:14px;}
+  .qt-lan{position:relative; background:#eef5f0; border-radius:10px; height:46px; overflow:hidden; border:1px solid var(--line);}
+  .qt-lan-nhan{position:absolute; left:6px; top:50%; transform:translateY(-50%); font-size:11.5px; font-weight:800; color:var(--leaf-dark); z-index:2;}
+  .qt-bo{position:absolute; top:50%; transform:translateY(-50%); left:2%; font-size:26px; transition:left 2s cubic-bezier(.2,.7,.3,1); z-index:1;}
+  .qt-lan.thang{background:#fff3d6;}
+  .qt-lan.thang .qt-lan-nhan{color:#b45309;}
+  #qtKetQua{text-align:center;}
+  .qt-the-hocsinh{display:inline-block; background:var(--leaf); color:#fff; font-weight:800; font-size:16px;
+    padding:10px 20px; border-radius:12px; margin:4px 6px; box-shadow:0 4px 12px rgba(20,83,45,.25); animation:qtBatHien .4s;}
+  @keyframes qtBatHien{ from{transform:scale(.5); opacity:0;} to{transform:scale(1); opacity:1;} }
+
+  /* ---------- Trò chơi: Đuổi hình đoán chữ ---------- */
+  #dhTien{text-align:center; font-weight:700; color:var(--ink-soft); font-size:12.5px; margin-bottom:10px;}
+  #dhHinh{font-size:64px; text-align:center; background:#f7fbf8; border-radius:14px; padding:36px 10px; margin-bottom:14px; letter-spacing:8px;}
+  #dhDapAn{text-align:center; font-size:20px; font-weight:800; color:var(--leaf-dark); min-height:30px; margin-bottom:14px;}
+
+  /* ---------- Trò chơi: Ghép đôi ---------- */
+  #gdThongKe{text-align:center; font-weight:700; color:var(--ink-soft); font-size:12.5px; margin-bottom:12px;}
+  .gd-luoi{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:16px;}
+  @media (max-width:640px){ .gd-luoi{grid-template-columns:repeat(2,1fr);} }
+  .gd-the{aspect-ratio:1; border-radius:10px; background:var(--leaf); color:transparent; display:flex;
+    align-items:center; justify-content:center; font-size:12px; font-weight:700; text-align:center;
+    padding:6px; cursor:pointer; user-select:none; transition:.2s; box-shadow:0 2px 6px rgba(0,0,0,.12);}
+  .gd-the.lat{background:#fff; color:var(--ink); border:2px solid var(--leaf);}
+  .gd-the.dung{background:#eaf5ee; color:var(--leaf-dark); border:2px solid var(--leaf); cursor:default;}
+
+  /* ---------- Trò chơi: Trắc nghiệm ---------- */
+  #tnTien{text-align:center; font-weight:700; color:var(--ink-soft); font-size:12.5px; margin-bottom:10px;}
+  #tnCauHoi{font-size:16px; font-weight:700; color:var(--ink); text-align:center; margin-bottom:16px; line-height:1.5;}
+  #tnLuaChon{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  @media (max-width:640px){ #tnLuaChon{grid-template-columns:1fr;} }
+  .tn-lc{padding:14px 16px; border:1.5px solid var(--line); border-radius:10px; background:#fff;
+    cursor:pointer; font-size:14px; text-align:left; transition:.15s;}
+  .tn-lc:hover{border-color:var(--leaf); background:#f7fbf8;}
+  .tn-lc.dung{background:#eaf5ee; border-color:var(--leaf); color:var(--leaf-dark); font-weight:700;}
+  .tn-lc.sai{background:#fdecea; border-color:var(--red); color:var(--red); font-weight:700;}
+  .tn-lc:disabled{cursor:default;}
+  #tnKetThuc{text-align:center; padding:24px 10px;}
+  #tnKetThuc .diem-to{font-size:40px; font-weight:800; color:var(--leaf-dark); margin-bottom:10px;}
   .bcs-chucvu{font-weight:800; color:var(--leaf-dark); min-width:150px; font-size:13.5px;}
   .bcs-hoten{font-size:14px; color:var(--ink); flex:1;}
   .bcs-admin-item{display:flex; align-items:center; justify-content:space-between; gap:10px;
@@ -452,6 +495,7 @@
 
   <div class="subtabs active" id="subtabs-thongtin" data-group="thongtin"></div>
   <div class="subtabs" id="subtabs-hoatdong" data-group="hoatdong"></div>
+  <div class="subtabs" id="subtabs-games" data-group="games"></div>
 
   <!-- ============ THẺ 1: SƠ ĐỒ LỚP ============ -->
   <div class="panel active" id="panel-sodo" data-group="thongtin">
@@ -817,6 +861,74 @@
       <h2>Đã duyệt <span class="count-badge" id="cfCountBadge">0</span></h2>
       <div id="cfFeed"></div>
       <div id="cfEmpty" class="empty" style="display:none;">Chưa có confession nào được duyệt. 🎭</div>
+    </div>
+  </div>
+
+  <!-- ============ TRÒ CHƠI 1: QUAY CHỌN TÊN (ĐUA BÒ) ============ -->
+  <div class="panel" id="panel-quayten" data-group="games">
+    <div class="card">
+      <h2>🐂 Quay chọn tên — Đua bò Bảy Núi</h2>
+      <p class="section-note">Chọn ngẫu nhiên học sinh để trả lời/kiểm tra bài — vui như đua bò Bảy Núi quê mình!</p>
+      <div class="qt-dieukhien">
+        <div class="field">
+          <label>Cách chọn</label>
+          <select id="qtCheDo">
+            <option value="to">Đua theo Tổ (mỗi Dãy là 1 Tổ)</option>
+            <option value="ca_lop">Bốc thăm cả lớp</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Số học sinh cần chọn</label>
+          <select id="qtSoLuong">
+            <option value="1">1 học sinh</option>
+            <option value="2">2 học sinh</option>
+            <option value="3">3 học sinh</option>
+          </select>
+        </div>
+        <button class="btn btn-primary btn-sm" id="qtBatDauBtn" style="align-self:flex-end;">🏁 Bắt đầu</button>
+      </div>
+      <div id="qtSanDua"></div>
+      <div id="qtKetQua"></div>
+    </div>
+  </div>
+
+  <!-- ============ TRÒ CHƠI 2: ĐUỔI HÌNH ĐOÁN CHỮ ============ -->
+  <div class="panel" id="panel-duoihinh" data-group="games">
+    <div class="card">
+      <h2>🖼️ Đuổi hình đoán chữ</h2>
+      <p class="section-note">Nhìn hình đoán từ khóa Vật lý — Toán — Hóa. Chiếu lên cho cả lớp cùng đoán!</p>
+      <div id="dhTien">Câu 1/10</div>
+      <div id="dhHinh"></div>
+      <div id="dhDapAn"></div>
+      <div class="modal-btns" style="justify-content:center;">
+        <button class="btn btn-clay btn-sm" id="dhXemDapAnBtn">👁️ Xem đáp án</button>
+        <button class="btn btn-primary btn-sm" id="dhTiepTheoBtn">Câu tiếp theo ➡️</button>
+        <button class="btn btn-ghost btn-sm" id="dhChoiLaiBtn">🔄 Chơi lại</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TRÒ CHƠI 3: GHÉP ĐÔI ============ -->
+  <div class="panel" id="panel-ghepdoi" data-group="games">
+    <div class="card">
+      <h2>🃏 Ghép đôi — Lật thẻ nhớ</h2>
+      <p class="section-note">Lật 2 thẻ mỗi lượt — ghép đúng khái niệm với công thức/định nghĩa tương ứng.</p>
+      <div id="gdThongKe">Lượt lật: 0 · Đã ghép: 0/8</div>
+      <div id="gdLuoi" class="gd-luoi"></div>
+      <div class="modal-btns" style="justify-content:center;">
+        <button class="btn btn-ghost btn-sm" id="gdChoiLaiBtn">🔄 Xáo lại &amp; chơi mới</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TRÒ CHƠI 4: TRẮC NGHIỆM ============ -->
+  <div class="panel" id="panel-tracnghiem" data-group="games">
+    <div class="card">
+      <h2>❓ Trắc nghiệm nhanh</h2>
+      <div id="tnTien">Câu 1/8 · Điểm: 0</div>
+      <div id="tnCauHoi"></div>
+      <div id="tnLuaChon"></div>
+      <div id="tnKetThuc" style="display:none;"></div>
     </div>
   </div>
 
@@ -1319,8 +1431,9 @@ const TAB_DINH_NGHIA = {
   hoatdong:   {icon:'🙋', ten:'Các hoạt động của lớp'},
   bangtin:    {icon:'📰', ten:'Bảng tin lớp'},
   confession: {icon:'🎭', ten:'Confession'},
+  games:      {icon:'🎮', ten:'Trò chơi học tập'},
 };
-const THU_TU_CHINH_MAC_DINH = ['thongtin', 'hoatdong', 'bangtin', 'confession'];
+const THU_TU_CHINH_MAC_DINH = ['thongtin', 'hoatdong', 'bangtin', 'confession', 'games'];
 
 const SUBTAB_DINH_NGHIA = {
   sodo:      {icon:'📍', ten:'Sơ đồ lớp'},
@@ -1331,10 +1444,15 @@ const SUBTAB_DINH_NGHIA = {
   laodong:   {icon:'🧹', ten:'Đăng ký lao động'},
   khaigiang: {icon:'📺', ten:'Chuẩn bị khai giảng'},
   hotro:     {icon:'🤝', ten:'Nhận hỗ trợ'},
+  quayten:   {icon:'🐂', ten:'Quay chọn tên'},
+  duoihinh:  {icon:'🖼️', ten:'Đuổi hình đoán chữ'},
+  ghepdoi:   {icon:'🃏', ten:'Ghép đôi'},
+  tracnghiem:{icon:'❓', ten:'Trắc nghiệm'},
 };
 const NHOM_TAB = {
   thongtin: ['sodo', 'hoso', 'bancansu', 'caulacbo', 'canhanhs'],
   hoatdong: ['laodong', 'khaigiang', 'hotro'],
+  games:    ['quayten', 'duoihinh', 'ghepdoi', 'tracnghiem'],
 };
 /* Map link cũ (trước khi gộp nhóm) -> đúng nhóm mới, để link/bookmark cũ vẫn mở đúng chỗ */
 const TAB_CU_SANG_NHOM = {};
@@ -1343,7 +1461,7 @@ Object.keys(NHOM_TAB).forEach(nhom=> NHOM_TAB[nhom].forEach(muc=> TAB_CU_SANG_NH
 /* Thứ tự hiển thị THẬT SỰ đang dùng — nạp từ Firebase (dieuHuong2026), nếu chưa có thì
    dùng đúng thứ tự mặc định ở trên. Giáo viên chỉnh thứ tự thì chỉ đổi các biến này. */
 let thuTuChinh = THU_TU_CHINH_MAC_DINH.slice();
-let thuTuCon = { thongtin: NHOM_TAB.thongtin.slice(), hoatdong: NHOM_TAB.hoatdong.slice() };
+let thuTuCon = { thongtin: NHOM_TAB.thongtin.slice(), hoatdong: NHOM_TAB.hoatdong.slice(), games: NHOM_TAB.games.slice() };
 
 function renderTabsChinh(){
   const host = $('tabsChinh');
@@ -1407,7 +1525,7 @@ renderToanBoDieuHuong();
   if(TAB_CU_SANG_NHOM[h]){ moTab(TAB_CU_SANG_NHOM[h], h); return; }
 
   // Link mới dạng "#thongtin-sodo", "#hoatdong-hotro"...
-  const mNhom = h.match(/^(thongtin|hoatdong)-(.+)$/);
+  const mNhom = h.match(/^(thongtin|hoatdong|games)-(.+)$/);
   if(mNhom){ moTab(mNhom[1], mNhom[2]); return; }
 
   if(document.querySelector(`.tab[data-tab="${h}"]`)){ moTab(h); return; }
@@ -3673,6 +3791,240 @@ $('chsXuatExcelBtn').onclick = async ()=>{
 };
 
 /* ================================================================
+   TRÒ CHƠI HỌC TẬP — 4 trò, dữ liệu mẫu cố định (chưa qua Firebase), không cần đăng nhập.
+   ================================================================ */
+
+/* -------- Trò 1: Quay chọn tên (đua bò theo Tổ / bốc thăm cả lớp) -------- */
+/* Lấy danh sách học sinh theo Tổ (Dãy 1-4) trực tiếp từ dữ liệu Sơ đồ lớp (seats) đã có sẵn —
+   không cần thêm dữ liệu mới. Học sinh chưa có chỗ ngồi sẽ không thuộc Tổ nào. */
+function layHocSinhTheoTo(){
+  const to = {1:[], 2:[], 3:[], 4:[]};
+  Object.keys(seats).forEach(seatId=>{
+    const m = seatId.match(/^d(\d)-b\d+-[TP]$/);
+    if(m && seats[seatId] && seats[seatId].name) to[+m[1]].push(seats[seatId].name);
+  });
+  return to;
+}
+function layTatCaHocSinhDaXep(){
+  return Object.values(seats).filter(Boolean).map(s=> s.name).filter(Boolean);
+}
+function chonNgauNhien(mang, soLuong){
+  const ban = mang.slice();
+  const ketQua = [];
+  while(ban.length && ketQua.length < soLuong){
+    const i = Math.floor(Math.random()*ban.length);
+    ketQua.push(ban.splice(i,1)[0]);
+  }
+  return ketQua;
+}
+
+$('qtBatDauBtn').onclick = ()=>{
+  const cheDo = $('qtCheDo').value;
+  const soLuong = parseInt($('qtSoLuong').value, 10);
+  const san = $('qtSanDua'), ketQuaBox = $('qtKetQua');
+  ketQuaBox.innerHTML = '';
+
+  if(cheDo === 'ca_lop'){
+    const ds = layTatCaHocSinhDaXep();
+    if(ds.length < soLuong){
+      san.innerHTML = '';
+      ketQuaBox.innerHTML = `<p class="section-note">Chưa đủ học sinh đã có chỗ ngồi trong Sơ đồ lớp để bốc thăm (cần ít nhất ${soLuong}).</p>`;
+      return;
+    }
+    // Hiệu ứng xáo tên nhanh trước khi ra kết quả
+    san.innerHTML = `<div class="qt-lan"><span class="qt-lan-nhan">🎲 Đang bốc thăm...</span></div>`;
+    let dem = 0;
+    const nhay = setInterval(()=>{
+      dem++;
+      const ngauNhien = chonNgauNhien(ds, Math.min(soLuong, ds.length));
+      san.querySelector('.qt-lan-nhan').textContent = '🎲 ' + ngauNhien.join(' · ');
+      if(dem > 10){
+        clearInterval(nhay);
+        const ketQua = chonNgauNhien(ds, soLuong);
+        ketQuaBox.innerHTML = '🎉 ' + ketQua.map(ten=> `<span class="qt-the-hocsinh">${esc(ten)}</span>`).join('');
+      }
+    }, 120);
+    return;
+  }
+
+  // Chế độ đua theo Tổ
+  const to = layHocSinhTheoTo();
+  const toCoNguoi = [1,2,3,4].filter(t=> to[t].length > 0);
+  if(!toCoNguoi.length){
+    san.innerHTML = '';
+    ketQuaBox.innerHTML = `<p class="section-note">Chưa có học sinh nào trong Sơ đồ lớp để chia Tổ.</p>`;
+    return;
+  }
+  san.innerHTML = toCoNguoi.map(t=> `
+    <div class="qt-lan" data-to="${t}">
+      <span class="qt-lan-nhan">Tổ ${t} (${to[t].length} bạn)</span>
+      <span class="qt-bo">🐂</span>
+    </div>`).join('');
+
+  const toThang = toCoNguoi[Math.floor(Math.random()*toCoNguoi.length)];
+  // Chạy đua: mỗi lane đi tới 1 khoảng ngẫu nhiên, lane thắng luôn đi xa nhất (đến đích)
+  requestAnimationFrame(()=>{
+    toCoNguoi.forEach(t=>{
+      const bo = san.querySelector(`.qt-lan[data-to="${t}"] .qt-bo`);
+      const dich = (t === toThang) ? 88 : (20 + Math.random()*55);
+      bo.style.left = dich + '%';
+    });
+  });
+
+  setTimeout(()=>{
+    san.querySelector(`.qt-lan[data-to="${toThang}"]`).classList.add('thang');
+    const dsThang = to[toThang];
+    const soChon = Math.min(soLuong, dsThang.length);
+    const ketQua = chonNgauNhien(dsThang, soChon);
+    ketQuaBox.innerHTML = `<p style="font-weight:800; color:#b45309; margin-bottom:8px;">🏆 Tổ ${toThang} về đích!</p>`
+      + ketQua.map(ten=> `<span class="qt-the-hocsinh">${esc(ten)}</span>`).join('');
+  }, 2200);
+};
+
+/* -------- Trò 2: Đuổi hình đoán chữ -------- */
+const DUOI_HINH_CAU_HOI = [
+  {hinh:'🍎⬇️', dapAn:'Trọng lực'},
+  {hinh:'🧲', dapAn:'Nam châm'},
+  {hinh:'💡⚡', dapAn:'Dòng điện'},
+  {hinh:'🔺📐', dapAn:'Tam giác'},
+  {hinh:'🧪🔥', dapAn:'Thí nghiệm'},
+  {hinh:'🌡️', dapAn:'Nhiệt độ'},
+  {hinh:'⚖️', dapAn:'Cân bằng'},
+  {hinh:'💧➡️🧊', dapAn:'Đông đặc'},
+  {hinh:'🔄🌍', dapAn:'Chuyển động'},
+  {hinh:'➗📊', dapAn:'Phân số'},
+];
+let dhViTri = 0;
+function renderDuoiHinh(){
+  const cau = DUOI_HINH_CAU_HOI[dhViTri];
+  $('dhTien').textContent = `Câu ${dhViTri+1}/${DUOI_HINH_CAU_HOI.length}`;
+  $('dhHinh').textContent = cau.hinh;
+  $('dhDapAn').textContent = '';
+  $('dhDapAn').dataset.hienRoi = '0';
+}
+$('dhXemDapAnBtn').onclick = ()=>{
+  $('dhDapAn').textContent = '✅ ' + DUOI_HINH_CAU_HOI[dhViTri].dapAn;
+  $('dhDapAn').dataset.hienRoi = '1';
+};
+$('dhTiepTheoBtn').onclick = ()=>{
+  dhViTri = (dhViTri + 1) % DUOI_HINH_CAU_HOI.length;
+  renderDuoiHinh();
+};
+$('dhChoiLaiBtn').onclick = ()=>{ dhViTri = 0; renderDuoiHinh(); };
+
+/* -------- Trò 3: Ghép đôi -------- */
+const GHEP_DOI_CAP = [
+  ['Vận tốc', 'v = s/t'],
+  ['Gia tốc', 'a = Δv/Δt'],
+  ['Định luật II Newton', 'F = m.a'],
+  ['Diện tích hình tròn', 'S = πr²'],
+  ['Chu vi hình tròn', 'C = 2πr'],
+  ['Định lý Pytago', 'a² + b² = c²'],
+  ['Khối lượng riêng', 'D = m/V'],
+  ['Công thức nước', 'H₂O'],
+];
+let gdTheDaChon = [];  // các thẻ đang lật (tối đa 2)
+let gdTheDaXong = [];  // các id thẻ đã ghép đúng
+let gdLuotLat = 0;
+let gdBoThe = [];
+
+function xaoMang(mang){
+  const m = mang.slice();
+  for(let i=m.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [m[i],m[j]]=[m[j],m[i]]; }
+  return m;
+}
+function taoBoTheGhepDoi(){
+  const the = [];
+  GHEP_DOI_CAP.forEach((cap, capId)=>{
+    the.push({id:'a'+capId, capId, noiDung:cap[0]});
+    the.push({id:'b'+capId, capId, noiDung:cap[1]});
+  });
+  return xaoMang(the);
+}
+function renderGhepDoi(){
+  $('gdThongKe').textContent = `Lượt lật: ${gdLuotLat} · Đã ghép: ${gdTheDaXong.length/2}/${GHEP_DOI_CAP.length}`;
+  const luoi = $('gdLuoi');
+  luoi.innerHTML = gdBoThe.map(t=>{
+    const dangLat = gdTheDaChon.includes(t.id) || gdTheDaXong.includes(t.id);
+    const xongRoi = gdTheDaXong.includes(t.id);
+    return `<div class="gd-the ${dangLat?'lat':''} ${xongRoi?'dung':''}" data-the="${t.id}">${dangLat ? esc(t.noiDung) : '?'}</div>`;
+  }).join('');
+  luoi.querySelectorAll('.gd-the').forEach(el=> el.onclick = ()=> chonTheGhepDoi(el.dataset.the));
+}
+function chonTheGhepDoi(theId){
+  if(gdTheDaChon.includes(theId) || gdTheDaXong.includes(theId)) return;
+  if(gdTheDaChon.length >= 2) return;
+  gdTheDaChon.push(theId);
+  renderGhepDoi();
+  if(gdTheDaChon.length === 2){
+    gdLuotLat++;
+    const [id1, id2] = gdTheDaChon;
+    const the1 = gdBoThe.find(t=>t.id===id1), the2 = gdBoThe.find(t=>t.id===id2);
+    if(the1.capId === the2.capId){
+      gdTheDaXong.push(id1, id2);
+      gdTheDaChon = [];
+      renderGhepDoi();
+    } else {
+      setTimeout(()=>{ gdTheDaChon = []; renderGhepDoi(); }, 800);
+    }
+  }
+}
+function batDauGhepDoi(){
+  gdBoThe = taoBoTheGhepDoi();
+  gdTheDaChon = []; gdTheDaXong = []; gdLuotLat = 0;
+  renderGhepDoi();
+}
+$('gdChoiLaiBtn').onclick = batDauGhepDoi;
+
+/* -------- Trò 4: Trắc nghiệm nhanh -------- */
+const TRAC_NGHIEM_CAU_HOI = [
+  {hoi:'Đơn vị đo lực trong hệ SI là gì?', luaChon:['Newton','Joule','Watt','Pascal'], dung:0},
+  {hoi:'Công thức tính diện tích hình chữ nhật?', luaChon:['a × b','a + b','2(a + b)','a²'], dung:0},
+  {hoi:'Nguyên tử được cấu tạo từ những hạt nào?', luaChon:['Proton, neutron, electron','Chỉ có proton','Chỉ có electron','Proton và neutron'], dung:0},
+  {hoi:'1 giờ có bao nhiêu giây?', luaChon:['3600','60','360','1000'], dung:0},
+  {hoi:'Nước sôi ở bao nhiêu độ C (áp suất thường)?', luaChon:['100°C','0°C','50°C','90°C'], dung:0},
+  {hoi:'Tam giác đều có bao nhiêu góc bằng nhau?', luaChon:['3','2','1','0'], dung:0},
+  {hoi:'Công thức hóa học của muối ăn là gì?', luaChon:['NaCl','KCl','CaCl₂','NaOH'], dung:0},
+  {hoi:'Đại lượng nào đặc trưng cho mức độ nhanh chậm của chuyển động?', luaChon:['Vận tốc','Khối lượng','Trọng lượng','Thể tích'], dung:0},
+];
+let tnViTri = 0, tnDiem = 0;
+function renderTracNghiem(){
+  $('tnKetThuc').style.display = 'none';
+  $('tnCauHoi').style.display = ''; $('tnLuaChon').style.display = '';
+  const cau = TRAC_NGHIEM_CAU_HOI[tnViTri];
+  $('tnTien').textContent = `Câu ${tnViTri+1}/${TRAC_NGHIEM_CAU_HOI.length} · Điểm: ${tnDiem}`;
+  $('tnCauHoi').textContent = cau.hoi;
+  $('tnLuaChon').innerHTML = cau.luaChon.map((lc,i)=> `<button class="tn-lc" data-i="${i}">${esc(lc)}</button>`).join('');
+  $('tnLuaChon').querySelectorAll('.tn-lc').forEach(btn=> btn.onclick = ()=> chonTracNghiem(+btn.dataset.i));
+}
+function chonTracNghiem(i){
+  const cau = TRAC_NGHIEM_CAU_HOI[tnViTri];
+  const nutBam = $('tnLuaChon').querySelectorAll('.tn-lc');
+  nutBam.forEach(b=> b.disabled = true);
+  nutBam[i].classList.add(i === cau.dung ? 'dung' : 'sai');
+  if(i !== cau.dung) nutBam[cau.dung].classList.add('dung');
+  if(i === cau.dung) tnDiem++;
+  setTimeout(()=>{
+    if(tnViTri < TRAC_NGHIEM_CAU_HOI.length - 1){ tnViTri++; renderTracNghiem(); }
+    else ketThucTracNghiem();
+  }, 1000);
+}
+function ketThucTracNghiem(){
+  $('tnTien').textContent = `Hoàn thành ${TRAC_NGHIEM_CAU_HOI.length}/${TRAC_NGHIEM_CAU_HOI.length} · Điểm: ${tnDiem}`;
+  $('tnCauHoi').style.display = 'none'; $('tnLuaChon').style.display = 'none';
+  $('tnKetThuc').style.display = 'block';
+  $('tnKetThuc').innerHTML = `<div class="diem-to">${tnDiem}/${TRAC_NGHIEM_CAU_HOI.length}</div>
+    <p style="color:var(--ink-soft); margin-bottom:16px;">${tnDiem === TRAC_NGHIEM_CAU_HOI.length ? '🎉 Xuất sắc, đúng hết!' : 'Cố gắng thêm lần sau nhé!'}</p>
+    <button class="btn btn-primary btn-sm" id="tnLamLaiBtn">🔄 Làm lại</button>`;
+  $('tnLamLaiBtn').onclick = ()=>{ tnViTri = 0; tnDiem = 0; renderTracNghiem(); };
+}
+
+/* Khởi tạo lần đầu cho cả 4 trò (dữ liệu mẫu cố định, không cần chờ Firebase) */
+renderDuoiHinh();
+batDauGhepDoi();
+renderTracNghiem();
+
+/* ================================================================
    KHU VỰC GIÁO VIÊN
    ================================================================ */
 async function napHoTroTatCa(){
@@ -3938,15 +4290,15 @@ bcsRef.on('value', s=>{
   renderBanCanSu();
 });
 
-/* Thời khóa biểu: công khai cho mọi người, không vẽ đè nếu giáo viên đang sửa dở (dangSuaTkb) */
 /* Thứ tự menu điều hướng: công khai cho mọi người, không làm mất tab đang mở khi vẽ lại */
 dieuHuongRef.on('value', s=>{
   const v = s.val() || {};
   thuTuChinh = (Array.isArray(v.nhomChinh) && v.nhomChinh.length) ? v.nhomChinh : THU_TU_CHINH_MAC_DINH.slice();
-  thuTuCon = {
-    thongtin: (v.nhomCon && Array.isArray(v.nhomCon.thongtin) && v.nhomCon.thongtin.length) ? v.nhomCon.thongtin : NHOM_TAB.thongtin.slice(),
-    hoatdong: (v.nhomCon && Array.isArray(v.nhomCon.hoatdong) && v.nhomCon.hoatdong.length) ? v.nhomCon.hoatdong : NHOM_TAB.hoatdong.slice(),
-  };
+  thuTuCon = {};
+  Object.keys(NHOM_TAB).forEach(groupId=>{
+    const daLuu = v.nhomCon && v.nhomCon[groupId];
+    thuTuCon[groupId] = (Array.isArray(daLuu) && daLuu.length) ? daLuu : NHOM_TAB[groupId].slice();
+  });
   renderToanBoDieuHuong();
   if(tabDangMo) moTab(tabDangMo, subDangMo); else moTab(thuTuChinh[0]);
   if(isAdmin) renderSapXepMenu();
