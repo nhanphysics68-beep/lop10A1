@@ -63,10 +63,10 @@
   .subtab.active{background:var(--leaf-dark); border-color:var(--leaf-dark); color:#fff;}
 
   /* ---------- Ban cán sự lớp ---------- */
-  .bcs-item{display:flex; align-items:center; gap:12px; background:#f7fbf8; border:1px solid var(--line);
+  .bcs-item{display:flex; align-items:center; gap:12px; flex-wrap:wrap; background:#f7fbf8; border:1px solid var(--line);
     border-radius:10px; padding:10px 16px; margin-bottom:8px;}
   .bcs-chucvu{font-weight:800; color:var(--leaf-dark); min-width:150px; font-size:13.5px;}
-  .bcs-hoten{font-size:14px; color:var(--ink);}
+  .bcs-hoten{font-size:14px; color:var(--ink); flex:1;}
   .bcs-admin-item{display:flex; align-items:center; justify-content:space-between; gap:10px;
     background:#fff; border:1px solid var(--line); border-radius:8px; padding:8px 12px; margin-bottom:6px; font-size:13px;}
 
@@ -741,8 +741,10 @@
   <div class="panel" id="panel-bancansu" data-group="thongtin">
     <div class="card">
       <h2>👥 Ban cán sự lớp 10A1</h2>
+      <button class="btn btn-primary btn-sm" id="bcsThemMoiBtn" style="display:none; margin-bottom:12px;">+ Thêm chức vụ mới</button>
       <div id="bcsList"></div>
       <div id="bcsEmpty" class="empty" style="display:none;">Chưa có thông tin ban cán sự lớp.</div>
+      <div id="bcsMsg" class="msg"></div>
     </div>
   </div>
 
@@ -885,44 +887,6 @@
         Dữ liệu nhạy cảm (CCCD, chính sách, khuyết tật...) — chỉ tài khoản giáo viên đọc được. Không chia sẻ bảng này ra ngoài.
       </p>
       <div class="scroll-x"><table id="hsAdminTable"></table></div>
-
-      <div class="section-title">👥 Ban cán sự lớp</div>
-      <div id="bcsAdminList"></div>
-      <div class="grid2">
-        <div class="field">
-          <label>Chức vụ</label>
-          <select id="bcsChucVu">
-            <option value="">— Chọn chức vụ —</option>
-            <option>Lớp trưởng</option>
-            <option>Lớp phó học tập</option>
-            <option>Lớp phó lao động</option>
-            <option>Lớp phó văn thể mỹ</option>
-            <option>Bí thư chi đoàn</option>
-            <option>Phó bí thư chi đoàn</option>
-            <option>Thủ quỹ</option>
-            <option>Thư ký</option>
-            <option>Tổ trưởng tổ 1</option>
-            <option>Tổ trưởng tổ 2</option>
-            <option>Tổ trưởng tổ 3</option>
-            <option>Tổ trưởng tổ 4</option>
-            <option>Tổ phó tổ 1</option>
-            <option>Tổ phó tổ 2</option>
-            <option>Tổ phó tổ 3</option>
-            <option>Tổ phó tổ 4</option>
-            <option value="__khac__">Khác (tự nhập)...</option>
-          </select>
-          <input type="text" id="bcsChucVuKhac" placeholder="Nhập chức vụ khác" maxlength="60" style="display:none; margin-top:6px;">
-        </div>
-        <div class="field">
-          <label>Họ và tên</label>
-          <select id="bcsHoTen">
-            <option value="">— Chọn tên học sinh —</option>
-          </select>
-        </div>
-      </div>
-      <div class="field" style="max-width:160px;"><label>Thứ tự hiển thị</label><input type="number" id="bcsThuTu" placeholder="1, 2, 3..." min="0"></div>
-      <button class="btn btn-primary btn-sm" id="bcsThemBtn">+ Thêm vào danh sách</button>
-      <div id="bcsMsg" class="msg"></div>
 
       <div class="section-title">👤 Dữ liệu cá nhân học sinh (riêng tư) <span class="count-badge" id="chsCountBadge">0</span></div>
       <p class="section-note" style="margin:0 0 6px;">
@@ -1214,6 +1178,7 @@ function esc(s){
 // (Thời khóa biểu giờ tải từ Firebase — xem listener tkbRef ở cuối file, không cần gọi tay ở đây)
 
 /* GẮN SỰ KIỆN CHO NÚT SỬA THỜI KHÓA BIỂU — đặt ở đây vì cần $ đã được khai báo phía trên. */
+$('bcsThemMoiBtn').onclick = ()=> moModalThemSuaBCS(null);
 $('tkbSuaBtn').onclick = ()=>{
   dangSuaTkb = true;
   tkbSangNhap = JSON.parse(JSON.stringify(tkbSang || []));
@@ -1378,7 +1343,7 @@ auth.onAuthStateChanged(async user=>{
   await napHoTroCuaToi();
   await napHoSoCuaToi();
   await napDuLieuCaNhanCuaToi();
-  renderSeats(); renderRegs(); renderTv(); renderBaiViet(); renderConfessionFeed(); renderCauLacBo();
+  renderSeats(); renderRegs(); renderTv(); renderBaiViet(); renderConfessionFeed(); renderCauLacBo(); renderBanCanSu();
 });
 
 $('adminUnlockBtn').onclick = async ()=>{
@@ -3091,33 +3056,20 @@ function renderBanCanSu(){
   if(!host) return;
   const ds = banCanSu.slice().sort((a,b)=> (a.thuTu||0) - (b.thuTu||0));
   $('bcsEmpty').style.display = ds.length ? 'none' : 'block';
+  const nutThem = $('bcsThemMoiBtn');
+  if(nutThem) nutThem.style.display = isAdmin ? 'inline-block' : 'none';
+
   host.innerHTML = ds.map(x=> `
     <div class="bcs-item">
       <span class="bcs-chucvu">${esc(x.chucVu)}</span>
       <span class="bcs-hoten">${esc(x.hoTen)}</span>
+      ${isAdmin ? `<span class="thao-tac">
+        <button class="btn btn-blue btn-sm" data-bcs-sua="${x.id}">Sửa</button>
+        <button class="btn btn-ghost btn-sm" data-bcs-xoa="${x.id}">Xóa</button>
+      </span>` : ''}
     </div>`).join('');
-}
 
-function capNhatDropdownTenBCS(){
-  const sel = $('bcsHoTen');
-  if(!sel) return;
-  const dangChon = sel.value;
-  sel.innerHTML = '<option value="">— Chọn tên học sinh —</option>' +
-    roster.map(r=> `<option value="${esc(r.name)}">${esc(r.name)}</option>`).join('');
-  if(roster.some(r=> r.name === dangChon)) sel.value = dangChon;
-}
-
-function renderBcsAdmin(){
-  const host = $('bcsAdminList');
-  if(!host) return;
-  capNhatDropdownTenBCS();
-  const ds = banCanSu.slice().sort((a,b)=> (a.thuTu||0) - (b.thuTu||0));
-  if(!ds.length){ host.innerHTML = `<p class="section-note">Chưa có ai trong danh sách.</p>`; return; }
-  host.innerHTML = ds.map(x=> `
-    <div class="bcs-admin-item">
-      <span><b>${esc(x.chucVu)}</b> — ${esc(x.hoTen)} <span style="color:var(--ink-soft);">(thứ tự ${x.thuTu||0})</span></span>
-      <button class="btn btn-ghost btn-sm" data-bcs-xoa="${x.id}">Xóa</button>
-    </div>`).join('');
+  host.querySelectorAll('[data-bcs-sua]').forEach(b=> b.onclick = ()=> moModalThemSuaBCS(b.getAttribute('data-bcs-sua')));
   host.querySelectorAll('[data-bcs-xoa]').forEach(b=> b.onclick = async ()=>{
     if(!confirm('Xóa mục này khỏi Ban cán sự lớp?')) return;
     try{ await bcsRef.child(b.getAttribute('data-bcs-xoa')).remove(); }
@@ -3125,24 +3077,58 @@ function renderBcsAdmin(){
   });
 }
 
-$('bcsChucVu').onchange = ()=>{
-  $('bcsChucVuKhac').style.display = ($('bcsChucVu').value === '__khac__') ? 'block' : 'none';
-};
+const BCS_CHUC_VU_CO_SAN = [
+  'Lớp trưởng','Lớp phó học tập','Lớp phó lao động','Lớp phó văn thể mỹ',
+  'Bí thư chi đoàn','Phó bí thư chi đoàn','Thủ quỹ','Thư ký',
+  'Tổ trưởng tổ 1','Tổ trưởng tổ 2','Tổ trưởng tổ 3','Tổ trưởng tổ 4',
+  'Tổ phó tổ 1','Tổ phó tổ 2','Tổ phó tổ 3','Tổ phó tổ 4',
+];
 
-$('bcsThemBtn').onclick = async ()=>{
-  const chonChucVu = $('bcsChucVu').value;
-  const chucVu = (chonChucVu === '__khac__') ? $('bcsChucVuKhac').value.trim() : chonChucVu;
-  const hoTen = $('bcsHoTen').value;
-  const thuTu = parseInt($('bcsThuTu').value, 10) || 0;
-  if(!chucVu){ showMsg($('bcsMsg'), 'Vui lòng chọn hoặc nhập Chức vụ.', 'err'); return; }
-  if(!hoTen){ showMsg($('bcsMsg'), 'Vui lòng chọn Họ và tên.', 'err'); return; }
-  try{
-    await bcsRef.push({ chucVu, hoTen, thuTu });
-    $('bcsChucVu').value = ''; $('bcsChucVuKhac').value = ''; $('bcsChucVuKhac').style.display = 'none';
-    $('bcsHoTen').value = ''; $('bcsThuTu').value = '';
-    showMsg($('bcsMsg'), 'Đã thêm.', 'ok');
-  }catch(e){ showMsg($('bcsMsg'), baoLoi(e),'err'); }
-};
+function moModalThemSuaBCS(id){
+  const x = id ? banCanSu.find(b=> b.id===id) : null;
+  const dsTenHocSinh = roster.map(r=> r.name);
+  const chucVuCoSanKhopSan = x && BCS_CHUC_VU_CO_SAN.includes(x.chucVu);
+
+  openModal(`<h3>${x ? 'Sửa' : 'Thêm'} chức vụ Ban cán sự</h3>
+    <label style="font-size:12.5px;font-weight:700;">Chức vụ</label>
+    <select id="bcsFChucVu">
+      <option value="">— Chọn chức vụ —</option>
+      ${BCS_CHUC_VU_CO_SAN.map(cv=> `<option ${x && x.chucVu===cv ? 'selected':''}>${esc(cv)}</option>`).join('')}
+      <option value="__khac__" ${x && !chucVuCoSanKhopSan ? 'selected':''}>Khác (tự nhập)...</option>
+    </select>
+    <input type="text" id="bcsFChucVuKhac" placeholder="Nhập chức vụ khác" maxlength="60"
+      style="${x && !chucVuCoSanKhopSan ? '' : 'display:none;'} margin-top:6px;"
+      value="${x && !chucVuCoSanKhopSan ? esc(x.chucVu) : ''}">
+    <label style="font-size:12.5px;font-weight:700;">Họ và tên</label>
+    <select id="bcsFHoTen">
+      <option value="">— Chọn tên học sinh —</option>
+      ${dsTenHocSinh.map(ten=> `<option ${x && x.hoTen===ten ? 'selected':''}>${esc(ten)}</option>`).join('')}
+    </select>
+    <label style="font-size:12.5px;font-weight:700;">Thứ tự hiển thị</label>
+    <input type="number" id="bcsFThuTu" value="${x ? (x.thuTu||0) : (banCanSu.length+1)}" min="0">
+    <div id="bcsFErr" class="msg err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary btn-sm" id="bcsFLuu">${x ? 'Lưu' : 'Thêm'}</button>
+    </div>`, 'gen');
+
+  $('bcsFChucVu').onchange = ()=>{
+    $('bcsFChucVuKhac').style.display = ($('bcsFChucVu').value === '__khac__') ? 'block' : 'none';
+  };
+  $('bcsFLuu').onclick = async ()=>{
+    const chonChucVu = $('bcsFChucVu').value;
+    const chucVu = (chonChucVu === '__khac__') ? $('bcsFChucVuKhac').value.trim() : chonChucVu;
+    const hoTen = $('bcsFHoTen').value;
+    const thuTu = parseInt($('bcsFThuTu').value, 10) || 0;
+    if(!chucVu){ showMsg($('bcsFErr'), 'Vui lòng chọn hoặc nhập Chức vụ.', 'err'); return; }
+    if(!hoTen){ showMsg($('bcsFErr'), 'Vui lòng chọn Họ và tên.', 'err'); return; }
+    try{
+      if(x) await bcsRef.child(x.id).update({ chucVu, hoTen, thuTu });
+      else  await bcsRef.push({ chucVu, hoTen, thuTu });
+      closeModal();
+    }catch(e){ showMsg($('bcsFErr'), baoLoi(e),'err'); }
+  };
+}
 
 /* ================================================================
    CÁC CÂU LẠC BỘ — công khai đọc, mỗi học sinh tự tham gia/rời CLB của mình.
@@ -3712,8 +3698,6 @@ function renderAdmin(){
 
   renderAdminHoSo();
   renderConfessionChoDuyet();
-  renderBcsAdmin();
-
   /* Đổi chỗ nhanh */
   const opts = allSeatIds().map(id=>
     `<option value="${id}">${seatLabel(id)}${seats[id]? ' — '+esc(seats[id].name):' (trống)'}</option>`).join('');
@@ -3835,7 +3819,6 @@ bcsRef.on('value', s=>{
   const v = s.val()||{};
   banCanSu = Object.keys(v).map(k=> Object.assign({id:k}, v[k]));
   renderBanCanSu();
-  if(isAdmin) renderBcsAdmin();
 });
 
 /* Thời khóa biểu: công khai cho mọi người, không vẽ đè nếu giáo viên đang sửa dở (dangSuaTkb) */
