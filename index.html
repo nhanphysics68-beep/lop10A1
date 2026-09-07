@@ -1527,7 +1527,8 @@ async function luuSoDoNgay(){
     $('soDoLuuThanh').style.display = 'none';
     renderSeats();
     if(isAdmin) renderAdmin();
-    showMsg($('soDoLuuMsg'), '✅ Đã tự động lưu.', 'ok');
+    showMsg($('soDoLuuMsg'), '✅ Hoàn thành — đã lưu thay đổi sơ đồ.', 'ok');
+    showMsg($('adminMsg'), '✅ Hoàn thành — đã lưu thay đổi sơ đồ.', 'ok');
   }catch(e){
     showMsg($('soDoLuuMsg'), baoLoi(e),'err');
     showMsg($('adminMsg'), baoLoi(e),'err');
