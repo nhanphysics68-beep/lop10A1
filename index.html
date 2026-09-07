@@ -65,6 +65,15 @@
   /* ---------- Ban cán sự lớp ---------- */
   .bcs-item{display:flex; align-items:center; gap:12px; flex-wrap:wrap; background:#f7fbf8; border:1px solid var(--line);
     border-radius:10px; padding:10px 16px; margin-bottom:8px;}
+  .sap-xep-nhom{margin-bottom:16px;}
+  .sap-xep-tieude{font-weight:800; color:var(--leaf-dark); font-size:12.5px; margin-bottom:6px;}
+  .sap-xep-item{display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--line);
+    border-radius:8px; padding:6px 10px; margin-bottom:5px; font-size:13px;}
+  .sap-xep-item span{flex:1;}
+  .btn-len-xuong{background:#fff; border:1.5px solid var(--line); border-radius:6px; width:26px; height:26px;
+    font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0;}
+  .btn-len-xuong:hover{border-color:var(--leaf); background:#eaf5ee;}
+  .btn-len-xuong:disabled{opacity:.3; cursor:default;}
   .bcs-chucvu{font-weight:800; color:var(--leaf-dark); min-width:150px; font-size:13.5px;}
   .bcs-hoten{font-size:14px; color:var(--ink); flex:1;}
   .bcs-admin-item{display:flex; align-items:center; justify-content:space-between; gap:10px;
@@ -439,25 +448,10 @@
     </p>
   </div>
 
-  <div class="tabs">
-    <button class="tab active" data-tab="thongtin"><span class="ico">🏫</span>Thông tin lớp 10A1</button>
-    <button class="tab" data-tab="hoatdong"><span class="ico">🙋</span>Các hoạt động của lớp</button>
-    <button class="tab" data-tab="bangtin"><span class="ico">📰</span>Bảng tin lớp</button>
-    <button class="tab" data-tab="confession"><span class="ico">🎭</span>Confession</button>
-  </div>
+  <div class="tabs" id="tabsChinh"></div>
 
-  <div class="subtabs active" id="subtabs-thongtin" data-group="thongtin">
-    <button class="subtab active" data-subtab="sodo"><span class="ico">📍</span>Sơ đồ lớp</button>
-    <button class="subtab" data-subtab="hoso"><span class="ico">🧾</span>Hồ sơ đầu năm</button>
-    <button class="subtab" data-subtab="bancansu"><span class="ico">👥</span>Ban cán sự lớp</button>
-    <button class="subtab" data-subtab="caulacbo"><span class="ico">🎨</span>Các câu lạc bộ</button>
-    <button class="subtab" data-subtab="canhanhs"><span class="ico">👤</span>Dữ liệu cá nhân</button>
-  </div>
-  <div class="subtabs" id="subtabs-hoatdong" data-group="hoatdong">
-    <button class="subtab active" data-subtab="laodong"><span class="ico">🧹</span>Đăng ký lao động</button>
-    <button class="subtab" data-subtab="khaigiang"><span class="ico">📺</span>Chuẩn bị khai giảng</button>
-    <button class="subtab" data-subtab="hotro"><span class="ico">🤝</span>Nhận hỗ trợ</button>
-  </div>
+  <div class="subtabs active" id="subtabs-thongtin" data-group="thongtin"></div>
+  <div class="subtabs" id="subtabs-hoatdong" data-group="hoatdong"></div>
 
   <!-- ============ THẺ 1: SƠ ĐỒ LỚP ============ -->
   <div class="panel active" id="panel-sodo" data-group="thongtin">
@@ -888,6 +882,12 @@
       </p>
       <div class="scroll-x"><table id="hsAdminTable"></table></div>
 
+      <div class="section-title">⚙️ Sắp xếp menu điều hướng</div>
+      <p class="section-note" style="margin:0 0 8px;">
+        Đổi thứ tự các mục bằng nút ▲▼ — áp dụng ngay lập tức cho tất cả mọi người, không cần bấm Lưu.
+      </p>
+      <div id="sapXepMenuBox"></div>
+
       <div class="section-title">👤 Dữ liệu cá nhân học sinh (riêng tư) <span class="count-badge" id="chsCountBadge">0</span></div>
       <p class="section-note" style="margin:0 0 6px;">
         CCCD và ảnh thẻ chỉ hiện ở đây, không công khai. Bấm Xuất Excel để có file dạng hồ sơ từng trang.
@@ -1000,6 +1000,7 @@ const cfCamBienRef  = db.ref('confession2026/cambien');
 const cfBinhLuanRef = db.ref('confession2026/binhluan');
 const bcsRef = db.ref('lop10a1/bancansu');  // ban cán sự lớp — công khai đọc, chỉ giáo viên ghi
 const tkbRef = db.ref('tkb2026');           // thời khóa biểu — công khai đọc, chỉ giáo viên ghi
+const dieuHuongRef = db.ref('dieuHuong2026'); // thứ tự menu điều hướng — công khai đọc, chỉ giáo viên ghi
 const clbRef = db.ref('clb2026');           // các câu lạc bộ — công khai đọc, mỗi người tự ghi đúng phần của mình
 const clbDinhNghiaRef = db.ref('clbDinhNghia2026'); // định nghĩa CLB (tên/icon/mô tả) — công khai đọc, chỉ giáo viên ghi
 const clbDiemRef = db.ref('clbDiem2026');   // điểm uy tín đóng góp — công khai đọc, CHỈ giáo viên ghi được
@@ -1179,6 +1180,70 @@ function esc(s){
 
 /* GẮN SỰ KIỆN CHO NÚT SỬA THỜI KHÓA BIỂU — đặt ở đây vì cần $ đã được khai báo phía trên. */
 $('bcsThemMoiBtn').onclick = ()=> moModalThemSuaBCS(null);
+
+/* -------------------- GIÁO VIÊN: sắp xếp thứ tự menu điều hướng -------------------- */
+function doiChoTrongMang(mang, i, j){ const t = mang[i]; mang[i] = mang[j]; mang[j] = t; }
+
+async function luuThuTuMenu(){
+  try{
+    await dieuHuongRef.set({ nhomChinh: thuTuChinh, nhomCon: thuTuCon });
+  }catch(e){ showMsg($('adminMsg'), baoLoi(e), 'err'); }
+}
+
+function taoDongSapXep(nhan, i, tongSo, diChuyen){
+  return `<div class="sap-xep-item">
+    <span>${esc(nhan)}</span>
+    <button type="button" class="btn-len-xuong" data-len="${i}" ${i===0?'disabled':''} title="Lên">▲</button>
+    <button type="button" class="btn-len-xuong" data-xuong="${i}" ${i===tongSo-1?'disabled':''} title="Xuống">▼</button>
+  </div>`;
+}
+
+function renderSapXepMenu(){
+  const host = $('sapXepMenuBox');
+  if(!host) return;
+
+  let h = `<div class="sap-xep-nhom"><div class="sap-xep-tieude">Nhóm chính (4 mục)</div>`;
+  h += thuTuChinh.map((id,i)=> taoDongSapXep(TAB_DINH_NGHIA[id].icon+' '+TAB_DINH_NGHIA[id].ten, i, thuTuChinh.length)).join('');
+  h += `</div>`;
+
+  Object.keys(NHOM_TAB).forEach(groupId=>{
+    const ds = thuTuCon[groupId];
+    h += `<div class="sap-xep-nhom" data-nhom-con="${groupId}">
+      <div class="sap-xep-tieude">Mục con — ${esc(TAB_DINH_NGHIA[groupId].ten)}</div>`;
+    h += ds.map((id,i)=> taoDongSapXep(SUBTAB_DINH_NGHIA[id].icon+' '+SUBTAB_DINH_NGHIA[id].ten, i, ds.length)).join('');
+    h += `</div>`;
+  });
+  host.innerHTML = h;
+
+  // Nhóm chính
+  const khoiChinh = host.querySelector('.sap-xep-nhom:not([data-nhom-con])');
+  khoiChinh.querySelectorAll('[data-len]').forEach(b=> b.onclick = async ()=>{
+    const i = +b.getAttribute('data-len');
+    doiChoTrongMang(thuTuChinh, i, i-1);
+    await luuThuTuMenu();
+  });
+  khoiChinh.querySelectorAll('[data-xuong]').forEach(b=> b.onclick = async ()=>{
+    const i = +b.getAttribute('data-xuong');
+    doiChoTrongMang(thuTuChinh, i, i+1);
+    await luuThuTuMenu();
+  });
+
+  // Từng nhóm con
+  host.querySelectorAll('[data-nhom-con]').forEach(khoi=>{
+    const groupId = khoi.getAttribute('data-nhom-con');
+    khoi.querySelectorAll('[data-len]').forEach(b=> b.onclick = async ()=>{
+      const i = +b.getAttribute('data-len');
+      doiChoTrongMang(thuTuCon[groupId], i, i-1);
+      await luuThuTuMenu();
+    });
+    khoi.querySelectorAll('[data-xuong]').forEach(b=> b.onclick = async ()=>{
+      const i = +b.getAttribute('data-xuong');
+      doiChoTrongMang(thuTuCon[groupId], i, i+1);
+      await luuThuTuMenu();
+    });
+  });
+}
+
 $('tkbSuaBtn').onclick = ()=>{
   dangSuaTkb = true;
   tkbSangNhap = JSON.parse(JSON.stringify(tkbSang || []));
@@ -1247,6 +1312,26 @@ function mySeatId(){ for(const id in seats){ if(seats[id] && seats[id].uid===myU
 function myRegId(){ const r = regs.find(x=> x.uid===myUid); return r? r.id : null; }
 
 /* -------------------- THẺ CHUYỂN TRANG (có nhóm/thẻ con) -------------------- */
+/* Định nghĩa CỐ ĐỊNH: icon/tên/thành viên mỗi nhóm không đổi — chỉ THỨ TỰ hiển thị là
+   có thể tùy chỉnh (lưu trên Firebase, xem dieuHuong2026 phía dưới). */
+const TAB_DINH_NGHIA = {
+  thongtin:   {icon:'🏫', ten:'Thông tin lớp 10A1'},
+  hoatdong:   {icon:'🙋', ten:'Các hoạt động của lớp'},
+  bangtin:    {icon:'📰', ten:'Bảng tin lớp'},
+  confession: {icon:'🎭', ten:'Confession'},
+};
+const THU_TU_CHINH_MAC_DINH = ['thongtin', 'hoatdong', 'bangtin', 'confession'];
+
+const SUBTAB_DINH_NGHIA = {
+  sodo:      {icon:'📍', ten:'Sơ đồ lớp'},
+  hoso:      {icon:'🧾', ten:'Hồ sơ đầu năm'},
+  bancansu:  {icon:'👥', ten:'Ban cán sự lớp'},
+  caulacbo:  {icon:'🎨', ten:'Các câu lạc bộ'},
+  canhanhs:  {icon:'👤', ten:'Dữ liệu cá nhân'},
+  laodong:   {icon:'🧹', ten:'Đăng ký lao động'},
+  khaigiang: {icon:'📺', ten:'Chuẩn bị khai giảng'},
+  hotro:     {icon:'🤝', ten:'Nhận hỗ trợ'},
+};
 const NHOM_TAB = {
   thongtin: ['sodo', 'hoso', 'bancansu', 'caulacbo', 'canhanhs'],
   hoatdong: ['laodong', 'khaigiang', 'hotro'],
@@ -1255,6 +1340,36 @@ const NHOM_TAB = {
 const TAB_CU_SANG_NHOM = {};
 Object.keys(NHOM_TAB).forEach(nhom=> NHOM_TAB[nhom].forEach(muc=> TAB_CU_SANG_NHOM[muc] = nhom));
 
+/* Thứ tự hiển thị THẬT SỰ đang dùng — nạp từ Firebase (dieuHuong2026), nếu chưa có thì
+   dùng đúng thứ tự mặc định ở trên. Giáo viên chỉnh thứ tự thì chỉ đổi các biến này. */
+let thuTuChinh = THU_TU_CHINH_MAC_DINH.slice();
+let thuTuCon = { thongtin: NHOM_TAB.thongtin.slice(), hoatdong: NHOM_TAB.hoatdong.slice() };
+
+function renderTabsChinh(){
+  const host = $('tabsChinh');
+  if(!host) return;
+  host.innerHTML = thuTuChinh.map(id=>{
+    const d = TAB_DINH_NGHIA[id];
+    return `<button class="tab" data-tab="${id}"><span class="ico">${d.icon}</span>${esc(d.ten)}</button>`;
+  }).join('');
+  host.querySelectorAll('.tab').forEach(t=> t.onclick = ()=> moTab(t.dataset.tab));
+}
+function renderSubtabsNhom(groupId){
+  const host = $('subtabs-' + groupId);
+  if(!host) return;
+  const ds = thuTuCon[groupId] || NHOM_TAB[groupId];
+  host.innerHTML = ds.map(id=>{
+    const d = SUBTAB_DINH_NGHIA[id];
+    return `<button class="subtab" data-subtab="${id}"><span class="ico">${d.icon}</span>${esc(d.ten)}</button>`;
+  }).join('');
+  host.querySelectorAll('.subtab').forEach(st=> st.onclick = ()=> moTab(groupId, st.dataset.subtab));
+}
+function renderToanBoDieuHuong(){
+  renderTabsChinh();
+  Object.keys(NHOM_TAB).forEach(renderSubtabsNhom);
+}
+
+let tabDangMo = null, subDangMo = null;
 function moTab(tabId, subId){
   document.querySelectorAll('.tab').forEach(x=> x.classList.remove('active'));
   document.querySelectorAll('.subtabs').forEach(x=> x.classList.remove('active'));
@@ -1263,24 +1378,24 @@ function moTab(tabId, subId){
   const tabBtn = document.querySelector(`.tab[data-tab="${tabId}"]`);
   if(!tabBtn) return;
   tabBtn.classList.add('active');
+  tabDangMo = tabId; subDangMo = null;
 
   if(NHOM_TAB[tabId]){
     const thanhSub = $('subtabs-' + tabId);
     thanhSub.classList.add('active');
-    const chon = (subId && NHOM_TAB[tabId].includes(subId)) ? subId : NHOM_TAB[tabId][0];
+    const dsCon = thuTuCon[tabId] || NHOM_TAB[tabId];
+    const chon = (subId && dsCon.includes(subId)) ? subId : dsCon[0];
     thanhSub.querySelectorAll('.subtab').forEach(x=> x.classList.toggle('active', x.dataset.subtab === chon));
     $('panel-' + chon).classList.add('active');
     location.hash = tabId + '-' + chon;
+    subDangMo = chon;
   } else {
     $('panel-' + tabId).classList.add('active');
     location.hash = tabId;
   }
 }
 
-document.querySelectorAll('.tab').forEach(t=> t.onclick = ()=> moTab(t.dataset.tab));
-document.querySelectorAll('.subtab').forEach(st=>{
-  st.onclick = ()=> moTab(st.closest('.subtabs').dataset.group, st.dataset.subtab);
-});
+renderToanBoDieuHuong();
 
 (function moTheoHash(){
   const h = (location.hash||'').replace('#','');
@@ -1296,6 +1411,7 @@ document.querySelectorAll('.subtab').forEach(st=>{
   if(mNhom){ moTab(mNhom[1], mNhom[2]); return; }
 
   if(document.querySelector(`.tab[data-tab="${h}"]`)){ moTab(h); return; }
+  moTab(thuTuChinh[0]); // mặc định: mở đúng mục đầu tiên theo thứ tự hiện tại
 })();
 
 /* -------------------- MODAL -------------------- */
@@ -3603,6 +3719,7 @@ function renderBanXoa(){
 function renderAdmin(){
   if(!isAdmin) return;
   renderBanXoa();
+  renderSapXepMenu();
 
   /* Yêu cầu đổi chỗ */
   const cho = swaps.filter(s=> s.status==='pending');
@@ -3822,6 +3939,19 @@ bcsRef.on('value', s=>{
 });
 
 /* Thời khóa biểu: công khai cho mọi người, không vẽ đè nếu giáo viên đang sửa dở (dangSuaTkb) */
+/* Thứ tự menu điều hướng: công khai cho mọi người, không làm mất tab đang mở khi vẽ lại */
+dieuHuongRef.on('value', s=>{
+  const v = s.val() || {};
+  thuTuChinh = (Array.isArray(v.nhomChinh) && v.nhomChinh.length) ? v.nhomChinh : THU_TU_CHINH_MAC_DINH.slice();
+  thuTuCon = {
+    thongtin: (v.nhomCon && Array.isArray(v.nhomCon.thongtin) && v.nhomCon.thongtin.length) ? v.nhomCon.thongtin : NHOM_TAB.thongtin.slice(),
+    hoatdong: (v.nhomCon && Array.isArray(v.nhomCon.hoatdong) && v.nhomCon.hoatdong.length) ? v.nhomCon.hoatdong : NHOM_TAB.hoatdong.slice(),
+  };
+  renderToanBoDieuHuong();
+  if(tabDangMo) moTab(tabDangMo, subDangMo); else moTab(thuTuChinh[0]);
+  if(isAdmin) renderSapXepMenu();
+});
+
 tkbRef.child('sang').on('value', s=>{
   tkbSang = tkbTuObject(s.val(), TKB_CAC_THU.length) || [];
   if(!dangSuaTkb) renderThoiKhoaBieu();
