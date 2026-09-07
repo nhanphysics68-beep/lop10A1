@@ -30,6 +30,22 @@
 
   /* ---------- Thẻ chuyển trang ---------- */
   .tabs{display:flex; gap:8px; flex-wrap:wrap; margin:18px 0 16px;}
+
+  /* ---------- Thời khóa biểu ---------- */
+  .tkb-card{margin-top:16px;}
+  .tkb-nhan{font-weight:800; color:var(--leaf-dark); font-size:13.5px; margin-bottom:8px;}
+  .tkb-table td input{width:100%; padding:5px 6px; border:1.5px solid var(--leaf); border-radius:6px;
+    font-family:inherit; font-size:12.5px; text-align:center; background:#fffdf5;}
+  .tkb-table{width:100%; border-collapse:collapse; font-size:13px; min-width:560px;}
+  .tkb-table th, .tkb-table td{border:1px solid var(--line); padding:8px 10px; text-align:center;}
+  .tkb-table thead th{background:var(--leaf); color:#fff; font-size:12.5px; white-space:nowrap;}
+  .tkb-table thead th:first-child{background:var(--leaf-dark);}
+  .tkb-table tbody th{background:#eaf5ee; color:var(--leaf-dark); font-weight:800; white-space:nowrap;}
+  .tkb-table tbody tr:nth-child(odd){background:#fbfdfb;}
+  .tkb-table td.tkb-trong{color:var(--ink-soft); font-style:italic;}
+  .tkb-table td.tkb-co{font-weight:700; color:var(--ink);}
+  .tkb-table td.tkb-chaoco{color:var(--clay); font-weight:800;}
+  .tkb-table td.tkb-shl{color:#7c3aed; font-weight:800;}
   .tab{flex:1; min-width:150px; background:var(--paper); border:1.5px solid var(--line);
     border-radius:12px; padding:12px 14px; cursor:pointer; font-weight:700; font-size:14px;
     color:var(--ink-soft); text-align:center; transition:.15s; font-family:inherit;}
@@ -374,6 +390,47 @@
       <p class="subtitle">Trường THCS &amp; THPT Hòa Thuận · Năm học 2026–2027</p>
     </div>
     <div class="logo-spacer"></div>
+  </div>
+
+  <div class="card tkb-card">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+      <h2>🗓️ Thời khóa biểu năm học 2026–2027</h2>
+      <div id="tkbNutAdmin" style="display:none;">
+        <button class="btn btn-blue btn-sm" id="tkbSuaBtn">✏️ Sửa thời khóa biểu</button>
+      </div>
+    </div>
+
+    <div id="tkbVungSua" style="display:none; margin-bottom:14px; padding:10px; background:#eef5f0; border-radius:10px;">
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+        <button class="btn btn-primary btn-sm" id="tkbLuuBtn">💾 Lưu thời khóa biểu</button>
+        <button class="btn btn-ghost btn-sm" id="tkbHuyBtn">✕ Hủy, không lưu</button>
+        <button class="btn btn-ghost btn-sm" id="tkbKhoiPhucBtn">↺ Khôi phục TKB mặc định</button>
+      </div>
+      <div style="display:flex; gap:16px; flex-wrap:wrap; font-size:12.5px;">
+        <span>Buổi sáng:
+          <button class="btn btn-ghost btn-sm" id="tkbSangThemTietBtn">+ Thêm tiết</button>
+          <button class="btn btn-ghost btn-sm" id="tkbSangBotTietBtn">− Bớt tiết cuối</button>
+        </span>
+        <span>Buổi chiều:
+          <button class="btn btn-ghost btn-sm" id="tkbChieuThemTietBtn">+ Thêm tiết</button>
+          <button class="btn btn-ghost btn-sm" id="tkbChieuBotTietBtn">− Bớt tiết cuối</button>
+        </span>
+      </div>
+      <div id="tkbMsg" class="msg"></div>
+    </div>
+
+    <div class="tkb-nhan">☀️ Buổi sáng</div>
+    <div class="scroll-x">
+      <table class="tkb-table" id="tkbTable"></table>
+    </div>
+
+    <div class="tkb-nhan" style="margin-top:16px;">🌇 Buổi chiều <span style="font-weight:400; color:var(--ink-soft);">(Thể dục - GDQPAN - Âm nhạc - Mỹ thuật)</span></div>
+    <div class="scroll-x">
+      <table class="tkb-table" id="tkbChieuTable"></table>
+    </div>
+    <p class="section-note" style="margin:8px 0 0;">
+      Chỉ hiện các tiết lớp 10A1 thật sự có học buổi chiều theo TKB nhà trường — những ô "—" nghĩa là buổi đó không có tiết chiều.
+    </p>
   </div>
 
   <div class="tabs">
@@ -972,6 +1029,7 @@ const cfDaDuyetRef  = db.ref('confession2026/da_duyet');
 const cfCamBienRef  = db.ref('confession2026/cambien');
 const cfBinhLuanRef = db.ref('confession2026/binhluan');
 const bcsRef = db.ref('lop10a1/bancansu');  // ban cán sự lớp — công khai đọc, chỉ giáo viên ghi
+const tkbRef = db.ref('tkb2026');           // thời khóa biểu — công khai đọc, chỉ giáo viên ghi
 const clbRef = db.ref('clb2026');           // các câu lạc bộ — công khai đọc, mỗi người tự ghi đúng phần của mình
 const clbDinhNghiaRef = db.ref('clbDinhNghia2026'); // định nghĩa CLB (tên/icon/mô tả) — công khai đọc, chỉ giáo viên ghi
 const clbDiemRef = db.ref('clbDiem2026');   // điểm uy tín đóng góp — công khai đọc, CHỈ giáo viên ghi được
@@ -979,6 +1037,94 @@ const chsRef = db.ref('hosocanhan2026');    // dữ liệu cá nhân học sinh 
 const hosoRef   = db.ref('hoso2026/hoso');         // riêng tư: khóa theo uid, giống hotro2026
 
 const LANES     = [ {id:1,desks:7}, {id:2,desks:6}, {id:3,desks:6}, {id:4,desks:6} ];
+
+/* Thời khóa biểu — lưu trên Firebase (tkb2026), giáo viên tự sửa trực tiếp trên web.
+   Cấu trúc: tkb2026/sang/tiet{N}/thu{M} và tkb2026/chieu/tiet{N}/thu{M} — dùng key chữ
+   (không phải số nguyên trần) để tránh Firebase tự ý biến thành mảng gây lệch dữ liệu. */
+const TKB_CAC_THU = ['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6'];
+/* Dữ liệu gốc trích từ 2 file TKB nhà trường gửi — dùng làm mặc định khi "Khôi phục". */
+const TKB_MAC_DINH_SANG = [
+  ['Chào cờ',        'Văn - T.Em',   'Toán - Thiện', 'Anh - NSang',  'Sử - Quý'],
+  ['Anh - NSang',    'Văn - T.Em',   'Toán - Thiện', 'Tin - Điểm',   'Sử - Quý'],
+  ['Anh - NSang',    'Lý - Nhân',    'Hóa - Hòa',    'Tin - Điểm',   'Toán - Thiện'],
+  ['Sinh - Hằng',    'Lý - Nhân',    'Văn - T.Em',   'Hóa - Hòa',    'Toán - Thiện'],
+  ['Sinh - Hằng',    'Lý - Nhân CĐ', '',             '',             'SHL - Nhân'],
+];
+const TKB_MAC_DINH_CHIEU = [
+  ['', '', 'TD - Phú', '', ''],
+  ['', '', 'TD - Phú', '', ''],
+  ['', '', 'GDQPAN - Kết', '', ''],
+];
+
+let tkbSang = null, tkbChieu = null;   // dữ liệu ĐÃ LƯU (từ Firebase); null = chưa tải xong
+let tkbSangNhap = null, tkbChieuNhap = null; // bản NHÁP khi đang sửa, chưa lưu
+let dangSuaTkb = false;
+
+/* Đổi qua lại giữa mảng 2 chiều (dễ code) và object key-chữ (an toàn lưu Firebase) */
+function tkbSangObject(mang){
+  const o = {};
+  mang.forEach((hang, i)=>{ const h={}; hang.forEach((v,j)=> h['thu'+j]=v||''); o['tiet'+i]=h; });
+  return o;
+}
+function tkbTuObject(obj, soCotMacDinh){
+  if(!obj) return null;
+  const soTiet = Object.keys(obj).length;
+  const mang = [];
+  for(let i=0;i<soTiet;i++){
+    const hang = obj['tiet'+i] || {};
+    const h = [];
+    for(let j=0;j<soCotMacDinh;j++) h.push(hang['thu'+j] || '');
+    mang.push(h);
+  }
+  return mang;
+}
+
+function taoBangTkb(idBang, duLieu, choPhepSua, danhDauDacBiet){
+  const bang = $(idBang);
+  if(!bang) return;
+  if(!duLieu || !duLieu.length){
+    bang.innerHTML = `<tbody><tr><td style="text-align:center;color:var(--ink-soft);padding:14px;">
+      Chưa có dữ liệu — ${choPhepSua ? 'bấm "Khôi phục TKB mặc định" hoặc tự nhập.' : 'thầy chưa thiết lập.'}</td></tr></tbody>`;
+    return;
+  }
+  let h = '<thead><tr><th>Tiết</th>' + TKB_CAC_THU.map(t=>`<th>${esc(t)}</th>`).join('') + '</tr></thead><tbody>';
+  duLieu.forEach((hang, i)=>{
+    h += `<tr><th>${i+1}</th>` + hang.map((mon,j)=>{
+      if(choPhepSua) return `<td><input type="text" data-tiet="${i}" data-thu="${j}" value="${esc(mon)}" maxlength="40"></td>`;
+      if(!mon) return '<td class="tkb-trong">—</td>';
+      const lop = danhDauDacBiet ? danhDauDacBiet(mon) : 'tkb-co';
+      return `<td class="${lop}">${esc(mon)}</td>`;
+    }).join('') + '</tr>';
+  });
+  h += '</tbody>';
+  bang.innerHTML = h;
+}
+function danhDauSang(mon){ return mon==='Chào cờ' ? 'tkb-chaoco' : (mon==='SHL - Nhân' ? 'tkb-shl' : 'tkb-co'); }
+
+function renderThoiKhoaBieu(){
+  const xemSang = dangSuaTkb ? tkbSangNhap : tkbSang;
+  const xemChieu = dangSuaTkb ? tkbChieuNhap : tkbChieu;
+  taoBangTkb('tkbTable', xemSang, dangSuaTkb, danhDauSang);
+  taoBangTkb('tkbChieuTable', xemChieu, dangSuaTkb, null);
+  if(dangSuaTkb){
+    document.querySelectorAll('#tkbTable input').forEach(inp=> inp.oninput = ()=>{
+      tkbSangNhap[inp.dataset.tiet][inp.dataset.thu] = inp.value;
+    });
+    document.querySelectorAll('#tkbChieuTable input').forEach(inp=> inp.oninput = ()=>{
+      tkbChieuNhap[inp.dataset.tiet][inp.dataset.thu] = inp.value;
+    });
+  }
+}
+function renderThoiKhoaBieuChieu(){ renderThoiKhoaBieu(); } // giữ tên cũ để tương thích nếu nơi khác còn gọi
+
+/* -------------------- GIÁO VIÊN: bật/tắt sửa, thêm/bớt tiết, lưu/hủy -------------------- */
+function capNhatNutTkbAdmin(){
+  const nut = $('tkbNutAdmin');
+  if(nut) nut.style.display = isAdmin ? 'block' : 'none';
+}
+/* Các nút bấm của khối này được gắn sự kiện phía dưới (sau khi $ và esc đã sẵn sàng) — xem
+   đoạn "GẮN SỰ KIỆN CHO NÚT SỬA THỜI KHÓA BIỂU" gần định nghĩa $. */
+
 const TV_SLOTS  = [1,2,3];
 const TV_CAPACITY = 3;
 
@@ -1053,6 +1199,48 @@ const $ = id => document.getElementById(id);
 function esc(s){
   return String(s==null?'':s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
+// (Thời khóa biểu giờ tải từ Firebase — xem listener tkbRef ở cuối file, không cần gọi tay ở đây)
+
+/* GẮN SỰ KIỆN CHO NÚT SỬA THỜI KHÓA BIỂU — đặt ở đây vì cần $ đã được khai báo phía trên. */
+$('tkbSuaBtn').onclick = ()=>{
+  dangSuaTkb = true;
+  tkbSangNhap = JSON.parse(JSON.stringify(tkbSang || []));
+  tkbChieuNhap = JSON.parse(JSON.stringify(tkbChieu || []));
+  $('tkbVungSua').style.display = 'block';
+  renderThoiKhoaBieu();
+};
+$('tkbHuyBtn').onclick = ()=>{
+  dangSuaTkb = false;
+  tkbSangNhap = null; tkbChieuNhap = null;
+  $('tkbVungSua').style.display = 'none';
+  renderThoiKhoaBieu();
+};
+$('tkbKhoiPhucBtn').onclick = ()=>{
+  if(!confirm('Khôi phục về đúng thời khóa biểu mặc định (ghi đè bản đang sửa)?')) return;
+  tkbSangNhap = JSON.parse(JSON.stringify(TKB_MAC_DINH_SANG));
+  tkbChieuNhap = JSON.parse(JSON.stringify(TKB_MAC_DINH_CHIEU));
+  renderThoiKhoaBieu();
+};
+$('tkbSangThemTietBtn').onclick = ()=>{ tkbSangNhap.push(new Array(TKB_CAC_THU.length).fill('')); renderThoiKhoaBieu(); };
+$('tkbSangBotTietBtn').onclick = ()=>{ if(tkbSangNhap.length>1){ tkbSangNhap.pop(); renderThoiKhoaBieu(); } };
+$('tkbChieuThemTietBtn').onclick = ()=>{ tkbChieuNhap.push(new Array(TKB_CAC_THU.length).fill('')); renderThoiKhoaBieu(); };
+$('tkbChieuBotTietBtn').onclick = ()=>{ if(tkbChieuNhap.length>1){ tkbChieuNhap.pop(); renderThoiKhoaBieu(); } };
+
+$('tkbLuuBtn').onclick = async ()=>{
+  const btn = $('tkbLuuBtn'); btn.disabled = true;
+  showMsg($('tkbMsg'), 'Đang lưu...', 'info');
+  try{
+    await tkbRef.child('sang').set(tkbSangObject(tkbSangNhap));
+    await tkbRef.child('chieu').set(tkbSangObject(tkbChieuNhap));
+    dangSuaTkb = false;
+    tkbSangNhap = null; tkbChieuNhap = null;
+    $('tkbVungSua').style.display = 'none';
+    renderThoiKhoaBieu();
+    showMsg($('tkbMsg'), '✅ Đã lưu thời khóa biểu.', 'ok');
+  }catch(e){ showMsg($('tkbMsg'), baoLoi(e), 'err'); }
+  btn.disabled = false;
+};
+
 function showMsg(el, text, type){
   if(!el) return;
   el.textContent = text; el.className = 'msg show ' + type;
@@ -1161,6 +1349,8 @@ auth.onAuthStateChanged(async user=>{
   isAdmin = (user.uid === ADMIN_UID);
   $('adminLocked').style.display = isAdmin ? 'none' : 'block';
   $('adminPanel').style.display  = isAdmin ? 'block' : 'none';
+  capNhatNutTkbAdmin();
+  renderThoiKhoaBieu();
 
   if(isAdmin){
     $('adminWho').textContent = 'Đang đăng nhập: ' + (user.email || user.uid);
@@ -3574,6 +3764,16 @@ bcsRef.on('value', s=>{
   banCanSu = Object.keys(v).map(k=> Object.assign({id:k}, v[k]));
   renderBanCanSu();
   if(isAdmin) renderBcsAdmin();
+});
+
+/* Thời khóa biểu: công khai cho mọi người, không vẽ đè nếu giáo viên đang sửa dở (dangSuaTkb) */
+tkbRef.child('sang').on('value', s=>{
+  tkbSang = tkbTuObject(s.val(), TKB_CAC_THU.length) || [];
+  if(!dangSuaTkb) renderThoiKhoaBieu();
+});
+tkbRef.child('chieu').on('value', s=>{
+  tkbChieu = tkbTuObject(s.val(), TKB_CAC_THU.length) || [];
+  if(!dangSuaTkb) renderThoiKhoaBieu();
 });
 
 /* Các câu lạc bộ: công khai cho mọi người */
