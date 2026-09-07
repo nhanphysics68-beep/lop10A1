@@ -163,6 +163,17 @@
     letter-spacing:2px; margin-top:8px; border-top:2px solid var(--line); padding-top:10px;}
   .legend{display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--ink-soft); margin-top:16px;}
   .legend span{display:inline-flex; align-items:center; gap:6px;}
+  @media (max-width:640px){
+    .classroom-grid{grid-template-columns:1fr; gap:16px;}
+    .lane{gap:8px;}
+    .lane-label{font-size:16px; margin-bottom:4px;}
+    .desk-row{gap:8px; padding:6px 8px;}
+    .desk{gap:8px;}
+    .desk-badge{width:26px; height:26px; font-size:13px;}
+    .nut-xoa-ban{width:24px; height:24px; font-size:13px;}
+    .seat{aspect-ratio:auto; min-height:56px; font-size:14px; padding:6px 8px;}
+    .seat .lockicon{font-size:16px;}
+  }
   .legend .box{width:14px; height:14px; border-radius:4px; display:inline-block;}
 
   /* ---------- Biểu mẫu ---------- */
@@ -1438,18 +1449,22 @@ function renderSeats(){
         }
         div.onclick = ()=>{ if(!isAdmin || dangKeoSeatId===null) onSeatClick(id); };
 
-        /* Kéo-thả đổi/chuyển chỗ — chỉ dành cho giáo viên. Chỉ thay đổi bản NHÁP cục bộ,
-           không ghi Firebase ngay, để kéo nhiều bước liên tiếp không bị vẽ lại giữa chừng
-           do dữ liệu realtime (nguyên nhân khiến trước đây có lượt kéo bị "trượt"). */
+        /* Kéo-thả đổi/chuyển chỗ — chỉ dành cho giáo viên. Chỉ ô ĐANG CÓ học sinh mới kéo
+           ĐƯỢC (kéo từ ô trống không có ý nghĩa gì, dễ gây nhầm — từng khiến 1 học sinh khác
+           "biến mất" khỏi ô của mình do bị kéo nhầm từ 1 ô trống bên cạnh thả vào). Ô trống
+           vẫn nhận được khi thả tới (để chuyển chỗ tới đó). Chỉ thay đổi bản NHÁP cục bộ,
+           không ghi Firebase ngay, để kéo nhiều bước liên tiếp không bị vẽ lại giữa chừng. */
         if(isAdmin){
-          div.draggable = true;
-          div.ondragstart = e=>{
-            dangKeoSeatId = id;
-            e.dataTransfer.effectAllowed = 'move';
-            try{ e.dataTransfer.setData('text/plain', id); }catch(err){}
-          };
-          div.ondragend = ()=>{ dangKeoSeatId = null; grid.querySelectorAll('.seat.dang-keo-toi').forEach(x=> x.classList.remove('dang-keo-toi')); };
-          div.ondragover = e=>{ e.preventDefault(); e.dataTransfer.dropEffect = 'move'; div.classList.add('dang-keo-toi'); };
+          if(data){
+            div.draggable = true;
+            div.ondragstart = e=>{
+              dangKeoSeatId = id;
+              e.dataTransfer.effectAllowed = 'move';
+              try{ e.dataTransfer.setData('text/plain', id); }catch(err){}
+            };
+            div.ondragend = ()=>{ dangKeoSeatId = null; grid.querySelectorAll('.seat.dang-keo-toi').forEach(x=> x.classList.remove('dang-keo-toi')); };
+          }
+          div.ondragover = e=>{ if(dangKeoSeatId===null) return; e.preventDefault(); e.dataTransfer.dropEffect = 'move'; div.classList.add('dang-keo-toi'); };
           div.ondragleave = ()=> div.classList.remove('dang-keo-toi');
           div.ondrop = e=>{
             e.preventDefault();
