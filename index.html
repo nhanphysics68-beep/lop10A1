@@ -43,6 +43,7 @@
   .tkb-table tbody th{background:#eaf5ee; color:var(--leaf-dark); font-weight:800; white-space:nowrap;}
   .tkb-table tbody tr:nth-child(odd){background:#fbfdfb;}
   .tkb-table td.tkb-trong{color:var(--ink-soft); font-style:italic;}
+  .tkb-table td.tkb-gio{background:#f7fbf8; color:var(--ink-soft); font-size:11.5px; white-space:nowrap; font-weight:700;}
   .tkb-table td.tkb-co{font-weight:700; color:var(--ink);}
   .tkb-table td.tkb-chaoco{color:var(--clay); font-weight:800;}
   .tkb-table td.tkb-shl{color:#7c3aed; font-weight:800;}
@@ -1079,7 +1080,12 @@ function tkbTuObject(obj, soCotMacDinh){
   return mang;
 }
 
-function taoBangTkb(idBang, duLieu, choPhepSua, danhDauDacBiet){
+/* Khung giờ từng tiết — trích từ thông báo chính thức của trường, cố định theo cả trường
+   nên KHÔNG cho sửa trong ô lưới, chỉ hiển thị tham khảo cạnh cột Tiết. */
+const TKB_GIO_SANG  = ['7h00 - 7h45','7h50 - 8h35','9h00 - 9h45','9h50 - 10h35','10h40 - 11h25'];
+const TKB_GIO_CHIEU = ['13h30 - 14h15','14h20 - 15h05','15h25 - 16h10','16h15 - 17h00'];
+
+function taoBangTkb(idBang, duLieu, choPhepSua, danhDauDacBiet, dsGio){
   const bang = $(idBang);
   if(!bang) return;
   if(!duLieu || !duLieu.length){
@@ -1087,9 +1093,10 @@ function taoBangTkb(idBang, duLieu, choPhepSua, danhDauDacBiet){
       Chưa có dữ liệu — ${choPhepSua ? 'bấm "Khôi phục TKB mặc định" hoặc tự nhập.' : 'thầy chưa thiết lập.'}</td></tr></tbody>`;
     return;
   }
-  let h = '<thead><tr><th>Tiết</th>' + TKB_CAC_THU.map(t=>`<th>${esc(t)}</th>`).join('') + '</tr></thead><tbody>';
+  let h = '<thead><tr><th>Tiết</th><th>Thời gian</th>' + TKB_CAC_THU.map(t=>`<th>${esc(t)}</th>`).join('') + '</tr></thead><tbody>';
   duLieu.forEach((hang, i)=>{
-    h += `<tr><th>${i+1}</th>` + hang.map((mon,j)=>{
+    const gio = (dsGio && dsGio[i]) || '—';
+    h += `<tr><th>${i+1}</th><td class="tkb-gio">${esc(gio)}</td>` + hang.map((mon,j)=>{
       if(choPhepSua) return `<td><input type="text" data-tiet="${i}" data-thu="${j}" value="${esc(mon)}" maxlength="40"></td>`;
       if(!mon) return '<td class="tkb-trong">—</td>';
       const lop = danhDauDacBiet ? danhDauDacBiet(mon) : 'tkb-co';
@@ -1104,8 +1111,8 @@ function danhDauSang(mon){ return mon==='Chào cờ' ? 'tkb-chaoco' : (mon==='SH
 function renderThoiKhoaBieu(){
   const xemSang = dangSuaTkb ? tkbSangNhap : tkbSang;
   const xemChieu = dangSuaTkb ? tkbChieuNhap : tkbChieu;
-  taoBangTkb('tkbTable', xemSang, dangSuaTkb, danhDauSang);
-  taoBangTkb('tkbChieuTable', xemChieu, dangSuaTkb, null);
+  taoBangTkb('tkbTable', xemSang, dangSuaTkb, danhDauSang, TKB_GIO_SANG);
+  taoBangTkb('tkbChieuTable', xemChieu, dangSuaTkb, null, TKB_GIO_CHIEU);
   if(dangSuaTkb){
     document.querySelectorAll('#tkbTable input').forEach(inp=> inp.oninput = ()=>{
       tkbSangNhap[inp.dataset.tiet][inp.dataset.thu] = inp.value;
