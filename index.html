@@ -1505,21 +1505,20 @@ function xoaBanKhoiSoDo(deskKey, laneId, banSo){
 async function luuSoDoNgay(){
   if(seatsNhap === null) return;
   showMsg($('soDoLuuMsg'), 'Đang tự động lưu...', 'info');
-  try{
-    const capNhat = {};
-    const tatCaId = new Set([...Object.keys(seats), ...Object.keys(seatsNhap)]);
-    tatCaId.forEach(id=>{
-      const cu = seats[id] || null, moi = seatsNhap[id] || null;
-      if(JSON.stringify(cu) !== JSON.stringify(moi)) capNhat['lop10a1/seats/'+id] = moi;
-    });
-    const tatCaBan = new Set([...Object.keys(banXoa), ...Object.keys(banXoaNhap)]);
-    tatCaBan.forEach(key=>{
-      const cu = !!banXoa[key], moi = !!banXoaNhap[key];
-      if(cu !== moi) capNhat['lop10a1/banXoa/'+key] = moi ? true : null;
-    });
-    // Các yêu cầu đổi chỗ đang chờ có thể không còn hợp lệ sau khi sắp xếp lại thủ công -> dọn hết cho sạch
-    swaps.forEach(s=> capNhat['lop10a1/swaps/'+s.id] = null);
+  const capNhat = {};
+  const tatCaId = new Set([...Object.keys(seats), ...Object.keys(seatsNhap)]);
+  tatCaId.forEach(id=>{
+    const cu = seats[id] || null, moi = seatsNhap[id] || null;
+    if(JSON.stringify(cu) !== JSON.stringify(moi)) capNhat['lop10a1/seats/'+id] = moi;
+  });
+  const tatCaBan = new Set([...Object.keys(banXoa), ...Object.keys(banXoaNhap)]);
+  tatCaBan.forEach(key=>{
+    const cu = !!banXoa[key], moi = !!banXoaNhap[key];
+    if(cu !== moi) capNhat['lop10a1/banXoa/'+key] = moi ? true : null;
+  });
 
+  try{
+    /* Ghi phần CHÍNH (chỗ ngồi + bàn đã xóa) trước — đây là phần quan trọng nhất. */
     if(Object.keys(capNhat).length){
       await db.ref().update(capNhat);
     }
@@ -1530,8 +1529,23 @@ async function luuSoDoNgay(){
     showMsg($('soDoLuuMsg'), '✅ Hoàn thành — đã lưu thay đổi sơ đồ.', 'ok');
     showMsg($('adminMsg'), '✅ Hoàn thành — đã lưu thay đổi sơ đồ.', 'ok');
   }catch(e){
-    showMsg($('soDoLuuMsg'), baoLoi(e),'err');
-    showMsg($('adminMsg'), baoLoi(e),'err');
+    /* Hiện NGUYÊN VĂN lỗi kỹ thuật (không dịch) — thường có ghi rõ đúng đường dẫn nào bị từ
+       chối, giúp chẩn đoán mà không cần mở Console trình duyệt. */
+    const chiTiet = 'Lỗi khi lưu (' + Object.keys(capNhat).length + ' đường dẫn): ' + (e && e.message ? e.message : e);
+    console.error(chiTiet, capNhat);
+    showMsg($('soDoLuuMsg'), chiTiet, 'err');
+    showMsg($('adminMsg'), chiTiet, 'err');
+    return; // đã lỗi ở phần chính thì không dọn yêu cầu đổi chỗ nữa
+  }
+
+  /* Dọn các yêu cầu đổi chỗ đang chờ (có thể không còn hợp lệ sau khi sắp xếp lại thủ công) —
+     tách riêng để nếu bước này lỗi thì KHÔNG ảnh hưởng tới việc đã lưu sơ đồ thành công ở trên. */
+  try{
+    const xoaSwap = {};
+    swaps.forEach(s=>{ if(s && s.id) xoaSwap['lop10a1/swaps/'+s.id] = null; });
+    if(Object.keys(xoaSwap).length) await db.ref().update(xoaSwap);
+  }catch(e){
+    console.error('Lỗi khi dọn yêu cầu đổi chỗ cũ (không ảnh hưởng sơ đồ đã lưu):', e);
   }
 }
 let soDoTuLuuTimer = null;
