@@ -4291,13 +4291,22 @@ bcsRef.on('value', s=>{
 });
 
 /* Thứ tự menu điều hướng: công khai cho mọi người, không làm mất tab đang mở khi vẽ lại */
+/* Ghép thêm những mục MỚI (được thêm vào code sau này) vào cuối danh sách thứ tự đã lưu —
+   nếu không, mục mới thêm (như "games") sẽ bị bỏ sót hoàn toàn vì danh sách cũ trên Firebase
+   chưa từng biết tới nó, dù code đã có sẵn. */
+function ghepMucMoiVaoCuoi(daLuu, dayDu){
+  const ds = (Array.isArray(daLuu) ? daLuu.slice() : []).filter(id=> dayDu.includes(id));
+  dayDu.forEach(id=>{ if(!ds.includes(id)) ds.push(id); });
+  return ds.length ? ds : dayDu.slice();
+}
+
 dieuHuongRef.on('value', s=>{
   const v = s.val() || {};
-  thuTuChinh = (Array.isArray(v.nhomChinh) && v.nhomChinh.length) ? v.nhomChinh : THU_TU_CHINH_MAC_DINH.slice();
+  thuTuChinh = ghepMucMoiVaoCuoi(v.nhomChinh, THU_TU_CHINH_MAC_DINH);
   thuTuCon = {};
   Object.keys(NHOM_TAB).forEach(groupId=>{
     const daLuu = v.nhomCon && v.nhomCon[groupId];
-    thuTuCon[groupId] = (Array.isArray(daLuu) && daLuu.length) ? daLuu : NHOM_TAB[groupId].slice();
+    thuTuCon[groupId] = ghepMucMoiVaoCuoi(daLuu, NHOM_TAB[groupId]);
   });
   renderToanBoDieuHuong();
   if(tabDangMo) moTab(tabDangMo, subDangMo); else moTab(thuTuChinh[0]);
