@@ -75,19 +75,28 @@
   .btn-len-xuong:hover{border-color:var(--leaf); background:#eaf5ee;}
   .btn-len-xuong:disabled{opacity:.3; cursor:default;}
 
-  /* ---------- Trò chơi: Quay chọn tên (đua bò) ---------- */
+  /* ---------- Trò chơi: Quay chọn tên (đua chó / vòng quay) ---------- */
   .qt-dieukhien{display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; margin-bottom:18px;}
-  .qt-dieukhien select{padding:9px 12px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13.5px;}
-  #qtSanDua{display:flex; flex-direction:column; gap:10px; margin-bottom:14px;}
-  .qt-lan{position:relative; background:#eef5f0; border-radius:10px; height:46px; overflow:hidden; border:1px solid var(--line);}
-  .qt-lan-nhan{position:absolute; left:6px; top:50%; transform:translateY(-50%); font-size:11.5px; font-weight:800; color:var(--leaf-dark); z-index:2;}
-  .qt-bo{position:absolute; top:50%; transform:translateY(-50%); left:2%; font-size:26px; transition:left 2s cubic-bezier(.2,.7,.3,1); z-index:1;}
+  .qt-dieukhien select, .qt-dieukhien input{padding:9px 12px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13.5px;}
+  .qt-dieukhien input{width:90px;}
+  #qtSanDua{display:flex; flex-direction:column; gap:8px; margin-bottom:14px;}
+  .qt-lan{position:relative; background:#eef5f0; border-radius:10px; height:44px; overflow:hidden; border:1px solid var(--line); display:flex; align-items:center;}
+  .qt-lan-nhan{position:absolute; left:8px; top:50%; transform:translateY(-50%); font-size:12px; font-weight:800; color:var(--leaf-dark); z-index:2; white-space:nowrap;}
+  .qt-cho{position:absolute; top:50%; transform:translateY(-50%) scaleX(-1); left:2%; width:34px; height:34px;
+    transition:left linear; z-index:1;}
   .qt-lan.thang{background:#fff3d6;}
   .qt-lan.thang .qt-lan-nhan{color:#b45309;}
   #qtKetQua{text-align:center;}
   .qt-the-hocsinh{display:inline-block; background:var(--leaf); color:#fff; font-weight:800; font-size:16px;
     padding:10px 20px; border-radius:12px; margin:4px 6px; box-shadow:0 4px 12px rgba(20,83,45,.25); animation:qtBatHien .4s;}
   @keyframes qtBatHien{ from{transform:scale(.5); opacity:0;} to{transform:scale(1); opacity:1;} }
+
+  .qt-vongquay-wrap{position:relative; width:min(320px,90vw); height:min(320px,90vw); margin:10px auto 18px;}
+  .qt-vongquay-wrap svg{width:100%; height:100%; transition:transform 8s cubic-bezier(.15,.85,.25,1);}
+  .qt-kim{position:absolute; top:50%; transform:translateY(-50%); font-size:26px; color:var(--red); z-index:3;}
+  .qt-kim-trai{left:-18px;}
+  .qt-kim-phai{right:-18px;}
+  .qt-kim-tren{top:-18px; left:50%; transform:translateX(-50%); }
 
   /* ---------- Trò chơi: Đuổi hình đoán chữ ---------- */
   #dhTien{text-align:center; font-weight:700; color:var(--ink-soft); font-size:12.5px; margin-bottom:10px;}
@@ -867,14 +876,23 @@
   <!-- ============ TRÒ CHƠI 1: QUAY CHỌN TÊN (ĐUA BÒ) ============ -->
   <div class="panel" id="panel-quayten" data-group="games">
     <div class="card">
-      <h2>🐂 Quay chọn tên — Đua bò Bảy Núi</h2>
-      <p class="section-note">Chọn ngẫu nhiên học sinh để trả lời/kiểm tra bài — vui như đua bò Bảy Núi quê mình!</p>
+      <h2>🐕 Quay chọn tên</h2>
+      <p class="section-note">Chọn theo 1 Tổ để đua chó xem ai "về đích" trước, hoặc quay vòng quay lớn để bốc thăm cả lớp.</p>
       <div class="qt-dieukhien">
         <div class="field">
           <label>Cách chọn</label>
           <select id="qtCheDo">
-            <option value="to">Đua theo Tổ (mỗi Dãy là 1 Tổ)</option>
-            <option value="ca_lop">Bốc thăm cả lớp</option>
+            <option value="to">🐕 Đua chó trong 1 Tổ</option>
+            <option value="ca_lop">🎡 Vòng quay cả lớp</option>
+          </select>
+        </div>
+        <div class="field" id="qtChonToBox">
+          <label>Chọn Tổ</label>
+          <select id="qtChonTo">
+            <option value="1">Tổ 1 (Dãy 1)</option>
+            <option value="2">Tổ 2 (Dãy 2)</option>
+            <option value="3">Tổ 3 (Dãy 3)</option>
+            <option value="4">Tổ 4 (Dãy 4)</option>
           </select>
         </div>
         <div class="field">
@@ -885,9 +903,31 @@
             <option value="3">3 học sinh</option>
           </select>
         </div>
-        <button class="btn btn-primary btn-sm" id="qtBatDauBtn" style="align-self:flex-end;">🏁 Bắt đầu</button>
+        <div class="field" id="qtTocDoBox">
+          <label>Thời gian đua (giây)</label>
+          <input type="number" id="qtTocDo" value="5" min="2" max="20" step="1">
+        </div>
       </div>
-      <div id="qtSanDua"></div>
+
+      <!-- Chế độ đua chó theo Tổ -->
+      <div id="qtDuaChoBox">
+        <div id="qtSanDua"></div>
+        <button class="btn btn-primary btn-sm" id="qtBatDauBtn">🏁 Bắt đầu đua</button>
+      </div>
+
+      <!-- Chế độ vòng quay cả lớp -->
+      <div id="qtVongQuayBox" style="display:none;">
+        <div class="qt-vongquay-wrap">
+          <div id="qtVongQuaySvgHost"></div>
+          <div class="qt-kim qt-kim-trai" id="qtKimTrai">▶</div>
+          <div class="qt-kim qt-kim-phai" id="qtKimPhai" style="display:none;">◀</div>
+          <div class="qt-kim qt-kim-tren" id="qtKimTren" style="display:none;">▼</div>
+        </div>
+        <div style="text-align:center;">
+          <button class="btn btn-primary btn-sm" id="qtQuayBtn">🎡 Quay!</button>
+        </div>
+      </div>
+
       <div id="qtKetQua"></div>
     </div>
   </div>
@@ -1444,7 +1484,7 @@ const SUBTAB_DINH_NGHIA = {
   laodong:   {icon:'🧹', ten:'Đăng ký lao động'},
   khaigiang: {icon:'📺', ten:'Chuẩn bị khai giảng'},
   hotro:     {icon:'🤝', ten:'Nhận hỗ trợ'},
-  quayten:   {icon:'🐂', ten:'Quay chọn tên'},
+  quayten:   {icon:'🐕', ten:'Quay chọn tên'},
   duoihinh:  {icon:'🖼️', ten:'Đuổi hình đoán chữ'},
   ghepdoi:   {icon:'🃏', ten:'Ghép đôi'},
   tracnghiem:{icon:'❓', ten:'Trắc nghiệm'},
@@ -3794,7 +3834,7 @@ $('chsXuatExcelBtn').onclick = async ()=>{
    TRÒ CHƠI HỌC TẬP — 4 trò, dữ liệu mẫu cố định (chưa qua Firebase), không cần đăng nhập.
    ================================================================ */
 
-/* -------- Trò 1: Quay chọn tên (đua bò theo Tổ / bốc thăm cả lớp) -------- */
+/* -------- Trò 1: Quay chọn tên (đua chó trong 1 Tổ / vòng quay cả lớp) -------- */
 /* Lấy danh sách học sinh theo Tổ (Dãy 1-4) trực tiếp từ dữ liệu Sơ đồ lớp (seats) đã có sẵn —
    không cần thêm dữ liệu mới. Học sinh chưa có chỗ ngồi sẽ không thuộc Tổ nào. */
 function layHocSinhTheoTo(){
@@ -3817,69 +3857,164 @@ function chonNgauNhien(mang, soLuong){
   }
   return ketQua;
 }
+const ANH_CON_CHO = 'mohamed_hassan-dog-7011.gif';
 
-$('qtBatDauBtn').onclick = ()=>{
+/* Bật/tắt hiện đúng khối theo chế độ đã chọn */
+function capNhatGiaoDienQuayTen(){
   const cheDo = $('qtCheDo').value;
+  $('qtChonToBox').style.display = (cheDo === 'to') ? '' : 'none';
+  $('qtTocDoBox').style.display = (cheDo === 'to') ? '' : 'none';
+  $('qtDuaChoBox').style.display = (cheDo === 'to') ? '' : 'none';
+  $('qtVongQuayBox').style.display = (cheDo === 'ca_lop') ? '' : 'none';
+  $('qtKetQua').innerHTML = '';
+}
+$('qtCheDo').onchange = ()=>{
+  capNhatGiaoDienQuayTen();
+  if($('qtCheDo').value === 'ca_lop') chuanBiVongQuay();
+};
+$('qtSoLuong').onchange = ()=>{
+  if($('qtCheDo').value === 'ca_lop') chuanBiVongQuay();
+};
+
+/* ---- Đua chó trong 1 Tổ ---- */
+$('qtBatDauBtn').onclick = ()=>{
+  const toChon = +$('qtChonTo').value;
   const soLuong = parseInt($('qtSoLuong').value, 10);
+  const giay = Math.max(2, parseFloat($('qtTocDo').value) || 5);
   const san = $('qtSanDua'), ketQuaBox = $('qtKetQua');
   ketQuaBox.innerHTML = '';
 
-  if(cheDo === 'ca_lop'){
-    const ds = layTatCaHocSinhDaXep();
-    if(ds.length < soLuong){
-      san.innerHTML = '';
-      ketQuaBox.innerHTML = `<p class="section-note">Chưa đủ học sinh đã có chỗ ngồi trong Sơ đồ lớp để bốc thăm (cần ít nhất ${soLuong}).</p>`;
-      return;
-    }
-    // Hiệu ứng xáo tên nhanh trước khi ra kết quả
-    san.innerHTML = `<div class="qt-lan"><span class="qt-lan-nhan">🎲 Đang bốc thăm...</span></div>`;
-    let dem = 0;
-    const nhay = setInterval(()=>{
-      dem++;
-      const ngauNhien = chonNgauNhien(ds, Math.min(soLuong, ds.length));
-      san.querySelector('.qt-lan-nhan').textContent = '🎲 ' + ngauNhien.join(' · ');
-      if(dem > 10){
-        clearInterval(nhay);
-        const ketQua = chonNgauNhien(ds, soLuong);
-        ketQuaBox.innerHTML = '🎉 ' + ketQua.map(ten=> `<span class="qt-the-hocsinh">${esc(ten)}</span>`).join('');
-      }
-    }, 120);
+  const to = layHocSinhTheoTo();
+  const dsHocSinh = to[toChon];
+  if(!dsHocSinh.length){
+    san.innerHTML = '';
+    ketQuaBox.innerHTML = `<p class="section-note">Tổ ${toChon} chưa có học sinh nào trong Sơ đồ lớp.</p>`;
     return;
   }
 
-  // Chế độ đua theo Tổ
-  const to = layHocSinhTheoTo();
-  const toCoNguoi = [1,2,3,4].filter(t=> to[t].length > 0);
-  if(!toCoNguoi.length){
-    san.innerHTML = '';
-    ketQuaBox.innerHTML = `<p class="section-note">Chưa có học sinh nào trong Sơ đồ lớp để chia Tổ.</p>`;
-    return;
-  }
-  san.innerHTML = toCoNguoi.map(t=> `
-    <div class="qt-lan" data-to="${t}">
-      <span class="qt-lan-nhan">Tổ ${t} (${to[t].length} bạn)</span>
-      <span class="qt-bo">🐂</span>
+  // Xác định trước thứ tự về đích (ngẫu nhiên) — số lượng cần chọn về đích nhanh nhất
+  const thuTuVeDich = xaoMang(dsHocSinh);
+  const soVeDich = Math.min(soLuong, dsHocSinh.length);
+
+  san.innerHTML = dsHocSinh.map(ten=> `
+    <div class="qt-lan" data-ten="${esc(ten)}">
+      <span class="qt-lan-nhan">${esc(ten)}</span>
+      <img class="qt-cho" src="${ANH_CON_CHO}" alt="🐕">
     </div>`).join('');
 
-  const toThang = toCoNguoi[Math.floor(Math.random()*toCoNguoi.length)];
-  // Chạy đua: mỗi lane đi tới 1 khoảng ngẫu nhiên, lane thắng luôn đi xa nhất (đến đích)
   requestAnimationFrame(()=>{
-    toCoNguoi.forEach(t=>{
-      const bo = san.querySelector(`.qt-lan[data-to="${t}"] .qt-bo`);
-      const dich = (t === toThang) ? 88 : (20 + Math.random()*55);
-      bo.style.left = dich + '%';
+    dsHocSinh.forEach(ten=>{
+      const cho = san.querySelector(`.qt-lan[data-ten="${CSS.escape(ten)}"] .qt-cho`);
+      const thuHang = thuTuVeDich.indexOf(ten);
+      let thoiGian, dich;
+      if(thuHang < soVeDich){
+        // Về đích: cách nhau 1 chút để có thứ tự nhất-nhì-ba rõ ràng
+        thoiGian = giay + thuHang * (giay*0.15);
+        dich = 90;
+      } else {
+        // Không về đích: dừng lại đâu đó trước vạch đích, không vượt qua các bạn về đích
+        thoiGian = giay * (0.5 + Math.random()*0.4);
+        dich = 35 + Math.random()*40;
+      }
+      cho.style.transitionDuration = thoiGian + 's';
+      cho.style.left = dich + '%';
     });
   });
 
+  const tongThoiGianCho = giay + (soVeDich-1) * (giay*0.15) + 0.3;
   setTimeout(()=>{
-    san.querySelector(`.qt-lan[data-to="${toThang}"]`).classList.add('thang');
-    const dsThang = to[toThang];
-    const soChon = Math.min(soLuong, dsThang.length);
-    const ketQua = chonNgauNhien(dsThang, soChon);
-    ketQuaBox.innerHTML = `<p style="font-weight:800; color:#b45309; margin-bottom:8px;">🏆 Tổ ${toThang} về đích!</p>`
-      + ketQua.map(ten=> `<span class="qt-the-hocsinh">${esc(ten)}</span>`).join('');
-  }, 2200);
+    const ketQua = thuTuVeDich.slice(0, soVeDich);
+    ketQua.forEach(ten=> san.querySelector(`.qt-lan[data-ten="${CSS.escape(ten)}"]`).classList.add('thang'));
+    ketQuaBox.innerHTML = `<p style="font-weight:800; color:#b45309; margin-bottom:8px;">🏆 Tổ ${toChon} về đích!</p>`
+      + ketQua.map((ten,i)=> `<span class="qt-the-hocsinh">${i+1}. ${esc(ten)}</span>`).join('');
+  }, tongThoiGianCho * 1000);
 };
+
+/* ---- Vòng quay cả lớp ---- */
+let qtGocHienTai = 0;
+let qtDsVongQuay = [];
+function xaoMang(mang){
+  const m = mang.slice();
+  for(let i=m.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [m[i],m[j]]=[m[j],m[i]]; }
+  return m;
+}
+function taoSvgVongQuay(danhSach){
+  const n = danhSach.length;
+  const R = 150, CX = 160, CY = 160;
+  const mauSac = ['#1f7a4d','#2b6cb0','#d97706','#7c3aed','#c0392b','#0f766e','#be185d','#4d7c0f'];
+  const goc = 360 / n;
+  let svg = `<svg viewBox="0 0 320 320">`;
+  danhSach.forEach((ten,i)=>{
+    const a0 = i*goc, a1 = (i+1)*goc;
+    const x0 = CX + R*Math.cos(a0*Math.PI/180), y0 = CY + R*Math.sin(a0*Math.PI/180);
+    const x1 = CX + R*Math.cos(a1*Math.PI/180), y1 = CY + R*Math.sin(a1*Math.PI/180);
+    const largeArc = goc > 180 ? 1 : 0;
+    svg += `<path d="M${CX},${CY} L${x0.toFixed(2)},${y0.toFixed(2)} A${R},${R} 0 ${largeArc} 1 ${x1.toFixed(2)},${y1.toFixed(2)} Z" fill="${mauSac[i%mauSac.length]}" stroke="#fff" stroke-width="1"/>`;
+    const amid = a0 + goc/2;
+    const tx = CX + (R*0.62)*Math.cos(amid*Math.PI/180), ty = CY + (R*0.62)*Math.sin(amid*Math.PI/180);
+    const chuNgan = ten.length > 12 ? ten.slice(0,11)+'…' : ten;
+    svg += `<text x="${tx.toFixed(2)}" y="${ty.toFixed(2)}" font-size="9" font-family="Trebuchet MS, sans-serif" fill="#fff" text-anchor="middle" transform="rotate(${amid.toFixed(2)},${tx.toFixed(2)},${ty.toFixed(2)})">${escXml(chuNgan)}</text>`;
+  });
+  svg += `</svg>`;
+  return svg;
+}
+function escXml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+function chuanBiVongQuay(){
+  const soLuong = parseInt($('qtSoLuong').value, 10);
+  $('qtKimTrai').style.display = '';
+  $('qtKimPhai').style.display = (soLuong >= 2) ? '' : 'none';
+  $('qtKimTren').style.display = (soLuong >= 3) ? '' : 'none';
+
+  const ds = layTatCaHocSinhDaXep();
+  const ketQuaBox = $('qtKetQua');
+  ketQuaBox.innerHTML = '';
+  qtDsVongQuay = ds;
+  if(ds.length < 2){
+    $('qtVongQuaySvgHost').innerHTML = '';
+    ketQuaBox.innerHTML = `<p class="section-note">Cần ít nhất 2 học sinh đã có chỗ ngồi trong Sơ đồ lớp để quay.</p>`;
+    return;
+  }
+  qtGocHienTai = 0;
+  const svgHost = $('qtVongQuaySvgHost');
+  svgHost.innerHTML = taoSvgVongQuay(ds);
+  svgHost.querySelector('svg').style.transform = 'rotate(0deg)';
+}
+
+$('qtQuayBtn').onclick = ()=>{
+  const ds = qtDsVongQuay;
+  if(ds.length < 2) return;
+  const soLuong = parseInt($('qtSoLuong').value, 10);
+  const goc = 360 / ds.length;
+  const svg = $('qtVongQuaySvgHost').querySelector('svg');
+  if(!svg) return;
+
+  $('qtKetQua').innerHTML = '';
+  const gocMoi = qtGocHienTai + 1800 + Math.random()*360; // 5 vòng + góc ngẫu nhiên
+  svg.style.transform = `rotate(${gocMoi}deg)`;
+  qtGocHienTai = gocMoi;
+
+  setTimeout(()=>{
+    const gocCuoi = ((qtGocHienTai % 360) + 360) % 360;
+    // Góc kim: phải=0°, trái=180°, trên=270° (theo hệ toạ độ SVG: 0°=phải, tăng dần theo chiều kim đồng hồ)
+    const gocKim = [180]; // luôn có kim trái
+    if(soLuong >= 2) gocKim.push(0);
+    if(soLuong >= 3) gocKim.push(270);
+
+    let chiSoDaChon = [];
+    gocKim.forEach(gk=>{
+      let idx = Math.floor((((gk - gocCuoi) % 360 + 360) % 360) / goc);
+      // Tránh trùng lặp hiếm gặp khi lớp có ít học sinh — dịch sang ô kế tiếp còn trống
+      while(chiSoDaChon.includes(idx)) idx = (idx + 1) % ds.length;
+      chiSoDaChon.push(idx);
+    });
+
+    const ketQua = chiSoDaChon.map(i=> ds[i]);
+    $('qtKetQua').innerHTML = '🎉 ' + ketQua.map(ten=> `<span class="qt-the-hocsinh">${esc(ten)}</span>`).join('');
+  }, 8200);
+};
+
+capNhatGiaoDienQuayTen();
 
 /* -------- Trò 2: Đuổi hình đoán chữ -------- */
 const DUOI_HINH_CAU_HOI = [
