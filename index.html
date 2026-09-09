@@ -155,6 +155,20 @@
 
   /* ---------- Dữ liệu cá nhân học sinh ---------- */
   .chs-anh-xemtruoc{margin-bottom:12px; font-size:12.5px; color:var(--ink-soft);}
+  .kt-da-nop{color:var(--leaf-dark); font-weight:700;}
+  .kt-chua-nop{color:var(--red); font-weight:700;}
+  .kt-khoan-item{display:flex; align-items:center; gap:10px; background:#f7fbf8; border:1px solid var(--line);
+    border-radius:8px; padding:10px 14px; margin-bottom:8px; font-size:13.5px;}
+  .kt-khoan-item input[type="checkbox"]{width:18px; height:18px; flex:none;}
+  .kt-khoan-ten{flex:1;}
+  .kt-khoan-tien{font-weight:800; color:#b45309;}
+  .kt-xem-anh{display:flex; gap:0; min-height:400px;}
+  .kt-xem-anh-trai{flex:1; padding:20px; border-right:1px solid var(--line); overflow-y:auto;}
+  .kt-xem-anh-phai{flex:1; padding:20px; display:flex; align-items:center; justify-content:center; background:#f7fbf8;}
+  .kt-xem-anh-phai img{max-width:100%; max-height:70vh; border-radius:8px;}
+  .kt-xem-anh-trai .dong{padding:6px 0; border-bottom:1px dashed var(--line); font-size:13.5px;}
+  .kt-xem-anh-trai .dong b{color:var(--leaf-dark);}
+  @media (max-width:700px){ .kt-xem-anh{flex-direction:column;} .kt-xem-anh-trai{border-right:none; border-bottom:1px solid var(--line);} }
   .chs-anh-xemtruoc img{max-width:160px; max-height:200px; border-radius:10px; border:2px solid var(--line);
     display:block; object-fit:cover;}
   .chs-admin-row{display:flex; align-items:center; gap:12px; background:#fff; border:1px solid var(--line);
@@ -852,6 +866,51 @@
     </div>
   </div>
 
+  <!-- ============ CÁC KHOẢN THU ĐẦU NĂM (thuộc nhóm Thông tin lớp 10A1) ============ -->
+  <div class="panel" id="panel-khoanthu" data-group="thongtin">
+    <div class="card">
+      <h2>💰 Các khoản thu đầu năm</h2>
+      <p class="section-note">Nhập họ tên → hệ thống tự lấy thông tin từ Hồ sơ đầu năm → chọn các khoản cần đóng → đính kèm minh chứng chuyển khoản.</p>
+    </div>
+
+    <!-- BƯỚC 1+2: thông tin + chọn khoản đóng -->
+    <div class="card" id="ktBuoc1">
+      <h2>1. Thông tin &amp; chọn khoản đóng</h2>
+      <div class="field">
+        <label>Họ và tên</label>
+        <input type="text" id="ktHoTen" maxlength="60" placeholder="Nhập đúng họ tên như trong danh sách lớp">
+      </div>
+      <p class="section-note" id="ktTuDongNote" style="display:none;">✨ Đã tự động lấy thông tin từ Hồ sơ đầu năm em đã nộp.</p>
+      <div class="grid2">
+        <div class="field"><label>Ngày sinh</label><input type="text" id="ktNgaySinh" readonly></div>
+        <div class="field"><label>Giới tính</label><input type="text" id="ktGioiTinh" readonly></div>
+      </div>
+      <div class="field"><label>Dân tộc</label><input type="text" id="ktDanToc" readonly></div>
+
+      <div class="section-title" style="margin-top:16px;">Chọn các khoản cần đóng</div>
+      <div id="ktDsKhoanThu"></div>
+      <div id="ktTongTien" style="font-weight:800; color:var(--leaf-dark); font-size:15px; margin:10px 0;">Tổng cộng: 0 đ</div>
+      <button class="btn btn-primary btn-sm" id="ktTiepTucBtn">Tiếp tục — Đính kèm minh chứng ➡️</button>
+      <div id="ktBuoc1Err" class="msg err"></div>
+    </div>
+
+    <!-- BƯỚC 2: đính kèm minh chứng -->
+    <div class="card" id="ktBuoc2" style="display:none;">
+      <h2>2. Đính kèm minh chứng chuyển khoản</h2>
+      <p id="ktTomTat" class="section-note"></p>
+      <div id="ktAnhXemTruoc" class="chs-anh-xemtruoc">Chưa đính kèm ảnh.</div>
+      <input type="file" id="ktAnhInput" accept="image/*" style="display:none;">
+      <button class="btn btn-blue btn-sm" id="ktChonAnhBtn">📎 Chọn ảnh chuyển khoản</button>
+      <button class="btn btn-ghost btn-sm" id="ktQuayLaiBtn">⬅️ Quay lại</button>
+      <div id="ktMsg" class="msg"></div>
+    </div>
+
+    <div class="card" id="ktDanhSachCard" style="display:none;">
+      <h2>📋 Danh sách (chỉ giáo viên xem)</h2>
+      <div class="scroll-x"><table id="ktDanhSachTable"></table></div>
+    </div>
+  </div>
+
   <!-- ============ THẺ 7: 10A1 CONFESSION (ẨN DANH, CÓ KIỂM DUYỆT) ============ -->
   <div class="panel" id="panel-confession">
     <div class="card">
@@ -1082,6 +1141,7 @@
 
 <div class="modal-bg" id="seatModal"><div class="modal" id="seatModalBody"></div></div>
 <div class="modal-bg" id="genModal"><div class="modal" id="genModalBody"></div></div>
+<div class="modal-bg" id="ktXemAnhModal"><div class="modal" id="ktXemAnhModalBody" style="max-width:900px; padding:0; overflow:hidden;"></div></div>
 
 <div class="den-anh" id="denAnh">
   <button class="dong" id="denAnhDong">&times;</button>
@@ -1157,6 +1217,7 @@ const clbRef = db.ref('clb2026');           // các câu lạc bộ — công kh
 const clbDinhNghiaRef = db.ref('clbDinhNghia2026'); // định nghĩa CLB (tên/icon/mô tả) — công khai đọc, chỉ giáo viên ghi
 const clbDiemRef = db.ref('clbDiem2026');   // điểm uy tín đóng góp — công khai đọc, CHỈ giáo viên ghi được
 const chsRef = db.ref('hosocanhan2026');    // dữ liệu cá nhân học sinh — riêng tư, giống hoso2026
+const khoanThuRef = db.ref('khoanthu2026'); // các khoản thu đầu năm — công khai đọc, mỗi người tự ghi phần của mình
 const hosoRef   = db.ref('hoso2026/hoso');         // riêng tư: khóa theo uid, giống hotro2026
 
 const LANES     = [ {id:1,desks:7}, {id:2,desks:6}, {id:3,desks:6}, {id:4,desks:6} ];
@@ -1481,6 +1542,7 @@ const SUBTAB_DINH_NGHIA = {
   bancansu:  {icon:'👥', ten:'Ban cán sự lớp'},
   caulacbo:  {icon:'🎨', ten:'Các câu lạc bộ'},
   canhanhs:  {icon:'👤', ten:'Dữ liệu cá nhân'},
+  khoanthu:  {icon:'💰', ten:'Các khoản thu đầu năm'},
   laodong:   {icon:'🧹', ten:'Đăng ký lao động'},
   khaigiang: {icon:'📺', ten:'Chuẩn bị khai giảng'},
   hotro:     {icon:'🤝', ten:'Nhận hỗ trợ'},
@@ -1490,7 +1552,7 @@ const SUBTAB_DINH_NGHIA = {
   tracnghiem:{icon:'❓', ten:'Trắc nghiệm'},
 };
 const NHOM_TAB = {
-  thongtin: ['sodo', 'hoso', 'bancansu', 'caulacbo', 'canhanhs'],
+  thongtin: ['sodo', 'hoso', 'bancansu', 'caulacbo', 'canhanhs', 'khoanthu'],
   hoatdong: ['laodong', 'khaigiang', 'hotro'],
   games:    ['quayten', 'duoihinh', 'ghepdoi', 'tracnghiem'],
 };
@@ -1586,6 +1648,7 @@ function closeModal(){
 ['seatModal','genModal'].forEach(id=>{
   $(id).onclick = e=>{ if(e.target.id===id) closeModal(); };
 });
+$('ktXemAnhModal').onclick = e=>{ if(e.target.id==='ktXemAnhModal') $('ktXemAnhModal').classList.remove('show'); };
 
 /* -------------------- ĐĂNG NHẬP -------------------- */
 auth.onAuthStateChanged(async user=>{
@@ -1617,7 +1680,9 @@ auth.onAuthStateChanged(async user=>{
   await napHoTroCuaToi();
   await napHoSoCuaToi();
   await napDuLieuCaNhanCuaToi();
+  await napKhoanThuCuaToi();
   renderSeats(); renderRegs(); renderTv(); renderBaiViet(); renderConfessionFeed(); renderCauLacBo(); renderBanCanSu();
+  renderDanhSachKhoanThu();
 });
 
 $('adminUnlockBtn').onclick = async ()=>{
@@ -3831,6 +3896,196 @@ $('chsXuatExcelBtn').onclick = async ()=>{
 };
 
 /* ================================================================
+   CÁC KHOẢN THU ĐẦU NĂM — tự lấy thông tin từ Hồ sơ đầu năm, chọn khoản đóng, đính kèm
+   minh chứng (không qua AI duyệt — chỉ cần đính kèm và lưu). Dữ liệu công khai đọc (để
+   Danh sách đối chiếu được), mỗi học sinh tự ghi đúng phần của mình.
+   ================================================================ */
+const TEN_THU_MUC_MINH_CHUNG = 'Minh-chung-khoan-thu-10A1';
+const KHOAN_THU_DINH_NGHIA = [
+  {id:'bhyt',    ten:'Bảo hiểm y tế (BHYT)',    tien:546480},
+  {id:'bhtn',    ten:'Bảo hiểm tai nạn (BHTN)', tien:200000},
+  {id:'hph',     ten:'Hội phụ huynh (HPH)',     tien:100000},
+  {id:'vesinh',  ten:'Vệ sinh',                 tien:40000},
+  {id:'tinnhan', ten:'Tin nhắn điện tử',        tien:60000},
+];
+function dinhDangTien(so){ return (so||0).toLocaleString('vi-VN') + ' đ'; }
+
+function boDauTiengViet(s){
+  return String(s||'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/đ/g,'d').replace(/Đ/g,'D')
+    .trim();
+}
+
+let ktDaChonKhoan = {};
+
+function renderDsKhoanThu(){
+  const host = $('ktDsKhoanThu');
+  host.innerHTML = KHOAN_THU_DINH_NGHIA.map(k=> `
+    <label class="kt-khoan-item">
+      <input type="checkbox" data-khoan="${k.id}" ${ktDaChonKhoan[k.id]?'checked':''}>
+      <span class="kt-khoan-ten">${esc(k.ten)}</span>
+      <span class="kt-khoan-tien">${dinhDangTien(k.tien)}</span>
+    </label>`).join('');
+  host.querySelectorAll('[data-khoan]').forEach(cb=> cb.onchange = ()=>{
+    ktDaChonKhoan[cb.dataset.khoan] = cb.checked;
+    capNhatTongTienKhoanThu();
+  });
+  capNhatTongTienKhoanThu();
+}
+function capNhatTongTienKhoanThu(){
+  const tong = KHOAN_THU_DINH_NGHIA.filter(k=> ktDaChonKhoan[k.id]).reduce((s,k)=> s+k.tien, 0);
+  $('ktTongTien').textContent = 'Tổng cộng: ' + dinhDangTien(tong);
+}
+
+/* Bước 1: tự lấy Ngày sinh/Giới tính/Dân tộc từ Hồ sơ đầu năm theo đúng họ tên đã nhập,
+   nếu học sinh đã nộp Hồ sơ đầu năm trên chính máy này. */
+async function tuDongLayThongTinKhoanThu(){
+  if(!myUid) return;
+  try{
+    const raw = (await hosoRef.child(myUid).once('value')).val();
+    const hoso = hsTuDangFirebase(raw);
+    if(hoso && hoso[3]){
+      if(!$('ktHoTen').value.trim()) $('ktHoTen').value = hoso[3] || '';
+      $('ktNgaySinh').value = hoso[4] || '';
+      $('ktGioiTinh').value = hoso[5] || '';
+      $('ktDanToc').value = hoso[12] || '';
+      $('ktTuDongNote').style.display = 'block';
+    }
+  }catch(e){}
+}
+
+async function napKhoanThuCuaToi(){
+  if(!myUid) return;
+  await tuDongLayThongTinKhoanThu();
+  try{
+    const data = (await khoanThuRef.child(myUid).once('value')).val();
+    if(data){
+      $('ktHoTen').value = data.hoTen || $('ktHoTen').value;
+      $('ktNgaySinh').value = data.ngaySinh || $('ktNgaySinh').value;
+      $('ktGioiTinh').value = data.gioiTinh || $('ktGioiTinh').value;
+      $('ktDanToc').value = data.danToc || $('ktDanToc').value;
+      ktDaChonKhoan = Object.assign({}, data.cacKhoanDong || {});
+      if(data.minhChungId){
+        hienThiMinhChung(data.minhChungId);
+        moBuoc2();
+      }
+    }
+  }catch(e){}
+  renderDsKhoanThu();
+}
+function hienThiMinhChung(anhId){
+  $('ktAnhXemTruoc').innerHTML = anhId
+    ? `✅ Đã nộp minh chứng.<br><img src="${anhDriveNho(anhId)}" alt="Minh chứng" style="max-width:220px;max-height:280px;border-radius:10px;border:2px solid var(--line);margin-top:6px;display:block;">`
+    : 'Chưa đính kèm ảnh.';
+}
+
+function moBuoc2(){
+  const dsDaChon = KHOAN_THU_DINH_NGHIA.filter(k=> ktDaChonKhoan[k.id]);
+  const tong = dsDaChon.reduce((s,k)=> s+k.tien, 0);
+  $('ktTomTat').textContent = dsDaChon.length
+    ? `Khoản đã chọn: ${dsDaChon.map(k=>k.ten).join(', ')} — Tổng: ${dinhDangTien(tong)}`
+    : 'Chưa chọn khoản nào.';
+  $('ktBuoc1').style.display = 'none';
+  $('ktBuoc2').style.display = 'block';
+}
+
+$('ktTiepTucBtn').onclick = ()=>{
+  const hoTen = $('ktHoTen').value.trim();
+  if(!hoTen){ showMsg($('ktBuoc1Err'), 'Vui lòng nhập họ tên.', 'err'); return; }
+  const coChonKhoanNao = KHOAN_THU_DINH_NGHIA.some(k=> ktDaChonKhoan[k.id]);
+  if(!coChonKhoanNao){ showMsg($('ktBuoc1Err'), 'Vui lòng chọn ít nhất 1 khoản cần đóng.', 'err'); return; }
+  moBuoc2();
+};
+$('ktQuayLaiBtn').onclick = ()=>{ $('ktBuoc2').style.display = 'none'; $('ktBuoc1').style.display = 'block'; };
+
+$('ktChonAnhBtn').onclick = ()=> $('ktAnhInput').click();
+$('ktAnhInput').onchange = async e=>{
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  if(!/^image\//.test(file.type)){ showMsg($('ktMsg'), 'Vui lòng chọn đúng tệp ảnh.', 'err'); return; }
+  if(!myUid){ showMsg($('ktMsg'), 'Đang kết nối, thử lại sau vài giây.', 'info'); return; }
+  if(!dungDrive()){ showMsg($('ktMsg'), 'Chưa cấu hình nơi lưu ảnh (Drive), báo thầy kiểm tra.', 'err'); return; }
+
+  showMsg($('ktMsg'), 'Đang tải ảnh lên...', 'info');
+  try{
+    const hoTen = $('ktHoTen').value.trim();
+    const anhNen = await nenAnh(file, 1000, 0.85);
+    const kqDrive = await guiAnhLenDrive(anhNen, hoTen, TEN_THU_MUC_MINH_CHUNG);
+    await khoanThuRef.child(myUid).set({
+      hoTen,
+      ngaySinh: $('ktNgaySinh').value,
+      gioiTinh: $('ktGioiTinh').value,
+      danToc: $('ktDanToc').value,
+      cacKhoanDong: ktDaChonKhoan,
+      minhChungId: kqDrive.id,
+      luc: new Date().toISOString()
+    });
+    hienThiMinhChung(kqDrive.id);
+    showMsg($('ktMsg'), '✅ Đã lưu thành công.', 'ok');
+  }catch(err){ showMsg($('ktMsg'), baoLoi(err), 'err'); }
+};
+
+/* -------------------- GIÁO VIÊN: danh sách đối chiếu + xem ảnh đối chiếu -------------------- */
+let ktDuLieuAdmin = {};
+async function renderDanhSachKhoanThu(){
+  const card = $('ktDanhSachCard');
+  if(!card) return;
+  card.style.display = isAdmin ? 'block' : 'none';
+  if(!isAdmin) return;
+  try{
+    const v = (await khoanThuRef.once('value')).val() || {};
+    ktDuLieuAdmin = v;
+    const dsNop = Object.keys(v).map(uid=> Object.assign({uid}, v[uid]));
+    const theoTen = new Map(dsNop.map(x=> [chuanTen(x.hoTen), x]));
+
+    let h = `<tr><th>STT</th><th>Họ và tên</th><th>Ngày sinh</th><th>Giới tính</th><th>Dân tộc</th><th>Các khoản đã đóng</th><th>Tổng tiền</th><th></th></tr>`;
+    if(!roster.length){
+      h += `<tr><td colspan="8" style="text-align:center;color:var(--ink-soft);">Cần nạp danh sách lớp (lop10a1/roster) để đối chiếu.</td></tr>`;
+    } else {
+      roster.forEach((hs,i)=>{
+        const dn = theoTen.get(chuanTen(hs.name));
+        const dsKhoan = dn ? KHOAN_THU_DINH_NGHIA.filter(k=> dn.cacKhoanDong && dn.cacKhoanDong[k.id]) : [];
+        const tong = dsKhoan.reduce((s,k)=> s+k.tien, 0);
+        h += `<tr><td>${i+1}</td><td>${esc(hs.name)}</td><td>${esc(hs.dob)}</td><td>${esc(hs.gender)}</td><td>${esc(hs.ethnic)}</td>
+          <td class="${dsKhoan.length?'kt-da-nop':'kt-chua-nop'}">${dsKhoan.length ? dsKhoan.map(k=>k.ten).join(', ') : '❌ Chưa đóng khoản nào'}</td>
+          <td>${dsKhoan.length ? dinhDangTien(tong) : '—'}</td>
+          <td>${dn && dn.minhChungId ? `<button class="btn btn-blue btn-sm" data-xem-anh="${dn.uid}">Xem ảnh chuyển khoản</button>` : ''}</td></tr>`;
+      });
+    }
+    $('ktDanhSachTable').innerHTML = h;
+    $('ktDanhSachTable').querySelectorAll('[data-xem-anh]').forEach(btn=>
+      btn.onclick = ()=> moXemAnhChuyenKhoan(btn.getAttribute('data-xem-anh')));
+  }catch(e){ $('ktDanhSachTable').innerHTML = `<tr><td>${baoLoi(e)}</td></tr>`; }
+}
+
+function moXemAnhChuyenKhoan(uid){
+  const dn = ktDuLieuAdmin[uid];
+  if(!dn) return;
+  const dsKhoan = KHOAN_THU_DINH_NGHIA.filter(k=> dn.cacKhoanDong && dn.cacKhoanDong[k.id]);
+  const tong = dsKhoan.reduce((s,k)=> s+k.tien, 0);
+  $('ktXemAnhModalBody').innerHTML = `
+    <div class="kt-xem-anh">
+      <div class="kt-xem-anh-trai">
+        <h3 style="margin-top:0;">Thông tin đối chiếu</h3>
+        <div class="dong"><b>Họ và tên:</b> ${esc(dn.hoTen||'')}</div>
+        <div class="dong"><b>Ngày sinh:</b> ${esc(dn.ngaySinh||'')}</div>
+        <div class="dong"><b>Giới tính:</b> ${esc(dn.gioiTinh||'')}</div>
+        <div class="dong"><b>Dân tộc:</b> ${esc(dn.danToc||'')}</div>
+        <div class="dong"><b>Các khoản đóng:</b> ${dsKhoan.map(k=>k.ten).join(', ')||'(không có)'}</div>
+        <div class="dong"><b>Tổng tiền cần đối chiếu:</b> ${dinhDangTien(tong)}</div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:14px;" onclick="document.getElementById('ktXemAnhModal').classList.remove('show')">Đóng</button>
+      </div>
+      <div class="kt-xem-anh-phai">
+        <img src="${anhDriveLon(dn.minhChungId)}" alt="Ảnh chuyển khoản">
+      </div>
+    </div>`;
+  $('ktXemAnhModal').classList.add('show');
+}
+
+
+/* ================================================================
    TRÒ CHƠI HỌC TẬP — 4 trò, dữ liệu mẫu cố định (chưa qua Firebase), không cần đăng nhập.
    ================================================================ */
 
@@ -4458,6 +4713,9 @@ tkbRef.child('chieu').on('value', s=>{
 });
 
 /* Các câu lạc bộ: công khai cho mọi người */
+/* Các khoản thu đầu năm: danh sách chỉ admin xem, tự cập nhật khi có người nộp mới */
+khoanThuRef.on('value', ()=>{ if(isAdmin) renderDanhSachKhoanThu(); });
+
 clbDinhNghiaRef.on('value', s=>{
   clbDinhNghia = s.val() || {};
   renderCauLacBo();
