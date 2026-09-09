@@ -903,6 +903,15 @@
       <button class="btn btn-blue btn-sm" id="ktChonAnhBtn">📎 Chọn ảnh chuyển khoản</button>
       <button class="btn btn-ghost btn-sm" id="ktQuayLaiBtn">⬅️ Quay lại</button>
       <div id="ktMsg" class="msg"></div>
+
+      <hr style="margin:20px 0; border:none; border-top:1px dashed var(--line);">
+
+      <h2>🪪 Ảnh thẻ bảo hiểm y tế (nếu em đã có thẻ)</h2>
+      <p class="section-note">Dành cho bạn nào đã có sẵn thẻ BHYT — kể cả bạn được miễn đóng BHYT (dân tộc thiểu số, Khơ-me) vẫn cần đính kèm ảnh thẻ ở đây.</p>
+      <div id="ktTheBhXemTruoc" class="chs-anh-xemtruoc">Chưa đính kèm ảnh thẻ bảo hiểm.</div>
+      <input type="file" id="ktTheBhInput" accept="image/*" style="display:none;">
+      <button class="btn btn-blue btn-sm" id="ktTheBhChonBtn">🪪 Chọn ảnh thẻ bảo hiểm</button>
+      <div id="ktTheBhMsg" class="msg"></div>
     </div>
 
     <div class="card" id="ktDanhSachCard" style="display:none;">
@@ -3966,8 +3975,9 @@ async function napKhoanThuCuaToi(){
       $('ktGioiTinh').value = data.gioiTinh || $('ktGioiTinh').value;
       $('ktDanToc').value = data.danToc || $('ktDanToc').value;
       ktDaChonKhoan = Object.assign({}, data.cacKhoanDong || {});
-      if(data.minhChungId){
+      if(data.minhChungId || data.theBaoHiemId){
         hienThiMinhChung(data.minhChungId);
+        hienThiTheBaoHiem(data.theBaoHiemId);
         moBuoc2();
       }
     }
@@ -3978,6 +3988,11 @@ function hienThiMinhChung(anhId){
   $('ktAnhXemTruoc').innerHTML = anhId
     ? `✅ Đã nộp minh chứng.<br><img src="${anhDriveNho(anhId)}" alt="Minh chứng" style="max-width:220px;max-height:280px;border-radius:10px;border:2px solid var(--line);margin-top:6px;display:block;">`
     : 'Chưa đính kèm ảnh.';
+}
+function hienThiTheBaoHiem(anhId){
+  $('ktTheBhXemTruoc').innerHTML = anhId
+    ? `✅ Đã đính kèm ảnh thẻ bảo hiểm.<br><img src="${anhDriveNho(anhId)}" alt="Thẻ bảo hiểm" style="max-width:220px;max-height:280px;border-radius:10px;border:2px solid var(--line);margin-top:6px;display:block;">`
+    : 'Chưa đính kèm ảnh thẻ bảo hiểm.';
 }
 
 function moBuoc2(){
@@ -4013,7 +4028,8 @@ $('ktAnhInput').onchange = async e=>{
     const hoTen = $('ktHoTen').value.trim();
     const anhNen = await nenAnh(file, 1000, 0.85);
     const kqDrive = await guiAnhLenDrive(anhNen, hoTen, TEN_THU_MUC_MINH_CHUNG);
-    await khoanThuRef.child(myUid).set({
+    const cu = (await khoanThuRef.child(myUid).once('value')).val() || {};
+    await khoanThuRef.child(myUid).set(Object.assign({}, cu, {
       hoTen,
       ngaySinh: $('ktNgaySinh').value,
       gioiTinh: $('ktGioiTinh').value,
@@ -4021,10 +4037,40 @@ $('ktAnhInput').onchange = async e=>{
       cacKhoanDong: ktDaChonKhoan,
       minhChungId: kqDrive.id,
       luc: new Date().toISOString()
-    });
+    }));
     hienThiMinhChung(kqDrive.id);
     showMsg($('ktMsg'), '✅ Đã lưu thành công.', 'ok');
   }catch(err){ showMsg($('ktMsg'), baoLoi(err), 'err'); }
+};
+
+const TEN_THU_MUC_THE_BH = 'The-bao-hiem-10A1';
+$('ktTheBhChonBtn').onclick = ()=> $('ktTheBhInput').click();
+$('ktTheBhInput').onchange = async e=>{
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  if(!/^image\//.test(file.type)){ showMsg($('ktTheBhMsg'), 'Vui lòng chọn đúng tệp ảnh.', 'err'); return; }
+  if(!myUid){ showMsg($('ktTheBhMsg'), 'Đang kết nối, thử lại sau vài giây.', 'info'); return; }
+  if(!dungDrive()){ showMsg($('ktTheBhMsg'), 'Chưa cấu hình nơi lưu ảnh (Drive), báo thầy kiểm tra.', 'err'); return; }
+
+  showMsg($('ktTheBhMsg'), 'Đang tải ảnh lên...', 'info');
+  try{
+    const hoTen = $('ktHoTen').value.trim() || 'HocSinh';
+    const anhNen = await nenAnh(file, 1000, 0.85);
+    const kqDrive = await guiAnhLenDrive(anhNen, hoTen, TEN_THU_MUC_THE_BH);
+    const cu = (await khoanThuRef.child(myUid).once('value')).val() || {};
+    await khoanThuRef.child(myUid).set(Object.assign({}, cu, {
+      hoTen: cu.hoTen || hoTen,
+      ngaySinh: cu.ngaySinh || $('ktNgaySinh').value,
+      gioiTinh: cu.gioiTinh || $('ktGioiTinh').value,
+      danToc: cu.danToc || $('ktDanToc').value,
+      cacKhoanDong: cu.cacKhoanDong || ktDaChonKhoan,
+      theBaoHiemId: kqDrive.id,
+      luc: new Date().toISOString()
+    }));
+    hienThiTheBaoHiem(kqDrive.id);
+    showMsg($('ktTheBhMsg'), '✅ Đã lưu ảnh thẻ bảo hiểm thành công.', 'ok');
+  }catch(err){ showMsg($('ktTheBhMsg'), baoLoi(err), 'err'); }
 };
 
 /* -------------------- GIÁO VIÊN: danh sách đối chiếu + xem ảnh đối chiếu -------------------- */
@@ -4040,9 +4086,9 @@ async function renderDanhSachKhoanThu(){
     const dsNop = Object.keys(v).map(uid=> Object.assign({uid}, v[uid]));
     const theoTen = new Map(dsNop.map(x=> [chuanTen(x.hoTen), x]));
 
-    let h = `<tr><th>STT</th><th>Họ và tên</th><th>Ngày sinh</th><th>Giới tính</th><th>Dân tộc</th><th>Các khoản đã đóng</th><th>Tổng tiền</th><th></th></tr>`;
+    let h = `<tr><th>STT</th><th>Họ và tên</th><th>Ngày sinh</th><th>Giới tính</th><th>Dân tộc</th><th>Các khoản đã đóng</th><th>Tổng tiền</th><th></th><th></th></tr>`;
     if(!roster.length){
-      h += `<tr><td colspan="8" style="text-align:center;color:var(--ink-soft);">Cần nạp danh sách lớp (lop10a1/roster) để đối chiếu.</td></tr>`;
+      h += `<tr><td colspan="9" style="text-align:center;color:var(--ink-soft);">Cần nạp danh sách lớp (lop10a1/roster) để đối chiếu.</td></tr>`;
     } else {
       roster.forEach((hs,i)=>{
         const dn = theoTen.get(chuanTen(hs.name));
@@ -4051,24 +4097,29 @@ async function renderDanhSachKhoanThu(){
         h += `<tr><td>${i+1}</td><td>${esc(hs.name)}</td><td>${esc(hs.dob)}</td><td>${esc(hs.gender)}</td><td>${esc(hs.ethnic)}</td>
           <td class="${dsKhoan.length?'kt-da-nop':'kt-chua-nop'}">${dsKhoan.length ? dsKhoan.map(k=>k.ten).join(', ') : '❌ Chưa đóng khoản nào'}</td>
           <td>${dsKhoan.length ? dinhDangTien(tong) : '—'}</td>
-          <td>${dn && dn.minhChungId ? `<button class="btn btn-blue btn-sm" data-xem-anh="${dn.uid}">Xem ảnh chuyển khoản</button>` : ''}</td></tr>`;
+          <td>${dn && dn.minhChungId ? `<button class="btn btn-blue btn-sm" data-xem-anh="${dn.uid}">Xem ảnh chuyển khoản</button>` : ''}</td>
+          <td>${dn && dn.theBaoHiemId ? `<button class="btn btn-clay btn-sm" data-xem-the="${dn.uid}">🪪 Xem thẻ bảo hiểm</button>` : ''}</td></tr>`;
       });
     }
     $('ktDanhSachTable').innerHTML = h;
+    $('ktDanhSachTable').querySelectorAll('[data-xem-the]').forEach(btn=>
+      btn.onclick = ()=> moXemAnhChuyenKhoan(btn.getAttribute('data-xem-the'), 'the'));
     $('ktDanhSachTable').querySelectorAll('[data-xem-anh]').forEach(btn=>
-      btn.onclick = ()=> moXemAnhChuyenKhoan(btn.getAttribute('data-xem-anh')));
+      btn.onclick = ()=> moXemAnhChuyenKhoan(btn.getAttribute('data-xem-anh'), 'minhchung'));
   }catch(e){ $('ktDanhSachTable').innerHTML = `<tr><td>${baoLoi(e)}</td></tr>`; }
 }
 
-function moXemAnhChuyenKhoan(uid){
+function moXemAnhChuyenKhoan(uid, loai){
   const dn = ktDuLieuAdmin[uid];
   if(!dn) return;
   const dsKhoan = KHOAN_THU_DINH_NGHIA.filter(k=> dn.cacKhoanDong && dn.cacKhoanDong[k.id]);
   const tong = dsKhoan.reduce((s,k)=> s+k.tien, 0);
+  const laTheBaoHiem = (loai === 'the');
+  const anhId = laTheBaoHiem ? dn.theBaoHiemId : dn.minhChungId;
   $('ktXemAnhModalBody').innerHTML = `
     <div class="kt-xem-anh">
       <div class="kt-xem-anh-trai">
-        <h3 style="margin-top:0;">Thông tin đối chiếu</h3>
+        <h3 style="margin-top:0;">${laTheBaoHiem ? 'Đối chiếu thẻ bảo hiểm' : 'Thông tin đối chiếu'}</h3>
         <div class="dong"><b>Họ và tên:</b> ${esc(dn.hoTen||'')}</div>
         <div class="dong"><b>Ngày sinh:</b> ${esc(dn.ngaySinh||'')}</div>
         <div class="dong"><b>Giới tính:</b> ${esc(dn.gioiTinh||'')}</div>
@@ -4078,7 +4129,7 @@ function moXemAnhChuyenKhoan(uid){
         <button class="btn btn-ghost btn-sm" style="margin-top:14px;" onclick="document.getElementById('ktXemAnhModal').classList.remove('show')">Đóng</button>
       </div>
       <div class="kt-xem-anh-phai">
-        <img src="${anhDriveLon(dn.minhChungId)}" alt="Ảnh chuyển khoản">
+        <img src="${anhDriveLon(anhId)}" alt="${laTheBaoHiem ? 'Ảnh thẻ bảo hiểm' : 'Ảnh chuyển khoản'}">
       </div>
     </div>`;
   $('ktXemAnhModal').classList.add('show');
