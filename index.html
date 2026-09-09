@@ -1761,7 +1761,7 @@ async function luuSoDoNgay(){
   showMsg($('soDoLuuMsg'), 'Đang tự động lưu...', 'info');
   /* Chỉ giữ đúng 2 trường Rules cho phép (name, uid) — dữ liệu ghế cũ có thể còn dư trường
      khác từ phiên bản trang trước đây, nếu ghi lại y nguyên sẽ bị Rules hiện tại chặn ($khac). */
-  const gonGheLai = data => data ? { name: data.name, uid: data.uid } : null;
+  const gonGheLai = data => data ? { name: data.name || '', uid: data.uid || ADMIN_UID } : null;
   const capNhat = {};
   const tatCaId = new Set([...Object.keys(seats), ...Object.keys(seatsNhap)]);
   tatCaId.forEach(id=>{
@@ -4173,7 +4173,7 @@ async function napHoTroTatCa(){
 async function duyetDoiCho(swapId){
   const sw = swaps.find(s=>s.id===swapId);
   if(!sw) return;
-  const gonGheLai = data => data ? { name: data.name, uid: data.uid } : null;
+  const gonGheLai = data => data ? { name: data.name || '', uid: data.uid || ADMIN_UID } : null;
   const capNhat = {};
   capNhat['lop10a1/seats/'+sw.fromSeatId] = gonGheLai(seats[sw.toSeatId]);
   capNhat['lop10a1/seats/'+sw.toSeatId]   = gonGheLai(seats[sw.fromSeatId]);
@@ -4313,7 +4313,7 @@ function renderAdmin(){
 $('swapBtn').onclick = async ()=>{
   const a=$('swapA').value, b=$('swapB').value;
   if(a===b) return;
-  const gonGheLai = data => data ? { name: data.name, uid: data.uid } : null;
+  const gonGheLai = data => data ? { name: data.name || '', uid: data.uid || ADMIN_UID } : null;
   const capNhat={};
   capNhat['lop10a1/seats/'+a] = gonGheLai(seats[b]);
   capNhat['lop10a1/seats/'+b] = gonGheLai(seats[a]);
