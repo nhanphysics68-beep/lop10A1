@@ -579,8 +579,10 @@
   <!-- ============ THÀNH VIÊN LỚP 10A1 (dạng thẻ học sinh) ============ -->
   <div class="panel" id="panel-thanhvien" data-group="thongtin">
     <div class="card">
-      <h2>🪪 Thành viên lớp 10A1</h2>
+      <h2>🆔 Thành viên lớp 10A1</h2>
       <p class="section-note">Chỉ hiện đúng những bạn đã tải ảnh thẻ lên ở mục "Dữ liệu cá nhân" — vào mục đó để thêm ảnh thẻ và thông tin của em.</p>
+      <button class="btn btn-blue btn-sm" id="tvLayDuLieuBtn" style="display:none; margin-bottom:14px;">🔄 Lấy dữ liệu từ "Dữ liệu cá nhân"</button>
+      <div id="tvLayDuLieuMsg" class="msg"></div>
       <div id="tvLuoi" class="tv-luoi"></div>
       <div id="tvTrong" class="empty" style="display:none;">Chưa có bạn nào tải ảnh thẻ lên.</div>
     </div>
@@ -935,11 +937,11 @@
 
       <hr style="margin:20px 0; border:none; border-top:1px dashed var(--line);">
 
-      <h2>🪪 Ảnh thẻ bảo hiểm y tế (nếu em đã có thẻ)</h2>
+      <h2>🆔 Ảnh thẻ bảo hiểm y tế (nếu em đã có thẻ)</h2>
       <p class="section-note">Dành cho bạn nào đã có sẵn thẻ BHYT — kể cả bạn được miễn đóng BHYT (dân tộc thiểu số, Khơ-me) vẫn cần đính kèm ảnh thẻ ở đây.</p>
       <div id="ktTheBhXemTruoc" class="chs-anh-xemtruoc">Chưa đính kèm ảnh thẻ bảo hiểm.</div>
       <input type="file" id="ktTheBhInput" accept="image/*" style="display:none;">
-      <button class="btn btn-blue btn-sm" id="ktTheBhChonBtn">🪪 Chọn ảnh thẻ bảo hiểm</button>
+      <button class="btn btn-blue btn-sm" id="ktTheBhChonBtn">🆔 Chọn ảnh thẻ bảo hiểm</button>
       <div id="ktTheBhMsg" class="msg"></div>
     </div>
 
@@ -1577,7 +1579,7 @@ const THU_TU_CHINH_MAC_DINH = ['thongtin', 'hoatdong', 'bangtin', 'confession', 
 
 const SUBTAB_DINH_NGHIA = {
   sodo:      {icon:'📍', ten:'Sơ đồ lớp'},
-  thanhvien: {icon:'🪪', ten:'Thành viên lớp'},
+  thanhvien: {icon:'🆔', ten:'Thành viên lớp'},
   hoso:      {icon:'🧾', ten:'Hồ sơ đầu năm'},
   bancansu:  {icon:'👥', ten:'Ban cán sự lớp'},
   caulacbo:  {icon:'🎨', ten:'Các câu lạc bộ'},
@@ -1723,6 +1725,7 @@ auth.onAuthStateChanged(async user=>{
   await napKhoanThuCuaToi();
   renderSeats(); renderRegs(); renderTv(); renderBaiViet(); renderConfessionFeed(); renderCauLacBo(); renderBanCanSu();
   renderDanhSachKhoanThu();
+  renderThanhVien();
 });
 
 $('adminUnlockBtn').onclick = async ()=>{
@@ -3723,6 +3726,9 @@ let thanhVienState = {};
 function renderThanhVien(){
   const luoi = $('tvLuoi'), trong = $('tvTrong');
   if(!luoi) return;
+  const nutLay = $('tvLayDuLieuBtn');
+  if(nutLay) nutLay.style.display = isAdmin ? 'inline-block' : 'none';
+
   const ds = Object.values(thanhVienState).filter(x=> x && x.anhTheId);
   trong.style.display = ds.length ? 'none' : 'block';
   luoi.innerHTML = ds.map(x=> `
@@ -3745,6 +3751,32 @@ function renderThanhVien(){
       <div class="tv-the-chan">LỚP 10A1 · NĂM HỌC 2026 – 2027</div>
     </div>`).join('');
 }
+
+/* Giáo viên bấm để quét lại TOÀN BỘ "Dữ liệu cá nhân" (hosocanhan2026) một lần — đưa những
+   bạn ĐÃ có sẵn ảnh thẻ TỪ TRƯỚC (trước khi có mục Thành viên lớp) vào đúng bản công khai
+   thanhvien2026, vì trước đó việc đồng bộ chỉ chạy khi học sinh tự lưu/tải ảnh thẻ MỚI. */
+$('tvLayDuLieuBtn').onclick = async ()=>{
+  const btn = $('tvLayDuLieuBtn');
+  btn.disabled = true;
+  showMsg($('tvLayDuLieuMsg'), 'Đang lấy dữ liệu...', 'info');
+  try{
+    const tatCa = (await chsRef.once('value')).val() || {};
+    let capNhat = 0, boQua = 0;
+    for(const uid of Object.keys(tatCa)){
+      const hs = tatCa[uid];
+      if(!hs || !hs.anhTheId || !hs.hoTen){ boQua++; continue; }
+      await thanhVienRef.child(uid).set({
+        hoTen: hs.hoTen || '',
+        ngaySinh: hs.ngaySinh || '',
+        gioiTinh: hs.gioiTinh || '',
+        anhTheId: hs.anhTheId || ''
+      });
+      capNhat++;
+    }
+    showMsg($('tvLayDuLieuMsg'), `✅ Đã lấy xong: ${capNhat} thành viên có ảnh thẻ, ${boQua} bạn bỏ qua (chưa có ảnh thẻ hoặc chưa có tên).`, 'ok');
+  }catch(e){ showMsg($('tvLayDuLieuMsg'), baoLoi(e), 'err'); }
+  btn.disabled = false;
+};
 
 $('chsLuuBtn').onclick = async ()=>{
   if(!myUid){ showMsg($('chsMsg'), 'Đang kết nối, thử lại sau vài giây.', 'info'); return; }
@@ -4174,7 +4206,7 @@ async function renderDanhSachKhoanThu(){
           <td class="${dsKhoan.length?'kt-da-nop':'kt-chua-nop'}">${dsKhoan.length ? dsKhoan.map(k=>k.ten).join(', ') : '❌ Chưa đóng khoản nào'}</td>
           <td>${dsKhoan.length ? dinhDangTien(tong) : '—'}</td>
           <td>${dn && dn.minhChungId ? `<button class="btn btn-blue btn-sm" data-xem-anh="${dn.uid}">Xem ảnh chuyển khoản</button>` : ''}</td>
-          <td>${dn && dn.theBaoHiemId ? `<button class="btn btn-clay btn-sm" data-xem-the="${dn.uid}">🪪 Xem thẻ bảo hiểm</button>` : ''}</td></tr>`;
+          <td>${dn && dn.theBaoHiemId ? `<button class="btn btn-clay btn-sm" data-xem-the="${dn.uid}">🆔 Xem thẻ bảo hiểm</button>` : ''}</td></tr>`;
       });
     }
     $('ktDanhSachTable').innerHTML = h;
