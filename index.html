@@ -77,6 +77,23 @@
     border-radius:50%; width:26px; height:26px; display:flex; align-items:center; justify-content:center; font-size:13px;}
   .bcs-the-chucvu{font-weight:800; color:var(--leaf-dark); font-size:12.5px; line-height:1.3; margin-bottom:3px;}
   .bcs-the-ten{font-size:13.5px; color:var(--ink); font-weight:600;}
+
+  /* ---------- Các hoạt động của tổ — Tổng kết tuần ---------- */
+  .tt-luoi-to{display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px;}
+  .tt-the-to{background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px; box-shadow:0 3px 10px rgba(20,83,45,.08);}
+  .tt-to-tieude{font-weight:800; color:var(--leaf-dark); font-size:15px; margin-bottom:4px; display:flex; align-items:center; justify-content:space-between; gap:8px;}
+  .tt-to-canbo{font-size:11.5px; color:var(--ink-soft); margin-bottom:10px;}
+  .tt-tuan-the{background:#f7fbf8; border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:10px;}
+  .tt-tuan-nhan{font-weight:800; color:#b45309; font-size:13px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;}
+  .tt-tuan-muc{margin-bottom:6px; font-size:12.5px; line-height:1.5;}
+  .tt-tuan-muc b{color:var(--leaf-dark);}
+  .tt-tuan-anh{display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;}
+  .tt-tuan-anh img{width:64px; height:64px; object-fit:cover; border-radius:6px; border:1px solid var(--line); cursor:pointer;}
+  .tt-form-field{margin-bottom:8px;}
+  .tt-form-field label{display:block; font-size:12px; font-weight:700; color:var(--leaf-dark); margin-bottom:3px;}
+  .tt-form-field textarea{width:100%; min-height:60px; padding:8px 10px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13px;}
+  .tt-anh-xemtruoc-nho{display:flex; gap:6px; flex-wrap:wrap; margin:6px 0;}
+  .tt-anh-xemtruoc-nho img{width:52px; height:52px; object-fit:cover; border-radius:6px; border:1px solid var(--line);}
   .sap-xep-nhom{margin-bottom:16px;}
   .sap-xep-tieude{font-weight:800; color:var(--leaf-dark); font-size:12.5px; margin-bottom:6px;}
   .sap-xep-item{display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--line);
@@ -547,6 +564,7 @@
 
   <div class="subtabs active" id="subtabs-thongtin" data-group="thongtin"></div>
   <div class="subtabs" id="subtabs-hoatdong" data-group="hoatdong"></div>
+  <div class="subtabs" id="subtabs-hoatdongto" data-group="hoatdongto"></div>
   <div class="subtabs" id="subtabs-games" data-group="games"></div>
 
   <!-- ============ THẺ 1: SƠ ĐỒ LỚP ============ -->
@@ -757,6 +775,15 @@
         <button class="btn btn-ghost btn-sm" id="htXoaBtn">Rút đăng ký</button>
       </div>
     </div>
+  </div>
+
+  <!-- ============ CÁC HOẠT ĐỘNG CỦA TỔ — TỔNG KẾT TUẦN ============ -->
+  <div class="panel" id="panel-tongketTuan" data-group="hoatdongto">
+    <div class="card">
+      <h2>📊 Tổng kết tuần theo Tổ</h2>
+      <p class="section-note">Tổ trưởng/Tổ phó của từng Tổ tổng kết vào thứ 6 hàng tuần — mỗi lần thêm sẽ tự đánh số Tuần kế tiếp, hiển thị dồn dần xuống dưới.</p>
+    </div>
+    <div id="ttLuoiTo" class="tt-luoi-to"></div>
   </div>
 
   <!-- ============ THẺ 5: BẢNG TIN LỚP HỌC ============ -->
@@ -1269,6 +1296,7 @@ const clbDinhNghiaRef = db.ref('clbDinhNghia2026'); // định nghĩa CLB (tên/
 const clbDiemRef = db.ref('clbDiem2026');   // điểm uy tín đóng góp — công khai đọc, CHỈ giáo viên ghi được
 const chsRef = db.ref('hosocanhan2026');    // dữ liệu cá nhân học sinh — riêng tư, giống hoso2026
 const thanhVienRef = db.ref('thanhvien2026'); // bản CÔNG KHAI rút gọn (ảnh thẻ, tên, giới tính, ngày sinh) — không có CCCD/thành tích
+const totuanRef = db.ref('totuan2026'); // tổng kết tuần theo Tổ — công khai đọc, tổ trưởng/tổ phó (đối chiếu tên) hoặc admin mới ghi được
 const khoanThuRef = db.ref('khoanthu2026'); // các khoản thu đầu năm — công khai đọc, mỗi người tự ghi phần của mình
 const hosoRef   = db.ref('hoso2026/hoso');         // riêng tư: khóa theo uid, giống hotro2026
 
@@ -1582,11 +1610,12 @@ function myRegId(){ const r = regs.find(x=> x.uid===myUid); return r? r.id : nul
 const TAB_DINH_NGHIA = {
   thongtin:   {icon:'🏫', ten:'Thông tin lớp 10A1'},
   hoatdong:   {icon:'🙋', ten:'Các hoạt động của lớp'},
+  hoatdongto: {icon:'🚩', ten:'Các hoạt động của tổ'},
   bangtin:    {icon:'📰', ten:'Bảng tin lớp'},
   confession: {icon:'🎭', ten:'Confession'},
   games:      {icon:'🎮', ten:'Trò chơi học tập'},
 };
-const THU_TU_CHINH_MAC_DINH = ['thongtin', 'hoatdong', 'bangtin', 'confession', 'games'];
+const THU_TU_CHINH_MAC_DINH = ['thongtin', 'hoatdong', 'hoatdongto', 'bangtin', 'confession', 'games'];
 
 const SUBTAB_DINH_NGHIA = {
   sodo:      {icon:'📍', ten:'Sơ đồ lớp'},
@@ -1599,6 +1628,7 @@ const SUBTAB_DINH_NGHIA = {
   laodong:   {icon:'🧹', ten:'Đăng ký lao động'},
   khaigiang: {icon:'📺', ten:'Chuẩn bị khai giảng'},
   hotro:     {icon:'🤝', ten:'Nhận hỗ trợ'},
+  tongketTuan: {icon:'📊', ten:'Tổng kết tuần'},
   quayten:   {icon:'🐕', ten:'Quay chọn tên'},
   duoihinh:  {icon:'🖼️', ten:'Đuổi hình đoán chữ'},
   ghepdoi:   {icon:'🃏', ten:'Ghép đôi'},
@@ -1607,6 +1637,7 @@ const SUBTAB_DINH_NGHIA = {
 const NHOM_TAB = {
   thongtin: ['sodo', 'thanhvien', 'hoso', 'bancansu', 'caulacbo', 'canhanhs', 'khoanthu'],
   hoatdong: ['laodong', 'khaigiang', 'hotro'],
+  hoatdongto: ['tongketTuan'],
   games:    ['quayten', 'duoihinh', 'ghepdoi', 'tracnghiem'],
 };
 /* Map link cũ (trước khi gộp nhóm) -> đúng nhóm mới, để link/bookmark cũ vẫn mở đúng chỗ */
@@ -1680,7 +1711,7 @@ renderToanBoDieuHuong();
   if(TAB_CU_SANG_NHOM[h]){ moTab(TAB_CU_SANG_NHOM[h], h); return; }
 
   // Link mới dạng "#thongtin-sodo", "#hoatdong-hotro"...
-  const mNhom = h.match(/^(thongtin|hoatdong|games)-(.+)$/);
+  const mNhom = h.match(/^(thongtin|hoatdong|hoatdongto|games)-(.+)$/);
   if(mNhom){ moTab(mNhom[1], mNhom[2]); return; }
 
   if(document.querySelector(`.tab[data-tab="${h}"]`)){ moTab(h); return; }
@@ -1737,6 +1768,7 @@ auth.onAuthStateChanged(async user=>{
   renderSeats(); renderRegs(); renderTv(); renderBaiViet(); renderConfessionFeed(); renderCauLacBo(); renderBanCanSu();
   renderDanhSachKhoanThu();
   renderThanhVien();
+  renderTongKetTuan();
 });
 
 $('adminUnlockBtn').onclick = async ()=>{
@@ -4365,6 +4397,149 @@ function moXemAnhChuyenKhoan(uid, loai){
 
 
 /* ================================================================
+   CÁC HOẠT ĐỘNG CỦA TỔ — TỔNG KẾT TUẦN
+   Phân quyền theo cách đối chiếu tên (giống cách toàn trang đang làm ở mọi mục khác):
+   tìm tên của người đang dùng máy qua chỗ ngồi (Sơ đồ lớp) đã đăng ký, rồi so với danh sách
+   Tổ trưởng/Tổ phó của đúng Tổ trong "Ban cán sự lớp". Đây là mức bảo vệ ở giao diện, không
+   phải xác thực tuyệt đối — phù hợp mức độ dữ liệu (không nhạy cảm) và nhất quán với cách
+   trang đang vận hành ở các mục khác (đăng ký chỗ, CLB...).
+   ================================================================ */
+let totuanState = {};
+
+function tenCuaToiTheoSeats(){
+  if(!myUid) return null;
+  const ghe = Object.values(seats).find(s=> s && s.uid === myUid);
+  return ghe ? ghe.name : null;
+}
+function coQuyenSuaTo(soTo){
+  if(isAdmin) return true;
+  const tenToi = tenCuaToiTheoSeats();
+  if(!tenToi) return false;
+  const tenToiChuan = chuanTen(tenToi);
+  return banCanSu.some(x=>{
+    const cv = chuanTen(x.chucVu);
+    return chuanTen(x.hoTen) === tenToiChuan && (cv.includes('tổ trưởng tổ '+soTo) || cv.includes('tổ phó tổ '+soTo));
+  });
+}
+
+function taoTheTuan(soTo, id, d, soTuan, coQuyen){
+  const anhKeys = d.anh ? Object.values(d.anh) : [];
+  return `<div class="tt-tuan-the">
+    <div class="tt-tuan-nhan">
+      <span>📅 Tuần ${soTuan}${d.nguoiNop ? ' — '+esc(d.nguoiNop) : ''}</span>
+      ${coQuyen ? `<span>
+        <button class="btn btn-blue btn-sm" data-sua-tuan data-to="${soTo}" data-id="${id}">Sửa</button>
+        <button class="btn btn-ghost btn-sm" data-xoa-tuan data-to="${soTo}" data-id="${id}">Xóa</button>
+      </span>` : ''}
+    </div>
+    <div class="tt-tuan-muc"><b>Ưu điểm:</b> ${esc(d.uuDiem || '(chưa có)')}</div>
+    <div class="tt-tuan-muc"><b>Hạn chế:</b> ${esc(d.hanChe || '(chưa có)')}</div>
+    <div class="tt-tuan-muc"><b>Kết quả trong tuần:</b> ${esc(d.ketQua || '(chưa có)')}</div>
+    <div class="tt-tuan-muc"><b>Phương hướng tuần tới:</b> ${esc(d.phuongHuong || '(chưa có)')}</div>
+    ${anhKeys.length ? `<div class="tt-tuan-muc"><b>Minh chứng:</b>
+      <div class="tt-tuan-anh">${anhKeys.map(aid=> `<img src="${anhDriveNho(aid)}" onclick="window.open('${anhDriveLon(aid)}','_blank')">`).join('')}</div>
+    </div>` : ''}
+  </div>`;
+}
+
+function renderTongKetTuan(){
+  const host = $('ttLuoiTo');
+  if(!host) return;
+  host.innerHTML = [1,2,3,4].map(soTo=>{
+    const duLieuTo = totuanState['to'+soTo] || {};
+    const dsTuanId = Object.keys(duLieuTo).sort();
+    const coQuyen = coQuyenSuaTo(soTo);
+    const canBo = banCanSu.filter(x=>{
+      const cv = chuanTen(x.chucVu);
+      return cv.includes('tổ trưởng tổ '+soTo) || cv.includes('tổ phó tổ '+soTo);
+    });
+    return `<div class="tt-the-to">
+      <div class="tt-to-tieude">
+        <span>🚩 Tổ ${soTo}</span>
+        ${coQuyen ? `<button class="btn btn-primary btn-sm" data-them-tuan="${soTo}">+ Thêm Tuần ${dsTuanId.length+1}</button>` : ''}
+      </div>
+      <div class="tt-to-canbo">${canBo.length ? canBo.map(x=> esc(x.chucVu)+': '+esc(x.hoTen)).join(' · ') : 'Chưa có tổ trưởng/tổ phó'}</div>
+      ${dsTuanId.length ? dsTuanId.map((id,i)=> taoTheTuan(soTo, id, duLieuTo[id], i+1, coQuyen)).join('') : '<p class="section-note">Chưa có tổng kết tuần nào.</p>'}
+    </div>`;
+  }).join('');
+
+  host.querySelectorAll('[data-them-tuan]').forEach(b=> b.onclick = ()=> moModalThemTuan(+b.getAttribute('data-them-tuan')));
+  host.querySelectorAll('[data-sua-tuan]').forEach(b=> b.onclick = ()=> moModalThemTuan(+b.dataset.to, b.dataset.id));
+  host.querySelectorAll('[data-xoa-tuan]').forEach(b=> b.onclick = async ()=>{
+    if(!confirm('Xóa hẳn tổng kết tuần này? Không thể hoàn tác.')) return;
+    try{ await totuanRef.child('to'+b.dataset.to).child(b.dataset.id).remove(); }
+    catch(e){ alert(baoLoi(e)); }
+  });
+}
+
+function moModalThemTuan(soTo, idSua){
+  const hienTai = idSua ? (totuanState['to'+soTo] || {})[idSua] : null;
+  let danhSachAnh = hienTai && hienTai.anh ? Object.values(hienTai.anh) : [];
+
+  openModal(`<h3>${idSua ? 'Sửa' : 'Thêm'} tổng kết tuần — Tổ ${soTo}</h3>
+    <div class="tt-form-field"><label>Ưu điểm</label><textarea id="ttUuDiem">${esc(hienTai ? hienTai.uuDiem : '')}</textarea></div>
+    <div class="tt-form-field"><label>Hạn chế</label><textarea id="ttHanChe">${esc(hienTai ? hienTai.hanChe : '')}</textarea></div>
+    <div class="tt-form-field"><label>Kết quả trong tuần</label><textarea id="ttKetQua">${esc(hienTai ? hienTai.ketQua : '')}</textarea></div>
+    <div class="tt-form-field"><label>Phương hướng tuần tới</label><textarea id="ttPhuongHuong">${esc(hienTai ? hienTai.phuongHuong : '')}</textarea></div>
+    <div class="tt-form-field">
+      <label>Đính kèm minh chứng (chọn được nhiều ảnh)</label>
+      <div id="ttAnhXemTruoc" class="tt-anh-xemtruoc-nho"></div>
+      <input type="file" id="ttAnhInput" accept="image/*" multiple style="display:none;">
+      <button type="button" class="btn btn-blue btn-sm" id="ttChonAnhBtn">📎 Chọn ảnh</button>
+    </div>
+    <div id="ttFormErr" class="msg err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary btn-sm" id="ttLuuBtn">${idSua ? 'Lưu' : 'Thêm'}</button>
+    </div>`, 'gen');
+
+  const veLaiXemTruoc = ()=>{ $('ttAnhXemTruoc').innerHTML = danhSachAnh.map(id=> `<img src="${anhDriveNho(id)}">`).join(''); };
+  veLaiXemTruoc();
+
+  $('ttChonAnhBtn').onclick = ()=> $('ttAnhInput').click();
+  $('ttAnhInput').onchange = async e=>{
+    const files = [...e.target.files];
+    e.target.value = '';
+    if(!files.length) return;
+    if(!dungDrive()){ showMsg($('ttFormErr'), 'Chưa cấu hình nơi lưu ảnh (Drive), báo thầy kiểm tra.', 'err'); return; }
+    showMsg($('ttFormErr'), 'Đang tải ảnh lên...', 'info');
+    try{
+      for(const f of files){
+        if(!/^image\//.test(f.type)) continue;
+        const nen = await nenAnh(f, 1000, 0.8);
+        const kq = await guiAnhLenDrive(nen, 'To'+soTo, 'ToKetTuan-To'+soTo);
+        danhSachAnh.push(kq.id);
+      }
+      veLaiXemTruoc();
+      $('ttFormErr').classList.remove('show');
+    }catch(err){ showMsg($('ttFormErr'), baoLoi(err), 'err'); }
+  };
+
+  $('ttLuuBtn').onclick = async ()=>{
+    const duLieu = {
+      uuDiem: $('ttUuDiem').value.trim(),
+      hanChe: $('ttHanChe').value.trim(),
+      ketQua: $('ttKetQua').value.trim(),
+      phuongHuong: $('ttPhuongHuong').value.trim(),
+      anh: danhSachAnh.reduce((o,id,i)=>{ o['a'+i] = id; return o; }, {}),
+      nguoiNop: tenCuaToiTheoSeats() || (isAdmin ? 'Giáo viên chủ nhiệm' : 'Không rõ'),
+      ngayLuu: new Date().toISOString()
+    };
+    try{
+      if(idSua) await totuanRef.child('to'+soTo).child(idSua).set(duLieu);
+      else await totuanRef.child('to'+soTo).push(duLieu);
+      closeModal();
+    }catch(e){ showMsg($('ttFormErr'), baoLoi(e), 'err'); }
+  };
+}
+
+totuanRef.on('value', s=>{
+  totuanState = s.val() || {};
+  renderTongKetTuan();
+});
+
+
+/* ================================================================
    TRÒ CHƠI HỌC TẬP — 4 trò, dữ liệu mẫu cố định (chưa qua Firebase), không cần đăng nhập.
    ================================================================ */
 
@@ -4920,6 +5095,7 @@ function taiFile(noiDung, ten, kieu){
 seatsRef.on('value', s=>{
   seats = s.val()||{};
   if(seatsNhap === null){ renderSeats(); if(isAdmin) renderAdmin(); } // đang có nháp chưa lưu -> không vẽ đè
+  renderTongKetTuan();
 });
 banXoaRef.on('value', s=>{
   banXoa = s.val()||{};
@@ -4957,6 +5133,7 @@ bcsRef.on('value', s=>{
   const v = s.val()||{};
   banCanSu = Object.keys(v).map(k=> Object.assign({id:k}, v[k]));
   renderBanCanSu();
+  renderTongKetTuan();
 });
 
 /* Thứ tự menu điều hướng: công khai cho mọi người, không làm mất tab đang mở khi vẽ lại */
