@@ -582,6 +582,7 @@
       <h2>🆔 Thành viên lớp 10A1</h2>
       <p class="section-note">Chỉ hiện đúng những bạn đã tải ảnh thẻ lên ở mục "Dữ liệu cá nhân" — vào mục đó để thêm ảnh thẻ và thông tin của em.</p>
       <button class="btn btn-blue btn-sm" id="tvLayDuLieuBtn" style="display:none; margin-bottom:14px;">🔄 Lấy dữ liệu từ "Dữ liệu cá nhân"</button>
+      <button class="btn btn-clay btn-sm" id="tvXuatInBtn" style="display:none; margin-bottom:14px;">🖨️ Xuất dữ liệu in (PDF, khổ A4)</button>
       <div id="tvLayDuLieuMsg" class="msg"></div>
       <div id="tvLuoi" class="tv-luoi"></div>
       <div id="tvTrong" class="empty" style="display:none;">Chưa có bạn nào tải ảnh thẻ lên.</div>
@@ -3726,8 +3727,9 @@ let thanhVienState = {};
 function renderThanhVien(){
   const luoi = $('tvLuoi'), trong = $('tvTrong');
   if(!luoi) return;
-  const nutLay = $('tvLayDuLieuBtn');
+  const nutLay = $('tvLayDuLieuBtn'), nutIn = $('tvXuatInBtn');
   if(nutLay) nutLay.style.display = isAdmin ? 'inline-block' : 'none';
+  if(nutIn) nutIn.style.display = isAdmin ? 'inline-block' : 'none';
 
   const ds = Object.values(thanhVienState).filter(x=> x && x.anhTheId);
   trong.style.display = ds.length ? 'none' : 'block';
@@ -3776,6 +3778,77 @@ $('tvLayDuLieuBtn').onclick = async ()=>{
     showMsg($('tvLayDuLieuMsg'), `✅ Đã lấy xong: ${capNhat} thành viên có ảnh thẻ, ${boQua} bạn bỏ qua (chưa có ảnh thẻ hoặc chưa có tên).`, 'ok');
   }catch(e){ showMsg($('tvLayDuLieuMsg'), baoLoi(e), 'err'); }
   btn.disabled = false;
+};
+
+/* Xuất bản in — mở 1 trang in riêng, xếp mỗi thẻ đúng 8,5cm x 5,5cm (kích thước thẻ ID chuẩn),
+   trên khổ giấy A4, 2 cột x 5 hàng (10 thẻ/trang). Dùng đúng chức năng In sẵn có của trình
+   duyệt (Ctrl+P / hộp thoại in tự mở) rồi chọn "Lưu thành PDF" — cách này giữ được đúng ảnh
+   thật của học sinh (đang lưu trên Google Drive) mà không bị lỗi do giới hạn CORS khi cố nhúng
+   ảnh trực tiếp bằng JavaScript vào file PDF.
+   Số đo dùng để 2 thẻ x 85mm + 5 thẻ x 55mm luôn được canh giữa đều trên trang A4. */
+$('tvXuatInBtn').onclick = ()=>{
+  const ds = Object.values(thanhVienState).filter(x=> x && x.anhTheId);
+  if(!ds.length){ showMsg($('tvLayDuLieuMsg'), 'Chưa có thành viên nào để xuất.', 'err'); return; }
+
+  const SO_THE_MOI_TRANG = 10; // 2 cột x 5 hàng
+  const cacTrang = [];
+  for(let i=0;i<ds.length;i+=SO_THE_MOI_TRANG) cacTrang.push(ds.slice(i, i+SO_THE_MOI_TRANG));
+
+  const taoThe = x => `
+    <div class="in-the">
+      <div class="in-the-dau">
+        <img src="1.png" alt="Logo">
+        <span>TRƯỜNG THCS &amp; THPT HÒA THUẬN — THẺ HỌC SINH</span>
+      </div>
+      <div class="in-the-than">
+        <img class="in-the-anh" src="${anhDriveNho(x.anhTheId)}" alt="Ảnh thẻ">
+        <div class="in-the-info">
+          <div class="ten">${esc(x.hoTen||'')}</div>
+          <div class="dong">Ngày sinh: ${esc(x.ngaySinh||'—')}</div>
+          <div class="dong">Giới tính: ${esc(x.gioiTinh||'—')}</div>
+          <div class="dong lop">Lớp 10A1 · 2026–2027</div>
+        </div>
+      </div>
+    </div>`;
+
+  const html = `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8">
+<title>In thẻ học sinh 10A1</title>
+<style>
+  @page{ size:A4; margin:0; }
+  *{box-sizing:border-box;}
+  body{margin:0; font-family:"Trebuchet MS",Arial,sans-serif;}
+  .in-trang{
+    width:210mm; height:297mm; display:grid;
+    grid-template-columns:repeat(2,85mm); grid-template-rows:repeat(5,55mm);
+    justify-content:center; align-content:center; gap:3.6mm;
+    page-break-after:always;
+  }
+  .in-trang:last-child{ page-break-after:auto; }
+  .in-the{
+    width:85mm; height:55mm; border:1px dashed #bbb; border-radius:2.5mm; overflow:hidden;
+    display:flex; flex-direction:column;
+  }
+  .in-the-dau{
+    background:#1f7a4d; color:#fff; display:flex; align-items:center; gap:2mm;
+    padding:1.5mm 2.5mm; font-size:6.5px; font-weight:700;
+  }
+  .in-the-dau img{ width:5mm; height:5mm; flex:none; }
+  .in-the-than{ flex:1; display:flex; gap:2.5mm; padding:2.5mm; }
+  .in-the-anh{ width:19mm; height:24mm; object-fit:cover; border-radius:1.5mm; border:1px solid #1f7a4d; flex:none; }
+  .in-the-info{ flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:1mm; }
+  .in-the-info .ten{ font-size:11px; font-weight:800; color:#14532d; line-height:1.2; }
+  .in-the-info .dong{ font-size:8px; color:#333; }
+  .in-the-info .lop{ margin-top:1.5mm; font-weight:700; color:#1f7a4d; }
+</style></head><body>
+${cacTrang.map(trang=> `<div class="in-trang">${trang.map(taoThe).join('')}</div>`).join('')}
+</body></html>`;
+
+  const cuaSoIn = window.open('', '_blank');
+  if(!cuaSoIn){ showMsg($('tvLayDuLieuMsg'), 'Trình duyệt đã chặn cửa sổ in — cho phép popup rồi thử lại.', 'err'); return; }
+  cuaSoIn.document.open();
+  cuaSoIn.document.write(html);
+  cuaSoIn.document.close();
+  cuaSoIn.onload = ()=> setTimeout(()=> cuaSoIn.print(), 400); // chờ ảnh tải xong rồi mới mở hộp thoại in
 };
 
 $('chsLuuBtn').onclick = async ()=>{
