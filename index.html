@@ -63,8 +63,20 @@
   .subtab.active{background:var(--leaf-dark); border-color:var(--leaf-dark); color:#fff;}
 
   /* ---------- Ban cán sự lớp ---------- */
-  .bcs-item{display:flex; align-items:center; gap:12px; flex-wrap:wrap; background:#f7fbf8; border:1px solid var(--line);
-    border-radius:10px; padding:10px 16px; margin-bottom:8px;}
+  #bcsList{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px;}
+  .bcs-the{position:relative; background:#fffefb; border:1px solid var(--line); border-radius:12px;
+    padding:14px 10px 12px; text-align:center; box-shadow:0 3px 10px rgba(20,83,45,.10); display:flex;
+    flex-direction:column; align-items:center;}
+  .bcs-the-thaotac{position:absolute; top:6px; right:6px; display:flex; gap:4px;}
+  .bcs-the-thaotac .btn{padding:3px 7px; font-size:10.5px;}
+  .bcs-the-anh-vung{position:relative; margin-bottom:8px;}
+  .bcs-the-anh, .bcs-the-anh-trong{width:72px; height:72px; border-radius:50%; object-fit:cover;
+    border:3px solid var(--leaf); background:#eaf5ee;}
+  .bcs-the-anh-trong{display:flex; align-items:center; justify-content:center; font-size:28px;}
+  .bcs-the-icon-nho{position:absolute; bottom:-2px; right:-2px; background:#fff; border:2px solid var(--leaf);
+    border-radius:50%; width:26px; height:26px; display:flex; align-items:center; justify-content:center; font-size:13px;}
+  .bcs-the-chucvu{font-weight:800; color:var(--leaf-dark); font-size:12.5px; line-height:1.3; margin-bottom:3px;}
+  .bcs-the-ten{font-size:13.5px; color:var(--ink); font-weight:600;}
   .sap-xep-nhom{margin-bottom:16px;}
   .sap-xep-tieude{font-weight:800; color:var(--leaf-dark); font-size:12.5px; margin-bottom:6px;}
   .sap-xep-item{display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--line);
@@ -126,8 +138,6 @@
   .tn-lc:disabled{cursor:default;}
   #tnKetThuc{text-align:center; padding:24px 10px;}
   #tnKetThuc .diem-to{font-size:40px; font-weight:800; color:var(--leaf-dark); margin-bottom:10px;}
-  .bcs-chucvu{font-weight:800; color:var(--leaf-dark); min-width:150px; font-size:13.5px;}
-  .bcs-hoten{font-size:14px; color:var(--ink); flex:1;}
   .bcs-admin-item{display:flex; align-items:center; justify-content:space-between; gap:10px;
     background:#fff; border:1px solid var(--line); border-radius:8px; padding:8px 12px; margin-bottom:6px; font-size:13px;}
 
@@ -3434,6 +3444,22 @@ $('cfLamMoiLogBtn').onclick = napAiLog;
 /* ================================================================
    BAN CÁN SỰ LỚP — công khai đọc, chỉ giáo viên thêm/xoá
    ================================================================ */
+/* Icon minh họa theo từng chức vụ — dò theo từ khóa trong tên chức vụ, để tự khớp được cả
+   khi giáo viên tự nhập chức vụ khác ngoài danh sách có sẵn. */
+function iconChoChucVu(chucVu){
+  const cv = (chucVu||'').toLowerCase();
+  if(cv.includes('lớp trưởng')) return '👑';
+  if(cv.includes('học tập')) return '📚';
+  if(cv.includes('lao động')) return '🧹';
+  if(cv.includes('văn nghệ') || cv.includes('văn thể mỹ') || cv.includes('văn thể') ) return '🎤';
+  if(cv.includes('bí thư')) return '🚩';
+  if(cv.includes('thủ quỹ')) return '💰';
+  if(cv.includes('thư ký')) return '📝';
+  if(cv.includes('tổ trưởng')) return '⭐';
+  if(cv.includes('tổ phó')) return '🌟';
+  return '🎗️';
+}
+
 function renderBanCanSu(){
   const host = $('bcsList');
   if(!host) return;
@@ -3442,15 +3468,26 @@ function renderBanCanSu(){
   const nutThem = $('bcsThemMoiBtn');
   if(nutThem) nutThem.style.display = isAdmin ? 'inline-block' : 'none';
 
-  host.innerHTML = ds.map(x=> `
-    <div class="bcs-item">
-      <span class="bcs-chucvu">${esc(x.chucVu)}</span>
-      <span class="bcs-hoten">${esc(x.hoTen)}</span>
-      ${isAdmin ? `<span class="thao-tac">
+  host.innerHTML = ds.map(x=>{
+    // Nếu bạn này đã có ảnh thẻ ở mục "Thành viên lớp" (khớp theo tên) thì lấy ảnh thật ra hiện,
+    // không có thì hiện icon chức vụ to thay cho ảnh.
+    const tvKhop = Object.values(thanhVienState).find(t=> t && t.anhTheId && chuanTen(t.hoTen) === chuanTen(x.hoTen));
+    const icon = iconChoChucVu(x.chucVu);
+    return `<div class="bcs-the">
+      ${isAdmin ? `<div class="thao-tac bcs-the-thaotac">
         <button class="btn btn-blue btn-sm" data-bcs-sua="${x.id}">Sửa</button>
         <button class="btn btn-ghost btn-sm" data-bcs-xoa="${x.id}">Xóa</button>
-      </span>` : ''}
-    </div>`).join('');
+      </div>` : ''}
+      <div class="bcs-the-anh-vung">
+        ${tvKhop
+          ? `<img class="bcs-the-anh" src="${anhDriveNho(tvKhop.anhTheId)}" alt="${esc(x.hoTen)}">`
+          : `<div class="bcs-the-anh-trong">${icon}</div>`}
+        <span class="bcs-the-icon-nho">${icon}</span>
+      </div>
+      <div class="bcs-the-chucvu">${esc(x.chucVu)}</div>
+      <div class="bcs-the-ten">${esc(x.hoTen)}</div>
+    </div>`;
+  }).join('');
 
   host.querySelectorAll('[data-bcs-sua]').forEach(b=> b.onclick = ()=> moModalThemSuaBCS(b.getAttribute('data-bcs-sua')));
   host.querySelectorAll('[data-bcs-xoa]').forEach(b=> b.onclick = async ()=>{
