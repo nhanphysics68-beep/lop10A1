@@ -3798,17 +3798,20 @@ $('tvXuatInBtn').onclick = ()=>{
     <div class="in-the">
       <div class="in-the-dau">
         <img src="1.png" alt="Logo">
-        <span>TRƯỜNG THCS &amp; THPT HÒA THUẬN — THẺ HỌC SINH</span>
+        <div class="in-the-truong">
+          <div class="ten-truong">TRƯỜNG THCS &amp; THPT HÒA THUẬN</div>
+          <div class="the-hs">THẺ HỌC SINH</div>
+        </div>
       </div>
       <div class="in-the-than">
         <img class="in-the-anh" src="${anhDriveNho(x.anhTheId)}" alt="Ảnh thẻ">
         <div class="in-the-info">
           <div class="ten">${esc(x.hoTen||'')}</div>
-          <div class="dong">Ngày sinh: ${esc(x.ngaySinh||'—')}</div>
-          <div class="dong">Giới tính: ${esc(x.gioiTinh||'—')}</div>
-          <div class="dong lop">Lớp 10A1 · 2026–2027</div>
+          <div class="dong"><b>Ngày sinh:</b> ${esc(x.ngaySinh||'—')}</div>
+          <div class="dong"><b>Giới tính:</b> ${esc(x.gioiTinh||'—')}</div>
         </div>
       </div>
+      <div class="in-the-chan">LỚP 10A1 · NĂM HỌC 2026 – 2027</div>
     </div>`;
 
   const html = `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8">
@@ -3825,20 +3828,27 @@ $('tvXuatInBtn').onclick = ()=>{
   }
   .in-trang:last-child{ page-break-after:auto; }
   .in-the{
-    width:85mm; height:55mm; border:1px dashed #bbb; border-radius:2.5mm; overflow:hidden;
-    display:flex; flex-direction:column;
+    width:85mm; height:55mm; border:1px solid #ddd; border-radius:3mm; overflow:hidden;
+    display:flex; flex-direction:column; background:#fffefb;
   }
   .in-the-dau{
-    background:#1f7a4d; color:#fff; display:flex; align-items:center; gap:2mm;
-    padding:1.5mm 2.5mm; font-size:6.5px; font-weight:700;
+    background:linear-gradient(120deg,#14532d,#1f7a4d); color:#fff; display:flex; align-items:center; gap:2.2mm;
+    padding:2mm 3mm;
   }
-  .in-the-dau img{ width:5mm; height:5mm; flex:none; }
-  .in-the-than{ flex:1; display:flex; gap:2.5mm; padding:2.5mm; }
-  .in-the-anh{ width:19mm; height:24mm; object-fit:cover; border-radius:1.5mm; border:1px solid #1f7a4d; flex:none; }
-  .in-the-info{ flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:1mm; }
-  .in-the-info .ten{ font-size:11px; font-weight:800; color:#14532d; line-height:1.2; }
-  .in-the-info .dong{ font-size:8px; color:#333; }
-  .in-the-info .lop{ margin-top:1.5mm; font-weight:700; color:#1f7a4d; }
+  .in-the-dau img{ width:8mm; height:8mm; flex:none; }
+  .in-the-truong{ line-height:1.3; }
+  .in-the-truong .ten-truong{ font-size:8.5px; font-weight:700; letter-spacing:.2px; text-transform:uppercase; opacity:.92; }
+  .in-the-truong .the-hs{ font-size:12px; font-weight:800; letter-spacing:.4px; }
+  .in-the-than{ flex:1; display:flex; gap:3.5mm; padding:3.5mm 3mm; align-items:center; }
+  .in-the-anh{ width:21mm; height:27mm; object-fit:cover; border-radius:1.5mm; border:2px solid #1f7a4d; flex:none; }
+  .in-the-info{ flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:1.8mm; }
+  .in-the-info .ten{ font-size:15px; font-weight:800; color:#14532d; line-height:1.25; }
+  .in-the-info .dong{ font-size:11px; color:#333; }
+  .in-the-info .dong b{ color:#14532d; }
+  .in-the-chan{
+    background:#f7fbf8; border-top:1px dashed #ccc; text-align:center;
+    font-size:9.5px; font-weight:700; color:#5b6b60; letter-spacing:.3px; padding:1.8mm;
+  }
 </style></head><body>
 ${cacTrang.map(trang=> `<div class="in-trang">${trang.map(taoThe).join('')}</div>`).join('')}
 </body></html>`;
