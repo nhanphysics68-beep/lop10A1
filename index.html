@@ -166,6 +166,25 @@
   .kt-xem-anh-trai{flex:1; padding:20px; border-right:1px solid var(--line); overflow-y:auto;}
   .kt-xem-anh-phai{flex:1; padding:20px; display:flex; align-items:center; justify-content:center; background:#f7fbf8;}
   .kt-xem-anh-phai img{max-width:100%; max-height:70vh; border-radius:8px;}
+
+  /* ---------- Thành viên lớp (thẻ học sinh) ---------- */
+  .tv-luoi{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px;}
+  .tv-the{background:#fffefb; border-radius:12px; overflow:hidden; box-shadow:0 4px 14px rgba(20,83,45,.14);
+    border:1px solid var(--line); display:flex; flex-direction:column;}
+  .tv-the-dau{background:linear-gradient(120deg, var(--leaf-dark), var(--leaf)); color:#fff;
+    display:flex; align-items:center; gap:8px; padding:8px 12px;}
+  .tv-the-dau img{width:28px; height:28px; flex:none; filter:drop-shadow(0 1px 2px rgba(0,0,0,.3));}
+  .tv-the-truong{line-height:1.25;}
+  .tv-the-truong .ten-truong{font-size:10px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; opacity:.9;}
+  .tv-the-truong .the-hs{font-size:13px; font-weight:800; letter-spacing:.5px;}
+  .tv-the-than{display:flex; gap:12px; padding:12px;}
+  .tv-the-anh{width:78px; height:100px; flex:none; object-fit:cover; border-radius:6px; border:2px solid var(--leaf); background:#eee;}
+  .tv-the-info{flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:3px;}
+  .tv-the-info .ten{font-size:14.5px; font-weight:800; color:var(--leaf-dark); line-height:1.25;}
+  .tv-the-info .dong{font-size:12px; color:var(--ink-soft);}
+  .tv-the-info .dong b{color:var(--ink); font-weight:700;}
+  .tv-the-chan{background:#f7fbf8; border-top:1px dashed var(--line); font-size:10.5px; color:var(--ink-soft);
+    text-align:center; padding:5px; letter-spacing:.3px;}
   .kt-xem-anh-trai .dong{padding:6px 0; border-bottom:1px dashed var(--line); font-size:13.5px;}
   .kt-xem-anh-trai .dong b{color:var(--leaf-dark);}
   @media (max-width:700px){ .kt-xem-anh{flex-direction:column;} .kt-xem-anh-trai{border-right:none; border-bottom:1px solid var(--line);} }
@@ -554,6 +573,16 @@
         <span><i class="box" style="background:#fdecea;border:2px solid var(--red);"></i>Có yêu cầu đổi chỗ</span>
       </div>
       <div id="pageMsg" class="msg"></div>
+    </div>
+  </div>
+
+  <!-- ============ THÀNH VIÊN LỚP 10A1 (dạng thẻ học sinh) ============ -->
+  <div class="panel" id="panel-thanhvien" data-group="thongtin">
+    <div class="card">
+      <h2>🪪 Thành viên lớp 10A1</h2>
+      <p class="section-note">Chỉ hiện đúng những bạn đã tải ảnh thẻ lên ở mục "Dữ liệu cá nhân" — vào mục đó để thêm ảnh thẻ và thông tin của em.</p>
+      <div id="tvLuoi" class="tv-luoi"></div>
+      <div id="tvTrong" class="empty" style="display:none;">Chưa có bạn nào tải ảnh thẻ lên.</div>
     </div>
   </div>
 
@@ -1226,6 +1255,7 @@ const clbRef = db.ref('clb2026');           // các câu lạc bộ — công kh
 const clbDinhNghiaRef = db.ref('clbDinhNghia2026'); // định nghĩa CLB (tên/icon/mô tả) — công khai đọc, chỉ giáo viên ghi
 const clbDiemRef = db.ref('clbDiem2026');   // điểm uy tín đóng góp — công khai đọc, CHỈ giáo viên ghi được
 const chsRef = db.ref('hosocanhan2026');    // dữ liệu cá nhân học sinh — riêng tư, giống hoso2026
+const thanhVienRef = db.ref('thanhvien2026'); // bản CÔNG KHAI rút gọn (ảnh thẻ, tên, giới tính, ngày sinh) — không có CCCD/thành tích
 const khoanThuRef = db.ref('khoanthu2026'); // các khoản thu đầu năm — công khai đọc, mỗi người tự ghi phần của mình
 const hosoRef   = db.ref('hoso2026/hoso');         // riêng tư: khóa theo uid, giống hotro2026
 
@@ -1547,6 +1577,7 @@ const THU_TU_CHINH_MAC_DINH = ['thongtin', 'hoatdong', 'bangtin', 'confession', 
 
 const SUBTAB_DINH_NGHIA = {
   sodo:      {icon:'📍', ten:'Sơ đồ lớp'},
+  thanhvien: {icon:'🪪', ten:'Thành viên lớp'},
   hoso:      {icon:'🧾', ten:'Hồ sơ đầu năm'},
   bancansu:  {icon:'👥', ten:'Ban cán sự lớp'},
   caulacbo:  {icon:'🎨', ten:'Các câu lạc bộ'},
@@ -1561,7 +1592,7 @@ const SUBTAB_DINH_NGHIA = {
   tracnghiem:{icon:'❓', ten:'Trắc nghiệm'},
 };
 const NHOM_TAB = {
-  thongtin: ['sodo', 'hoso', 'bancansu', 'caulacbo', 'canhanhs', 'khoanthu'],
+  thongtin: ['sodo', 'thanhvien', 'hoso', 'bancansu', 'caulacbo', 'canhanhs', 'khoanthu'],
   hoatdong: ['laodong', 'khaigiang', 'hotro'],
   games:    ['quayten', 'duoihinh', 'ghepdoi', 'tracnghiem'],
 };
@@ -3687,6 +3718,34 @@ function hienThiAnhThe(host, anhId){
     : 'Chưa có ảnh thẻ.';
 }
 
+/* -------------------- THÀNH VIÊN LỚP 10A1 (dạng thẻ học sinh, công khai) -------------------- */
+let thanhVienState = {};
+function renderThanhVien(){
+  const luoi = $('tvLuoi'), trong = $('tvTrong');
+  if(!luoi) return;
+  const ds = Object.values(thanhVienState).filter(x=> x && x.anhTheId);
+  trong.style.display = ds.length ? 'none' : 'block';
+  luoi.innerHTML = ds.map(x=> `
+    <div class="tv-the">
+      <div class="tv-the-dau">
+        <img src="1.png" alt="Logo">
+        <div class="tv-the-truong">
+          <div class="ten-truong">Trường THCS &amp; THPT Hòa Thuận</div>
+          <div class="the-hs">THẺ HỌC SINH</div>
+        </div>
+      </div>
+      <div class="tv-the-than">
+        <img class="tv-the-anh" src="${anhDriveNho(x.anhTheId)}" alt="Ảnh thẻ">
+        <div class="tv-the-info">
+          <div class="ten">${esc(x.hoTen||'')}</div>
+          <div class="dong"><b>Ngày sinh:</b> ${esc(x.ngaySinh||'—')}</div>
+          <div class="dong"><b>Giới tính:</b> ${esc(x.gioiTinh||'—')}</div>
+        </div>
+      </div>
+      <div class="tv-the-chan">LỚP 10A1 · NĂM HỌC 2026 – 2027</div>
+    </div>`).join('');
+}
+
 $('chsLuuBtn').onclick = async ()=>{
   if(!myUid){ showMsg($('chsMsg'), 'Đang kết nối, thử lại sau vài giây.', 'info'); return; }
   const hoTen = $('chsHoTen').value.trim();
@@ -3702,6 +3761,7 @@ $('chsLuuBtn').onclick = async ()=>{
       savedAt: new Date().toISOString()
     });
     await chsRef.child(myUid).set(moi);
+    await dongBoThanhVienCongKhai(moi);
     showMsg($('chsMsg'), '✅ Đã lưu thông tin.', 'ok');
   }catch(e){ showMsg($('chsMsg'), baoLoi(e),'err'); }
 };
@@ -3741,10 +3801,26 @@ $('chsAnhInput').onchange = async e=>{
       savedAt: new Date().toISOString()
     });
     await chsRef.child(myUid).set(moi);
+    await dongBoThanhVienCongKhai(moi);
     hienThiAnhThe($('chsAnhXemTruoc'), kq.id);
     showMsg($('chsAnhMsg'), '✅ Đã tải ảnh thẻ lên.', 'ok');
   }catch(err){ showMsg($('chsAnhMsg'), baoLoi(err), 'err'); }
 };
+
+/* Đồng bộ ra bản CÔNG KHAI rút gọn cho mục "Thành viên lớp 10A1" — chỉ đúng 4 trường
+   không nhạy cảm (họ tên, ngày sinh, giới tính, ảnh thẻ), KHÔNG bao giờ đưa CCCD hay
+   thành tích ra công khai. */
+async function dongBoThanhVienCongKhai(duLieuDayDu){
+  if(!myUid) return;
+  try{
+    await thanhVienRef.child(myUid).set({
+      hoTen: duLieuDayDu.hoTen || '',
+      ngaySinh: duLieuDayDu.ngaySinh || '',
+      gioiTinh: duLieuDayDu.gioiTinh || '',
+      anhTheId: duLieuDayDu.anhTheId || ''
+    });
+  }catch(e){ console.error('Lỗi đồng bộ thành viên công khai:', e); }
+}
 
 /* -------------------- GIÁO VIÊN: danh sách + xuất Excel dạng hồ sơ -------------------- */
 async function napChsAdmin(){
@@ -4766,6 +4842,12 @@ tkbRef.child('chieu').on('value', s=>{
 /* Các câu lạc bộ: công khai cho mọi người */
 /* Các khoản thu đầu năm: danh sách chỉ admin xem, tự cập nhật khi có người nộp mới */
 khoanThuRef.on('value', ()=>{ if(isAdmin) renderDanhSachKhoanThu(); });
+
+/* Thành viên lớp 10A1: công khai cho mọi người */
+thanhVienRef.on('value', s=>{
+  thanhVienState = s.val() || {};
+  renderThanhVien();
+});
 
 clbDinhNghiaRef.on('value', s=>{
   clbDinhNghia = s.val() || {};
