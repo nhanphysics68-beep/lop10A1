@@ -63,20 +63,23 @@
   .subtab.active{background:var(--leaf-dark); border-color:var(--leaf-dark); color:#fff;}
 
   /* ---------- Ban cán sự lớp ---------- */
-  #bcsList{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px;}
+  #bcsList{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px;}
   .bcs-the{position:relative; background:#fffefb; border:1px solid var(--line); border-radius:12px;
-    padding:14px 10px 12px; text-align:center; box-shadow:0 3px 10px rgba(20,83,45,.10); display:flex;
+    padding:14px 12px 12px; text-align:center; box-shadow:0 3px 10px rgba(20,83,45,.10); display:flex;
     flex-direction:column; align-items:center;}
-  .bcs-the-thaotac{position:absolute; top:6px; right:6px; display:flex; gap:4px;}
-  .bcs-the-thaotac .btn{padding:3px 7px; font-size:10.5px;}
   .bcs-the-anh-vung{position:relative; margin-bottom:8px;}
   .bcs-the-anh, .bcs-the-anh-trong{width:72px; height:72px; border-radius:50%; object-fit:cover;
     border:3px solid var(--leaf); background:#eaf5ee;}
   .bcs-the-anh-trong{display:flex; align-items:center; justify-content:center; font-size:28px;}
   .bcs-the-icon-nho{position:absolute; bottom:-2px; right:-2px; background:#fff; border:2px solid var(--leaf);
     border-radius:50%; width:26px; height:26px; display:flex; align-items:center; justify-content:center; font-size:13px;}
-  .bcs-the-chucvu{font-weight:800; color:var(--leaf-dark); font-size:12.5px; line-height:1.3; margin-bottom:3px;}
-  .bcs-the-ten{font-size:13.5px; color:var(--ink); font-weight:600;}
+  .bcs-the-ten{font-size:13.5px; color:var(--ink); font-weight:700; margin-bottom:8px;}
+  .bcs-the-ds-chucvu{width:100%; display:flex; flex-direction:column; gap:5px;}
+  .bcs-the-chucvu-dong{display:flex; align-items:center; justify-content:space-between; gap:6px;
+    background:#f7fbf8; border:1px solid var(--line); border-radius:8px; padding:5px 8px;
+    font-weight:700; color:var(--leaf-dark); font-size:12px; text-align:left;}
+  .bcs-the-thaotac-nho{display:flex; gap:4px; flex:none;}
+  .bcs-the-thaotac-nho .btn{padding:2px 6px; font-size:10px;}
 
   /* ---------- Các hoạt động của tổ — Tổng kết tuần ---------- */
   .tt-luoi-to{display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:16px;}
@@ -819,7 +822,7 @@
         <select id="ttChonTenNhanQuyen">
           <option value="">— Bạn là —</option>
         </select>
-        <input type="text" id="ttMaXacNhan" placeholder="Nhập mã xác nhận" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false">
+        <input type="text" id="ttMaXacNhan" placeholder="Chọn tên ở trên trước" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" disabled>
         <button class="btn btn-primary btn-sm" id="ttNhanQuyenBtn">Xác nhận</button>
       </div>
       <div id="ttNhanQuyenMsg" class="msg"></div>
@@ -3803,24 +3806,36 @@ function renderBanCanSu(){
   const nutThem = $('bcsThemMoiBtn');
   if(nutThem) nutThem.style.display = isAdmin ? 'inline-block' : 'none';
 
-  host.innerHTML = ds.map(x=>{
-    // Nếu bạn này đã có ảnh thẻ ở mục "Thành viên lớp" (khớp theo tên) thì lấy ảnh thật ra hiện,
-    // không có thì hiện icon chức vụ to thay cho ảnh.
-    const tvKhop = Object.values(thanhVienState).find(t=> t && t.anhTheId && chuanTen(t.hoTen) === chuanTen(x.hoTen));
-    const icon = iconChoChucVu(x.chucVu);
+  // Gộp các mục theo ĐÚNG 1 HỌC SINH (chuẩn hóa tên) — 1 bạn giữ nhiều chức vụ chỉ hiện 1 khung,
+  // liệt kê đủ các chức vụ bên trong, giữ đúng thứ tự xuất hiện đầu tiên của mỗi bạn trong danh sách.
+  const theoNguoi = new Map();
+  ds.forEach(x=>{
+    const key = chuanTen(x.hoTen);
+    if(!theoNguoi.has(key)) theoNguoi.set(key, []);
+    theoNguoi.get(key).push(x);
+  });
+
+  host.innerHTML = [...theoNguoi.values()].map(dsCuaNguoiDo=>{
+    const hoTen = dsCuaNguoiDo[0].hoTen;
+    const tvKhop = Object.values(thanhVienState).find(t=> t && t.anhTheId && chuanTen(t.hoTen) === chuanTen(hoTen));
+    const iconChinh = iconChoChucVu(dsCuaNguoiDo[0].chucVu);
     return `<div class="bcs-the">
-      ${isAdmin ? `<div class="thao-tac bcs-the-thaotac">
-        <button class="btn btn-blue btn-sm" data-bcs-sua="${x.id}">Sửa</button>
-        <button class="btn btn-ghost btn-sm" data-bcs-xoa="${x.id}">Xóa</button>
-      </div>` : ''}
       <div class="bcs-the-anh-vung">
         ${tvKhop
-          ? `<img class="bcs-the-anh" src="${anhDriveNho(tvKhop.anhTheId)}" alt="${esc(x.hoTen)}">`
-          : `<div class="bcs-the-anh-trong">${icon}</div>`}
-        <span class="bcs-the-icon-nho">${icon}</span>
+          ? `<img class="bcs-the-anh" src="${anhDriveNho(tvKhop.anhTheId)}" alt="${esc(hoTen)}">`
+          : `<div class="bcs-the-anh-trong">${iconChinh}</div>`}
+        <span class="bcs-the-icon-nho">${iconChinh}</span>
       </div>
-      <div class="bcs-the-chucvu">${esc(x.chucVu)}</div>
-      <div class="bcs-the-ten">${esc(x.hoTen)}</div>
+      <div class="bcs-the-ten">${esc(hoTen)}</div>
+      <div class="bcs-the-ds-chucvu">
+        ${dsCuaNguoiDo.map(x=> `<div class="bcs-the-chucvu-dong">
+          <span>${iconChoChucVu(x.chucVu)} ${esc(x.chucVu)}</span>
+          ${isAdmin ? `<span class="bcs-the-thaotac-nho">
+            <button class="btn btn-blue btn-sm" data-bcs-sua="${x.id}">Sửa</button>
+            <button class="btn btn-ghost btn-sm" data-bcs-xoa="${x.id}">Xóa</button>
+          </span>` : ''}
+        </div>`).join('')}
+      </div>
     </div>`;
   }).join('');
 
@@ -4789,8 +4804,16 @@ function capNhatOChonTenNhanQuyen(){
   $('ttChonTenNhanQuyen').innerHTML = `<option value="">— Bạn là —</option>`
     + canBo.map(x=> `<option>${esc(x.hoTen)}</option>`).join('')
     + `<option value="__khac__">Khác (tự nhập)...</option>`;
+  capNhatKhoaOMa();
+}
+function capNhatKhoaOMa(){
+  const daChonTen = !!$('ttChonTenNhanQuyen').value;
+  $('ttMaXacNhan').disabled = !daChonTen;
+  $('ttMaXacNhan').placeholder = daChonTen ? 'Nhập mã xác nhận' : 'Chọn tên ở trên trước';
+  if(!daChonTen) $('ttMaXacNhan').value = '';
 }
 $('ttChonToNhanQuyen').onchange = capNhatOChonTenNhanQuyen;
+$('ttChonTenNhanQuyen').onchange = capNhatKhoaOMa;
 
 $('ttNhanQuyenBtn').onclick = async ()=>{
   const soTo = $('ttChonToNhanQuyen').value;
