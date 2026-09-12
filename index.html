@@ -816,6 +816,9 @@
         <select id="ttChonToNhanQuyen">
           <option value="1">Tổ 1</option><option value="2">Tổ 2</option><option value="3">Tổ 3</option><option value="4">Tổ 4</option>
         </select>
+        <select id="ttChonTenNhanQuyen">
+          <option value="">— Bạn là —</option>
+        </select>
         <input type="text" id="ttMaXacNhan" placeholder="Nhập mã xác nhận" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false">
         <button class="btn btn-primary btn-sm" id="ttNhanQuyenBtn">Xác nhận</button>
       </div>
@@ -1346,6 +1349,7 @@ const thanhVienRef = db.ref('thanhvien2026'); // bản CÔNG KHAI rút gọn (�
 const totuanRef = db.ref('totuan2026'); // tổng kết tuần theo Tổ — công khai đọc, tổ trưởng/tổ phó (đối chiếu tên) hoặc admin mới ghi được
 const maToTuanRef = db.ref('matoTuan2026');       // mã xác nhận từng Tổ — chỉ admin xem/đặt
 const quyenToTuanRef = db.ref('quyenToTuan2026'); // ai đã được cấp quyền Tổ nào — công khai đọc
+const quyenToTuanTenRef = db.ref('quyenToTuanTen2026'); // tên đã xác nhận của người giữ quyền, để hiện đúng "Tuần N — Tên" thay vì "Không rõ"
 const nhapMaToTuanRef = db.ref('nhapMaToTuan2026'); // nhánh tạm để Rules so khớp mã, không cần đọc lại
 const khoanThuRef = db.ref('khoanthu2026'); // các khoản thu đầu năm — công khai đọc, mỗi người tự ghi phần của mình
 const hosoRef   = db.ref('hoso2026/hoso');         // riêng tư: khóa theo uid, giống hotro2026
@@ -4762,28 +4766,54 @@ function tenCuaToiTheoSeats(){
 /* Phân quyền THẬT qua "mã xác nhận" — Tổ trưởng/Tổ phó nhập đúng mã 1 lần, được Firebase Rules
    xác thực và cấp quyền vĩnh viễn cho đúng thiết bị đó (không còn đối chiếu tên như trước). */
 let quyenToTuanState = {}; // { to1: {uid1:true, uid2:true}, to2: {...}, ... }
+let quyenToTuanTenState = {}; // { to1: {uid1:"Tên đã xác nhận", ...}, ... } — để hiện đúng "Tuần N — Tên"
 function coQuyenSuaTo(soTo){
   if(isAdmin) return true;
   if(!myUid) return false;
   return !!(quyenToTuanState['to'+soTo] && quyenToTuanState['to'+soTo][myUid]);
 }
+/* Tên hiển thị cho người đang nộp: ưu tiên tên đã tự chọn lúc "Nhận quyền" (chắc chắn nhất),
+   sau đó mới thử tra theo chỗ ngồi (dự phòng cho các quyền được cấp từ trước khi có mục chọn tên này). */
+function tenNguoiDangNop(soTo){
+  const tenDaChon = quyenToTuanTenState['to'+soTo] && quyenToTuanTenState['to'+soTo][myUid];
+  return tenDaChon || tenCuaToiTheoSeats() || (isAdmin ? 'Giáo viên chủ nhiệm' : 'Không rõ');
+}
+
+/* Đổ tên Tổ trưởng/Tổ phó của đúng Tổ đang chọn vào ô "Bạn là" */
+function capNhatOChonTenNhanQuyen(){
+  const soTo = $('ttChonToNhanQuyen').value;
+  const canBo = banCanSu.filter(x=>{
+    const cv = chuanTen(x.chucVu);
+    return cv.includes('tổ trưởng tổ '+soTo) || cv.includes('tổ phó tổ '+soTo);
+  });
+  $('ttChonTenNhanQuyen').innerHTML = `<option value="">— Bạn là —</option>`
+    + canBo.map(x=> `<option>${esc(x.hoTen)}</option>`).join('')
+    + `<option value="__khac__">Khác (tự nhập)...</option>`;
+}
+$('ttChonToNhanQuyen').onchange = capNhatOChonTenNhanQuyen;
 
 $('ttNhanQuyenBtn').onclick = async ()=>{
   const soTo = $('ttChonToNhanQuyen').value;
+  const chonTen = $('ttChonTenNhanQuyen').value;
   const ma = $('ttMaXacNhan').value.trim().toUpperCase(); // không phân biệt hoa/thường, tránh lỗi tự viết hoa của bàn phím điện thoại
+  if(!chonTen){ showMsg($('ttNhanQuyenMsg'), 'Vui lòng chọn đúng tên của em trong danh sách.', 'err'); return; }
+  const tenThat = (chonTen === '__khac__') ? prompt('Nhập họ tên của em:') : chonTen;
+  if(!tenThat){ showMsg($('ttNhanQuyenMsg'), 'Vui lòng nhập họ tên.', 'err'); return; }
   if(!ma){ showMsg($('ttNhanQuyenMsg'), 'Vui lòng nhập mã xác nhận.', 'err'); return; }
   if(!myUid){ showMsg($('ttNhanQuyenMsg'), 'Đang kết nối, thử lại sau vài giây.', 'info'); return; }
   showMsg($('ttNhanQuyenMsg'), 'Đang kiểm tra...', 'info');
   try{
-    // Ghi 2 bước TUẦN TỰ riêng biệt (không gộp chung 1 update() nhiều-đường-dẫn) — cách này
-    // đã kiểm chứng hoạt động đúng, trong khi ghi gộp bị Firebase từ chối do không nhận diện
-    // đúng giá trị mã vừa "trình" ra khi so khớp trong cùng 1 lượt ghi.
+    // Ghi TUẦN TỰ riêng biệt (không gộp chung 1 update() nhiều-đường-dẫn) — cách này đã kiểm
+    // chứng hoạt động đúng, trong khi ghi gộp bị Firebase từ chối do không nhận diện đúng giá
+    // trị mã vừa "trình" ra khi so khớp trong cùng 1 lượt ghi.
     await db.ref('nhapMaToTuan2026/to'+soTo).set(ma);
     await db.ref('quyenToTuan2026/to'+soTo+'/'+myUid).set(true);
+    await db.ref('quyenToTuanTen2026/to'+soTo+'/'+myUid).set(tenThat.trim());
     showMsg($('ttNhanQuyenMsg'), `✅ Đã nhận quyền Tổ ${soTo} thành công! Từ nay máy này tự động có quyền tổng kết tuần cho Tổ ${soTo}, không cần nhập lại mã.`, 'ok');
     $('ttMaXacNhan').value = '';
   }catch(e){ showMsg($('ttNhanQuyenMsg'), '❌ Mã xác nhận không đúng. Kiểm tra lại đúng mã Thầy đã cung cấp cho Tổ này rồi thử lại.', 'err'); }
 };
+capNhatOChonTenNhanQuyen();
 
 function renderQuyenCuaToi(){
   const box = $('ttQuyenCuaToi');
@@ -4948,7 +4978,7 @@ function moModalThemTuan(soTo, idSua){
       ketQua: $('ttKetQua').value.trim(),
       phuongHuong: $('ttPhuongHuong').value.trim(),
       anh: danhSachAnh.reduce((o,id,i)=>{ o['a'+i] = id; return o; }, {}),
-      nguoiNop: tenCuaToiTheoSeats() || (isAdmin ? 'Giáo viên chủ nhiệm' : 'Không rõ'),
+      nguoiNop: tenNguoiDangNop(soTo),
       ngayLuu: new Date().toISOString()
     };
     try{
@@ -4971,6 +5001,9 @@ quyenToTuanRef.on('value', s=>{
   quyenToTuanState = s.val() || {};
   renderTongKetTuan();
   renderQuyenCuaToi();
+});
+quyenToTuanTenRef.on('value', s=>{
+  quyenToTuanTenState = s.val() || {};
 });
 
 
@@ -5569,6 +5602,7 @@ bcsRef.on('value', s=>{
   banCanSu = Object.keys(v).map(k=> Object.assign({id:k}, v[k]));
   renderBanCanSu();
   renderTongKetTuan();
+  if($('ttChonToNhanQuyen')) capNhatOChonTenNhanQuyen();
 });
 
 /* Thứ tự menu điều hướng: công khai cho mọi người, không làm mất tab đang mở khi vẽ lại */
