@@ -97,6 +97,18 @@
   .tt-form-field textarea{width:100%; min-height:60px; padding:8px 10px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13px;}
   .tt-anh-xemtruoc-nho{display:flex; gap:6px; flex-wrap:wrap; margin:6px 0;}
   .tt-anh-xemtruoc-nho img{width:52px; height:52px; object-fit:cover; border-radius:6px; border:1px solid var(--line);}
+  /* ---------- Phong trào ---------- */
+  .pt-the{background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px; box-shadow:0 3px 10px rgba(20,83,45,.08); margin-bottom:16px;}
+  .pt-tieude{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;}
+  .pt-tieude h3{margin:0; color:var(--leaf-dark); font-size:16px;}
+  .pt-muc-nho{font-weight:800; color:var(--leaf-dark); font-size:12.5px; margin:14px 0 6px;}
+  .pt-tv-hang{display:flex; align-items:center; gap:8px; background:#f7fbf8; border:1px solid var(--line);
+    border-radius:8px; padding:7px 10px; margin-bottom:6px; font-size:13px; flex-wrap:wrap;}
+  .pt-tv-hang .pt-tv-ten{font-weight:700; color:var(--ink); min-width:110px;}
+  .pt-tv-hang .pt-tv-congviec{flex:1; min-width:150px; color:var(--ink-soft);}
+  .pt-ketqua-box textarea{width:100%; min-height:60px; padding:8px 10px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13px;}
+  .pt-anh-luoi{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
+  .pt-anh-luoi img{width:70px; height:70px; object-fit:cover; border-radius:8px; border:1px solid var(--line); cursor:pointer;}
   .tt-nhanquyen-hang{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
   .tt-nhanquyen-hang select, .tt-nhanquyen-hang input{padding:9px 12px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13.5px;}
   .tt-nhanquyen-hang input{flex:1; min-width:160px;}
@@ -705,6 +717,17 @@
       </div>
       <div id="emptyState" class="empty" style="display:none;">Chưa có học sinh nào đăng ký. Hãy là người đầu tiên! 🌱</div>
     </div>
+  </div>
+
+  <!-- ============ PHONG TRÀO ============ -->
+  <div class="panel" id="panel-phongtrao" data-group="hoatdong">
+    <div class="card">
+      <h2>🚀 Phong trào của lớp</h2>
+      <p class="section-note">Theo dõi các phong trào lớp tham gia — thành viên, công việc cụ thể từng bạn, kết quả và minh chứng đính kèm.</p>
+      <button class="btn btn-primary btn-sm" id="ptThemBtn">+ Thêm phong trào mới</button>
+    </div>
+    <div id="ptDanhSach"></div>
+    <div id="ptTrong" class="empty" style="display:none;">Chưa có phong trào nào — bấm "+ Thêm phong trào mới" để bắt đầu.</div>
   </div>
 
   <!-- ============ THẺ 3: CHUẨN BỊ KHAI GIẢNG ============ -->
@@ -1359,6 +1382,7 @@ const quyenToTuanRef = db.ref('quyenToTuan2026'); // ai đã được cấp quy�
 const quyenToTuanTenRef = db.ref('quyenToTuanTen2026'); // tên đã xác nhận của người giữ quyền, để hiện đúng "Tuần N — Tên" thay vì "Không rõ"
 const nhapMaToTuanRef = db.ref('nhapMaToTuan2026'); // nhánh tạm để Rules so khớp mã, không cần đọc lại
 const khoanThuRef = db.ref('khoanthu2026'); // các khoản thu đầu năm — công khai đọc, mỗi người tự ghi phần của mình
+const phongTraoRef = db.ref('phongtrao2026'); // phong trào của lớp — công khai đọc/ghi, giống Bảng tin/Đăng ký lao động
 const hosoRef   = db.ref('hoso2026/hoso');         // riêng tư: khóa theo uid, giống hotro2026
 
 const LANES     = [ {id:1,desks:7}, {id:2,desks:6}, {id:3,desks:6}, {id:4,desks:6} ];
@@ -1711,6 +1735,7 @@ const SUBTAB_DINH_NGHIA = {
   canhanhs:  {icon:'👤', ten:'Dữ liệu cá nhân'},
   khoanthu:  {icon:'💰', ten:'Các khoản thu đầu năm'},
   laodong:   {icon:'🧹', ten:'Đăng ký lao động'},
+  phongtrao: {icon:'🚀', ten:'Phong trào'},
   khaigiang: {icon:'📺', ten:'Chuẩn bị khai giảng'},
   hotro:     {icon:'🤝', ten:'Nhận hỗ trợ'},
   tongketTuan: {icon:'📊', ten:'Tổng kết tuần'},
@@ -1721,7 +1746,7 @@ const SUBTAB_DINH_NGHIA = {
 };
 const NHOM_TAB = {
   thongtin: ['sodo', 'danhsachhs', 'thanhvien', 'hoso', 'bancansu', 'caulacbo', 'canhanhs', 'khoanthu'],
-  hoatdong: ['laodong', 'khaigiang', 'hotro'],
+  hoatdong: ['laodong', 'phongtrao', 'khaigiang', 'hotro'],
   hoatdongto: ['tongketTuan'],
   games:    ['quayten', 'duoihinh', 'ghepdoi', 'tracnghiem'],
 };
@@ -4788,6 +4813,149 @@ function moXemAnhChuyenKhoan(uid, loai){
     </div>`;
   $('ktXemAnhModal').classList.add('show');
 }
+
+
+/* ================================================================
+   PHONG TRÀO CỦA LỚP — công khai đọc/ghi (ai cũng tạo/cập nhật được, giống Bảng tin/Đăng ký lao
+   động), admin luôn xóa được. Mỗi phong trào có: tên, danh sách thành viên + công việc cụ thể
+   từng người, kết quả, và ảnh minh chứng đính kèm (đính kèm được nhiều ảnh).
+   ================================================================ */
+const TEN_THU_MUC_PHONG_TRAO = 'PhongTrao-10A1';
+let phongTraoState = {};
+
+function renderPhongTrao(){
+  const host = $('ptDanhSach');
+  if(!host) return;
+  const dsId = Object.keys(phongTraoState);
+  $('ptTrong').style.display = dsId.length ? 'none' : 'block';
+
+  host.innerHTML = dsId.map(id=>{
+    const pt = phongTraoState[id] || {};
+    const dsThanhVien = pt.thanhVien ? Object.entries(pt.thanhVien) : [];
+    const dsAnh = pt.minhChung ? Object.entries(pt.minhChung) : [];
+    return `<div class="pt-the">
+      <div class="pt-tieude">
+        <h3>🚀 ${esc(pt.ten||'')}</h3>
+        <button class="btn btn-ghost btn-sm" data-pt-xoa="${id}">Xóa phong trào</button>
+      </div>
+
+      <div class="pt-muc-nho">👥 Thành viên tham gia &amp; công việc cụ thể</div>
+      <div>
+        ${dsThanhVien.length ? dsThanhVien.map(([mid,tv])=> `<div class="pt-tv-hang">
+          <span class="pt-tv-ten">${esc(tv.ten||'')}</span>
+          <span class="pt-tv-congviec">${esc(tv.congViec||'(chưa ghi công việc)')}</span>
+          <button class="btn btn-ghost btn-sm" data-pt-xoa-tv="${id}|${mid}">Xóa</button>
+        </div>`).join('') : '<p class="section-note">Chưa có thành viên nào.</p>'}
+      </div>
+      <button class="btn btn-blue btn-sm" data-pt-them-tv="${id}">+ Thêm thành viên</button>
+
+      <div class="pt-muc-nho">✅ Kết quả</div>
+      <div class="pt-ketqua-box">
+        <textarea data-pt-ketqua="${id}" placeholder="Nhập kết quả đạt được...">${esc(pt.ketQua||'')}</textarea>
+        <button class="btn btn-primary btn-sm" data-pt-luu-ketqua="${id}" style="margin-top:6px;">Lưu kết quả</button>
+      </div>
+
+      <div class="pt-muc-nho">📎 Minh chứng đính kèm</div>
+      <div class="pt-anh-luoi">${dsAnh.map(([aid,driveId])=> `<img src="${anhDriveNho(driveId)}" onclick="window.open('${anhDriveLon(driveId)}','_blank')">`).join('')}</div>
+      <input type="file" accept="image/*" multiple style="display:none;" data-pt-anh-input="${id}">
+      <button class="btn btn-clay btn-sm" data-pt-chon-anh="${id}" style="margin-top:8px;">📎 Chọn ảnh minh chứng</button>
+      <div class="msg" data-pt-msg="${id}"></div>
+    </div>`;
+  }).join('');
+
+  host.querySelectorAll('[data-pt-xoa]').forEach(b=> b.onclick = async ()=>{
+    if(!confirm('Xóa hẳn phong trào này? Không thể hoàn tác.')) return;
+    try{ await phongTraoRef.child(b.getAttribute('data-pt-xoa')).remove(); }
+    catch(e){ alert(baoLoi(e)); }
+  });
+  host.querySelectorAll('[data-pt-xoa-tv]').forEach(b=> b.onclick = async ()=>{
+    const [id,mid] = b.getAttribute('data-pt-xoa-tv').split('|');
+    try{ await phongTraoRef.child(id).child('thanhVien').child(mid).remove(); }
+    catch(e){ alert(baoLoi(e)); }
+  });
+  host.querySelectorAll('[data-pt-them-tv]').forEach(b=> b.onclick = ()=> moModalThemThanhVienPT(b.getAttribute('data-pt-them-tv')));
+  host.querySelectorAll('[data-pt-luu-ketqua]').forEach(b=> b.onclick = async ()=>{
+    const id = b.getAttribute('data-pt-luu-ketqua');
+    const ta = host.querySelector(`[data-pt-ketqua="${id}"]`);
+    const msg = host.querySelector(`[data-pt-msg="${id}"]`);
+    try{
+      await phongTraoRef.child(id).child('ketQua').set(ta.value.trim());
+      showMsg(msg, '✅ Đã lưu kết quả.', 'ok');
+    }catch(e){ showMsg(msg, baoLoi(e), 'err'); }
+  });
+  host.querySelectorAll('[data-pt-chon-anh]').forEach(b=> b.onclick = ()=>{
+    host.querySelector(`[data-pt-anh-input="${b.getAttribute('data-pt-chon-anh')}"]`).click();
+  });
+  host.querySelectorAll('[data-pt-anh-input]').forEach(inp=> inp.onchange = async e=>{
+    const id = inp.getAttribute('data-pt-anh-input');
+    const files = [...e.target.files];
+    e.target.value = '';
+    if(!files.length) return;
+    const msg = host.querySelector(`[data-pt-msg="${id}"]`);
+    if(!dungDrive()){ showMsg(msg, 'Chưa cấu hình nơi lưu ảnh (Drive), báo thầy kiểm tra.', 'err'); return; }
+    showMsg(msg, 'Đang tải ảnh lên...', 'info');
+    try{
+      for(const f of files){
+        if(!/^image\//.test(f.type)) continue;
+        const nen = await nenAnh(f, 1000, 0.8);
+        const kq = await guiAnhLenDrive(nen, 'PhongTrao', TEN_THU_MUC_PHONG_TRAO);
+        await phongTraoRef.child(id).child('minhChung').push(kq.id);
+      }
+      showMsg(msg, '✅ Đã đính kèm ảnh.', 'ok');
+    }catch(err){ showMsg(msg, baoLoi(err), 'err'); }
+  });
+}
+
+$('ptThemBtn').onclick = ()=>{
+  openModal(`<h3>Thêm phong trào mới</h3>
+    <label style="font-size:12.5px;font-weight:700;">Tên phong trào</label>
+    <input type="text" id="ptFTen" maxlength="120" placeholder="VD: Kế hoạch nhỏ, Đền ơn đáp nghĩa...">
+    <div id="ptFErr" class="msg err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary btn-sm" id="ptFLuu">Thêm</button>
+    </div>`, 'gen');
+  $('ptFLuu').onclick = async ()=>{
+    const ten = $('ptFTen').value.trim();
+    if(!ten){ showMsg($('ptFErr'), 'Vui lòng nhập tên phong trào.', 'err'); return; }
+    try{
+      await phongTraoRef.push({ ten, ngayTao: new Date().toISOString() });
+      closeModal();
+    }catch(e){ showMsg($('ptFErr'), baoLoi(e), 'err'); }
+  };
+};
+
+function moModalThemThanhVienPT(ptId){
+  const dsTenHocSinh = roster.map(r=> r.name);
+  openModal(`<h3>Thêm thành viên</h3>
+    <label style="font-size:12.5px;font-weight:700;">Họ và tên</label>
+    <select id="ptFTvTen">
+      <option value="">— Chọn tên học sinh —</option>
+      ${dsTenHocSinh.map(ten=> `<option>${esc(ten)}</option>`).join('')}
+    </select>
+    <label style="font-size:12.5px;font-weight:700;">Công việc cụ thể</label>
+    <textarea id="ptFTvCongViec" maxlength="300" placeholder="VD: Thu gom giấy vụn, liên hệ ban ngành..."
+      style="width:100%; min-height:60px; padding:8px 10px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13px;"></textarea>
+    <div id="ptFTvErr" class="msg err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary btn-sm" id="ptFTvLuu">Thêm</button>
+    </div>`, 'gen');
+  $('ptFTvLuu').onclick = async ()=>{
+    const ten = $('ptFTvTen').value;
+    const congViec = $('ptFTvCongViec').value.trim();
+    if(!ten){ showMsg($('ptFTvErr'), 'Vui lòng chọn tên học sinh.', 'err'); return; }
+    try{
+      await phongTraoRef.child(ptId).child('thanhVien').push({ ten, congViec });
+      closeModal();
+    }catch(e){ showMsg($('ptFTvErr'), baoLoi(e), 'err'); }
+  };
+}
+
+phongTraoRef.on('value', s=>{
+  phongTraoState = s.val() || {};
+  renderPhongTrao();
+});
 
 
 /* ================================================================
