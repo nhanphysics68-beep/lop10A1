@@ -799,7 +799,7 @@
         <select id="ttChonToNhanQuyen">
           <option value="1">Tổ 1</option><option value="2">Tổ 2</option><option value="3">Tổ 3</option><option value="4">Tổ 4</option>
         </select>
-        <input type="password" id="ttMaXacNhan" placeholder="Nhập mã xác nhận">
+        <input type="text" id="ttMaXacNhan" placeholder="Nhập mã xác nhận" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false">
         <button class="btn btn-primary btn-sm" id="ttNhanQuyenBtn">Xác nhận</button>
       </div>
       <div id="ttNhanQuyenMsg" class="msg"></div>
@@ -4460,7 +4460,7 @@ function coQuyenSuaTo(soTo){
 
 $('ttNhanQuyenBtn').onclick = async ()=>{
   const soTo = $('ttChonToNhanQuyen').value;
-  const ma = $('ttMaXacNhan').value.trim();
+  const ma = $('ttMaXacNhan').value.trim().toUpperCase(); // không phân biệt hoa/thường, tránh lỗi tự viết hoa của bàn phím điện thoại
   if(!ma){ showMsg($('ttNhanQuyenMsg'), 'Vui lòng nhập mã xác nhận.', 'err'); return; }
   if(!myUid){ showMsg($('ttNhanQuyenMsg'), 'Đang kết nối, thử lại sau vài giây.', 'info'); return; }
   showMsg($('ttNhanQuyenMsg'), 'Đang kiểm tra...', 'info');
@@ -4508,7 +4508,7 @@ function renderAdminMaTo(){
   host.innerHTML = [1,2,3,4].map(soTo=> `
     <div class="tt-admin-ma-hang">
       <label>Tổ ${soTo}:</label>
-      <input type="text" id="ttMaTo${soTo}" placeholder="Mã xác nhận" value="${esc(maToTuanState['to'+soTo]||'')}">
+      <input type="text" id="ttMaTo${soTo}" placeholder="Mã xác nhận" value="${esc(maToTuanState['to'+soTo]||'')}" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false">
       <button class="btn btn-clay btn-sm" data-sinh-ma="${soTo}" title="Sinh mã ngẫu nhiên">🎲 Sinh mã</button>
       <button class="btn btn-blue btn-sm" data-luu-ma="${soTo}">Lưu</button>
     </div>`).join('');
@@ -4518,10 +4518,11 @@ function renderAdminMaTo(){
   });
   host.querySelectorAll('[data-luu-ma]').forEach(b=> b.onclick = async ()=>{
     const soTo = b.getAttribute('data-luu-ma');
-    const ma = $('ttMaTo'+soTo).value.trim();
+    const ma = $('ttMaTo'+soTo).value.trim().toUpperCase(); // luôn lưu chữ hoa, khớp đúng cách so sánh phía học sinh
     if(!ma){ showMsg($('ttAdminMaMsg'), 'Mã không được để trống.', 'err'); return; }
     try{
       await maToTuanRef.child('to'+soTo).set(ma);
+      $('ttMaTo'+soTo).value = ma;
       showMsg($('ttAdminMaMsg'), `✅ Đã lưu mã Tổ ${soTo}. Báo mã này cho đúng Tổ trưởng/Tổ phó Tổ ${soTo}.`, 'ok');
     }catch(e){ showMsg($('ttAdminMaMsg'), baoLoi(e), 'err'); }
   });
