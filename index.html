@@ -1495,12 +1495,12 @@ function renderSapXepMenu(){
   const host = $('sapXepMenuBox');
   if(!host) return;
 
-  let h = `<div class="sap-xep-nhom"><div class="sap-xep-tieude">Nhóm chính (4 mục)</div>`;
+  let h = `<div class="sap-xep-nhom"><div class="sap-xep-tieude">Nhóm chính (${thuTuChinh.length} mục)</div>`;
   h += thuTuChinh.map((id,i)=> taoDongSapXep(TAB_DINH_NGHIA[id].icon+' '+TAB_DINH_NGHIA[id].ten, i, thuTuChinh.length)).join('');
   h += `</div>`;
 
   Object.keys(NHOM_TAB).forEach(groupId=>{
-    const ds = thuTuCon[groupId];
+    const ds = thuTuCon[groupId] || NHOM_TAB[groupId]; // phòng vệ: không bao giờ để undefined làm văng lỗi
     h += `<div class="sap-xep-nhom" data-nhom-con="${groupId}">
       <div class="sap-xep-tieude">Mục con — ${esc(TAB_DINH_NGHIA[groupId].ten)}</div>`;
     h += ds.map((id,i)=> taoDongSapXep(SUBTAB_DINH_NGHIA[id].icon+' '+SUBTAB_DINH_NGHIA[id].ten, i, ds.length)).join('');
@@ -1647,7 +1647,10 @@ Object.keys(NHOM_TAB).forEach(nhom=> NHOM_TAB[nhom].forEach(muc=> TAB_CU_SANG_NH
 /* Thứ tự hiển thị THẬT SỰ đang dùng — nạp từ Firebase (dieuHuong2026), nếu chưa có thì
    dùng đúng thứ tự mặc định ở trên. Giáo viên chỉnh thứ tự thì chỉ đổi các biến này. */
 let thuTuChinh = THU_TU_CHINH_MAC_DINH.slice();
-let thuTuCon = { thongtin: NHOM_TAB.thongtin.slice(), hoatdong: NHOM_TAB.hoatdong.slice(), games: NHOM_TAB.games.slice() };
+/* Tự lấy đủ MỌI nhóm từ NHOM_TAB (không liệt kê tay từng nhóm) — để không bao giờ thiếu
+   khóa nào khi sau này thêm nhóm mới, tránh lặp lại lỗi ".map trên undefined". */
+let thuTuCon = {};
+Object.keys(NHOM_TAB).forEach(groupId=>{ thuTuCon[groupId] = NHOM_TAB[groupId].slice(); });
 
 function renderTabsChinh(){
   const host = $('tabsChinh');
@@ -4446,21 +4449,27 @@ function renderTongKetTuan(){
   const host = $('ttLuoiTo');
   if(!host) return;
   host.innerHTML = [1,2,3,4].map(soTo=>{
-    const duLieuTo = totuanState['to'+soTo] || {};
-    const dsTuanId = Object.keys(duLieuTo).sort();
-    const coQuyen = coQuyenSuaTo(soTo);
-    const canBo = banCanSu.filter(x=>{
-      const cv = chuanTen(x.chucVu);
-      return cv.includes('tổ trưởng tổ '+soTo) || cv.includes('tổ phó tổ '+soTo);
-    });
-    return `<div class="tt-the-to">
-      <div class="tt-to-tieude">
-        <span>🚩 Tổ ${soTo}</span>
-        ${coQuyen ? `<button class="btn btn-primary btn-sm" data-them-tuan="${soTo}">+ Thêm Tuần ${dsTuanId.length+1}</button>` : ''}
-      </div>
-      <div class="tt-to-canbo">${canBo.length ? canBo.map(x=> esc(x.chucVu)+': '+esc(x.hoTen)).join(' · ') : 'Chưa có tổ trưởng/tổ phó'}</div>
-      ${dsTuanId.length ? dsTuanId.map((id,i)=> taoTheTuan(soTo, id, duLieuTo[id], i+1, coQuyen)).join('') : '<p class="section-note">Chưa có tổng kết tuần nào.</p>'}
-    </div>`;
+    try{
+      const duLieuTo = totuanState['to'+soTo] || {};
+      const dsTuanId = Object.keys(duLieuTo).sort();
+      const coQuyen = coQuyenSuaTo(soTo);
+      const canBo = banCanSu.filter(x=>{
+        const cv = chuanTen(x.chucVu);
+        return cv.includes('tổ trưởng tổ '+soTo) || cv.includes('tổ phó tổ '+soTo);
+      });
+      return `<div class="tt-the-to">
+        <div class="tt-to-tieude">
+          <span>🚩 Tổ ${soTo}</span>
+          ${coQuyen ? `<button class="btn btn-primary btn-sm" data-them-tuan="${soTo}">+ Thêm Tuần ${dsTuanId.length+1}</button>` : ''}
+        </div>
+        <div class="tt-to-canbo">${canBo.length ? canBo.map(x=> esc(x.chucVu)+': '+esc(x.hoTen)).join(' · ') : 'Chưa có tổ trưởng/tổ phó'}</div>
+        ${dsTuanId.length ? dsTuanId.map((id,i)=> taoTheTuan(soTo, id, duLieuTo[id] || {}, i+1, coQuyen)).join('') : '<p class="section-note">Chưa có tổng kết tuần nào.</p>'}
+      </div>`;
+    }catch(loi){
+      console.error('Lỗi hiển thị Tổ '+soTo+':', loi);
+      return `<div class="tt-the-to"><div class="tt-to-tieude"><span>🚩 Tổ ${soTo}</span></div>
+        <p class="msg err show">⚠️ Có lỗi hiển thị Tổ ${soTo}: ${esc(loi.message||String(loi))} — báo thầy chụp lại dòng này.</p></div>`;
+    }
   }).join('');
 
   host.querySelectorAll('[data-them-tuan]').forEach(b=> b.onclick = ()=> moModalThemTuan(+b.getAttribute('data-them-tuan')));
