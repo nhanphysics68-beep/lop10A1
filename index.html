@@ -4485,6 +4485,13 @@ function renderQuyenCuaToi(){
 }
 
 /* -------------------- ADMIN: đặt mã xác nhận cho từng Tổ -------------------- */
+function sinhMaNgauNhien(){
+  // Bỏ các ký tự dễ nhầm khi đọc/gõ tay: 0/O, 1/I/L
+  const bangChu = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let ma = '';
+  for(let i=0;i<6;i++) ma += bangChu[Math.floor(Math.random()*bangChu.length)];
+  return ma;
+}
 let maToTuanState = {};
 let daDangKyMaToTuan = false;
 function renderAdminMaTo(){
@@ -4502,8 +4509,13 @@ function renderAdminMaTo(){
     <div class="tt-admin-ma-hang">
       <label>Tổ ${soTo}:</label>
       <input type="text" id="ttMaTo${soTo}" placeholder="Mã xác nhận" value="${esc(maToTuanState['to'+soTo]||'')}">
+      <button class="btn btn-clay btn-sm" data-sinh-ma="${soTo}" title="Sinh mã ngẫu nhiên">🎲 Sinh mã</button>
       <button class="btn btn-blue btn-sm" data-luu-ma="${soTo}">Lưu</button>
     </div>`).join('');
+  host.querySelectorAll('[data-sinh-ma]').forEach(b=> b.onclick = ()=>{
+    const soTo = b.getAttribute('data-sinh-ma');
+    $('ttMaTo'+soTo).value = sinhMaNgauNhien();
+  });
   host.querySelectorAll('[data-luu-ma]').forEach(b=> b.onclick = async ()=>{
     const soTo = b.getAttribute('data-luu-ma');
     const ma = $('ttMaTo'+soTo).value.trim();
