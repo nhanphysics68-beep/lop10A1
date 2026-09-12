@@ -4516,6 +4516,9 @@ function moModalThemTuan(soTo, idSua){
   };
 
   $('ttLuuBtn').onclick = async ()=>{
+    const nut = $('ttLuuBtn');
+    nut.disabled = true;
+    showMsg($('ttFormErr'), 'Đang lưu...', 'info');
     const duLieu = {
       uuDiem: $('ttUuDiem').value.trim(),
       hanChe: $('ttHanChe').value.trim(),
@@ -4528,8 +4531,12 @@ function moModalThemTuan(soTo, idSua){
     try{
       if(idSua) await totuanRef.child('to'+soTo).child(idSua).set(duLieu);
       else await totuanRef.child('to'+soTo).push(duLieu);
-      closeModal();
-    }catch(e){ showMsg($('ttFormErr'), baoLoi(e), 'err'); }
+      showMsg($('ttFormErr'), '✅ Đã lưu thành công!', 'ok');
+      setTimeout(closeModal, 500); // để em thấy rõ đã lưu xong trước khi khung tự đóng
+    }catch(e){
+      showMsg($('ttFormErr'), '❌ ' + baoLoi(e), 'err');
+      nut.disabled = false;
+    }
   };
 }
 
