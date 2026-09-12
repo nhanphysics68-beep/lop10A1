@@ -1817,11 +1817,19 @@ $('adminUnlockBtn').onclick = async ()=>{
 };
 $('adminSignOutBtn').onclick = ()=> auth.signOut();
 
+let daDangKyRosterListener = false;
 async function loadRoster(){
-  try{
-    const v = (await rosterRef.once('value')).val();
-    roster = !v ? [] : (Array.isArray(v)? v.filter(Boolean) : Object.values(v));
-  }catch(e){ roster = []; }
+  if(daDangKyRosterListener) return; // đã đăng ký live-update rồi, không cần đăng ký lại
+  daDangKyRosterListener = true;
+  return new Promise(resolve=>{
+    let laLanDau = true;
+    rosterRef.on('value', s=>{
+      const v = s.val();
+      roster = !v ? [] : (Array.isArray(v)? v.filter(Boolean) : Object.values(v));
+      if(laLanDau){ laLanDau = false; resolve(); }
+      else { renderAdmin(); } // các lần sau (có người vừa thêm/sửa danh sách lớp) tự vẽ lại ngay
+    });
+  });
 }
 
 /* ================================================================
