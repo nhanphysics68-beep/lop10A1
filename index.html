@@ -106,9 +106,13 @@
   .tt-admin-ma-hang input{flex:1; min-width:0; padding:6px 8px; border:1px solid var(--line); border-radius:6px; font-size:12.5px;}
   .sap-xep-nhom{margin-bottom:16px;}
   .sap-xep-tieude{font-weight:800; color:var(--leaf-dark); font-size:12.5px; margin-bottom:6px;}
-  .sap-xep-item{display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--line);
+  .sap-xep-item{display:flex; align-items:center; gap:8px; background:#fff; border:1px solid var(--line);
     border-radius:8px; padding:6px 10px; margin-bottom:5px; font-size:13px;}
-  .sap-xep-item span{flex:1;}
+  .sap-xep-icon{flex:none; font-size:15px;}
+  .sap-xep-ten-input{flex:1; min-width:0; border:1.5px solid transparent; background:transparent; padding:4px 6px;
+    border-radius:6px; font-family:inherit; font-size:13px; color:var(--ink);}
+  .sap-xep-ten-input:hover{border-color:var(--line);}
+  .sap-xep-ten-input:focus{outline:none; border-color:var(--leaf); background:#f7fbf8;}
   .btn-len-xuong{background:#fff; border:1.5px solid var(--line); border-radius:6px; width:26px; height:26px;
     font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0;}
   .btn-len-xuong:hover{border-color:var(--leaf); background:#eaf5ee;}
@@ -1534,15 +1538,25 @@ $('bcsThemMoiBtn').onclick = ()=> moModalThemSuaBCS(null);
 /* -------------------- GIÁO VIÊN: sắp xếp thứ tự menu điều hướng -------------------- */
 function doiChoTrongMang(mang, i, j){ const t = mang[i]; mang[i] = mang[j]; mang[j] = t; }
 
+let tenTuyChinhState = {}; // { id_tab_hoac_subtab: "Tên đã đổi", ... } — id không trùng nhau giữa tab chính và mục con
+function tenHienThi(id, dinhNghiaMacDinh){ return tenTuyChinhState[id] || dinhNghiaMacDinh[id].ten; }
+
 async function luuThuTuMenu(){
   try{
-    await dieuHuongRef.set({ nhomChinh: thuTuChinh, nhomCon: thuTuCon });
+    // Luôn kèm theo tenTuyChinh hiện có — vì set() ghi đè cả node, không kèm theo sẽ làm mất tên đã đổi.
+    await dieuHuongRef.set({ nhomChinh: thuTuChinh, nhomCon: thuTuCon, tenTuyChinh: tenTuyChinhState });
   }catch(e){ showMsg($('adminMsg'), baoLoi(e), 'err'); }
 }
+async function luuTenTuyChinh(id, tenMoi){
+  tenTuyChinhState[id] = tenMoi;
+  try{ await dieuHuongRef.child('tenTuyChinh').child(id).set(tenMoi); }
+  catch(e){ showMsg($('adminMsg'), baoLoi(e), 'err'); }
+}
 
-function taoDongSapXep(nhan, i, tongSo, diChuyen){
+function taoDongSapXep(id, icon, i, tongSo, dinhNghiaMacDinh){
   return `<div class="sap-xep-item">
-    <span>${esc(nhan)}</span>
+    <span class="sap-xep-icon">${icon}</span>
+    <input type="text" class="sap-xep-ten-input" data-doiten="${id}" value="${esc(tenHienThi(id, dinhNghiaMacDinh))}">
     <button type="button" class="btn-len-xuong" data-len="${i}" ${i===0?'disabled':''} title="Lên">▲</button>
     <button type="button" class="btn-len-xuong" data-xuong="${i}" ${i===tongSo-1?'disabled':''} title="Xuống">▼</button>
   </div>`;
@@ -1553,17 +1567,30 @@ function renderSapXepMenu(){
   if(!host) return;
 
   let h = `<div class="sap-xep-nhom"><div class="sap-xep-tieude">Nhóm chính (${thuTuChinh.length} mục)</div>`;
-  h += thuTuChinh.map((id,i)=> taoDongSapXep(TAB_DINH_NGHIA[id].icon+' '+TAB_DINH_NGHIA[id].ten, i, thuTuChinh.length)).join('');
+  h += thuTuChinh.map((id,i)=> taoDongSapXep(id, TAB_DINH_NGHIA[id].icon, i, thuTuChinh.length, TAB_DINH_NGHIA)).join('');
   h += `</div>`;
 
   Object.keys(NHOM_TAB).forEach(groupId=>{
     const ds = thuTuCon[groupId] || NHOM_TAB[groupId]; // phòng vệ: không bao giờ để undefined làm văng lỗi
     h += `<div class="sap-xep-nhom" data-nhom-con="${groupId}">
-      <div class="sap-xep-tieude">Mục con — ${esc(TAB_DINH_NGHIA[groupId].ten)}</div>`;
-    h += ds.map((id,i)=> taoDongSapXep(SUBTAB_DINH_NGHIA[id].icon+' '+SUBTAB_DINH_NGHIA[id].ten, i, ds.length)).join('');
+      <div class="sap-xep-tieude">Mục con — ${esc(tenHienThi(groupId, TAB_DINH_NGHIA))}</div>`;
+    h += ds.map((id,i)=> taoDongSapXep(id, SUBTAB_DINH_NGHIA[id].icon, i, ds.length, SUBTAB_DINH_NGHIA)).join('');
     h += `</div>`;
   });
   host.innerHTML = h;
+
+  host.querySelectorAll('[data-doiten]').forEach(input=>{
+    const luuNeuCoDoi = async ()=>{
+      const id = input.getAttribute('data-doiten');
+      const tenMoi = input.value.trim();
+      const dinhNghiaMacDinh = TAB_DINH_NGHIA[id] ? TAB_DINH_NGHIA : SUBTAB_DINH_NGHIA;
+      if(!tenMoi){ input.value = tenHienThi(id, dinhNghiaMacDinh); return; } // không cho để trống
+      if(tenMoi === tenHienThi(id, dinhNghiaMacDinh)) return; // không đổi gì thì khỏi ghi
+      await luuTenTuyChinh(id, tenMoi);
+    };
+    input.onblur = luuNeuCoDoi;
+    input.onkeydown = e=>{ if(e.key === 'Enter') input.blur(); };
+  });
 
   // Nhóm chính
   const khoiChinh = host.querySelector('.sap-xep-nhom:not([data-nhom-con])');
@@ -1715,7 +1742,7 @@ function renderTabsChinh(){
   if(!host) return;
   host.innerHTML = thuTuChinh.map(id=>{
     const d = TAB_DINH_NGHIA[id];
-    return `<button class="tab" data-tab="${id}"><span class="ico">${d.icon}</span>${esc(d.ten)}</button>`;
+    return `<button class="tab" data-tab="${id}"><span class="ico">${d.icon}</span>${esc(tenHienThi(id, TAB_DINH_NGHIA))}</button>`;
   }).join('');
   host.querySelectorAll('.tab').forEach(t=> t.onclick = ()=> moTab(t.dataset.tab));
 }
@@ -1725,7 +1752,7 @@ function renderSubtabsNhom(groupId){
   const ds = thuTuCon[groupId] || NHOM_TAB[groupId];
   host.innerHTML = ds.map(id=>{
     const d = SUBTAB_DINH_NGHIA[id];
-    return `<button class="subtab" data-subtab="${id}"><span class="ico">${d.icon}</span>${esc(d.ten)}</button>`;
+    return `<button class="subtab" data-subtab="${id}"><span class="ico">${d.icon}</span>${esc(tenHienThi(id, SUBTAB_DINH_NGHIA))}</button>`;
   }).join('');
   host.querySelectorAll('.subtab').forEach(st=> st.onclick = ()=> moTab(groupId, st.dataset.subtab));
 }
@@ -5646,6 +5673,7 @@ dieuHuongRef.on('value', s=>{
     const daLuu = v.nhomCon && v.nhomCon[groupId];
     thuTuCon[groupId] = ghepMucMoiVaoCuoi(daLuu, NHOM_TAB[groupId]);
   });
+  tenTuyChinhState = v.tenTuyChinh || {};
   renderToanBoDieuHuong();
   if(tabDangMo) moTab(tabDangMo, subDangMo); else moTab(thuTuChinh[0]);
   if(isAdmin) renderSapXepMenu();
