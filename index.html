@@ -612,6 +612,16 @@
   </div>
 
   <!-- ============ THÀNH VIÊN LỚP 10A1 (dạng thẻ học sinh) ============ -->
+  <div class="panel" id="panel-danhsachhs" data-group="thongtin">
+    <div class="card">
+      <h2>📋 Danh sách học sinh lớp 10A1</h2>
+      <p class="section-note">Danh sách chung của cả lớp — khi giáo viên chỉnh sửa ở đây, các mục khác dùng chung danh sách này (Sơ đồ lớp, Ban cán sự, Các khoản thu đầu năm...) sẽ tự động cập nhật theo.</p>
+      <button class="btn btn-primary btn-sm" id="dshsThemBtn" style="display:none; margin-bottom:12px;">+ Thêm học sinh</button>
+      <div id="dshsMsg" class="msg"></div>
+      <div class="scroll-x"><table id="dshsTable"></table></div>
+    </div>
+  </div>
+
   <div class="panel" id="panel-thanhvien" data-group="thongtin">
     <div class="card">
       <h2>🆔 Thành viên lớp 10A1</h2>
@@ -1652,6 +1662,7 @@ const THU_TU_CHINH_MAC_DINH = ['thongtin', 'hoatdong', 'hoatdongto', 'bangtin', 
 
 const SUBTAB_DINH_NGHIA = {
   sodo:      {icon:'📍', ten:'Sơ đồ lớp'},
+  danhsachhs:{icon:'📋', ten:'Danh sách học sinh'},
   thanhvien: {icon:'🆔', ten:'Thành viên lớp'},
   hoso:      {icon:'🧾', ten:'Hồ sơ đầu năm'},
   bancansu:  {icon:'👥', ten:'Ban cán sự lớp'},
@@ -1668,7 +1679,7 @@ const SUBTAB_DINH_NGHIA = {
   tracnghiem:{icon:'❓', ten:'Trắc nghiệm'},
 };
 const NHOM_TAB = {
-  thongtin: ['sodo', 'thanhvien', 'hoso', 'bancansu', 'caulacbo', 'canhanhs', 'khoanthu'],
+  thongtin: ['sodo', 'danhsachhs', 'thanhvien', 'hoso', 'bancansu', 'caulacbo', 'canhanhs', 'khoanthu'],
   hoatdong: ['laodong', 'khaigiang', 'hotro'],
   hoatdongto: ['tongketTuan'],
   games:    ['quayten', 'duoihinh', 'ghepdoi', 'tracnghiem'],
@@ -1788,15 +1799,15 @@ auth.onAuthStateChanged(async user=>{
 
   if(isAdmin){
     $('adminWho').textContent = 'Đang đăng nhập: ' + (user.email || user.uid);
-    await loadRoster();
     await napHoTroTatCa();
     await napHoSoTatCa();
     await napConfessionChoDuyet();
     await napAiLog();
     await napChsAdmin();
     renderAdmin();
-  } else { roster = []; htTatCa = []; hosoTatCa = []; confessionChoDuyet = []; }
+  } else { htTatCa = []; hosoTatCa = []; confessionChoDuyet = []; }
 
+  await loadRoster(); // công khai cho mọi người, vì "Danh sách học sinh" giờ hiển thị công khai
   await napHoTroCuaToi();
   await napHoSoCuaToi();
   await napDuLieuCaNhanCuaToi();
@@ -1807,6 +1818,7 @@ auth.onAuthStateChanged(async user=>{
   renderTongKetTuan();
   renderQuyenCuaToi();
   renderAdminMaTo();
+  renderDanhSachHS();
 });
 
 $('adminUnlockBtn').onclick = async ()=>{
@@ -1826,10 +1838,86 @@ async function loadRoster(){
     rosterRef.on('value', s=>{
       const v = s.val();
       roster = !v ? [] : (Array.isArray(v)? v.filter(Boolean) : Object.values(v));
+      renderDanhSachHS();
       if(laLanDau){ laLanDau = false; resolve(); }
-      else { renderAdmin(); } // các lần sau (có người vừa thêm/sửa danh sách lớp) tự vẽ lại ngay
+      else { if(isAdmin) renderAdmin(); renderDanhSachKhoanThu(); } // các lần sau (có người vừa thêm/sửa danh sách lớp) tự vẽ lại ngay
     });
   });
+}
+
+/* ================================================================
+   DANH SÁCH HỌC SINH LỚP 10A1 — công khai xem, chỉ giáo viên sửa. Đây là nguồn dữ liệu
+   DUY NHẤT (lop10a1/roster) mà Sơ đồ lớp, Ban cán sự, Các khoản thu đầu năm... đều đang
+   dùng để đối chiếu — sửa ở đây sẽ tự động phản ánh đúng ở mọi nơi khác.
+   LƯU Ý KỸ THUẬT: luôn ghi lại TOÀN BỘ mảng mỗi lần đổi (không ghi từng phần tử theo chỉ số),
+   để tránh rủi ro Firebase hiểu nhầm mảng có khoảng trống thành object khi xóa ở giữa danh sách.
+   ================================================================ */
+function renderDanhSachHS(){
+  const table = $('dshsTable');
+  if(!table) return;
+  const nutThem = $('dshsThemBtn');
+  if(nutThem) nutThem.style.display = isAdmin ? 'inline-block' : 'none';
+
+  let h = `<tr><th>STT</th><th>Họ và tên</th><th>Giới tính</th><th>Ngày sinh</th><th>Dân tộc</th>${isAdmin?'<th></th>':''}</tr>`;
+  if(!roster.length){
+    h += `<tr><td colspan="${isAdmin?6:5}" style="text-align:center;color:var(--ink-soft);">Chưa có dữ liệu danh sách lớp.</td></tr>`;
+  } else {
+    roster.forEach((hs,i)=>{
+      h += `<tr><td>${i+1}</td><td>${esc(hs.name||'')}</td><td>${esc(hs.gender||'')}</td><td>${esc(hs.dob||'')}</td><td>${esc(hs.ethnic||'')}</td>
+        ${isAdmin ? `<td style="white-space:nowrap;">
+          <button class="btn btn-blue btn-sm" data-sua-hs="${i}">Sửa</button>
+          <button class="btn btn-ghost btn-sm" data-xoa-hs="${i}">Xóa</button></td>` : ''}</tr>`;
+    });
+  }
+  table.innerHTML = h;
+
+  table.querySelectorAll('[data-sua-hs]').forEach(b=> b.onclick = ()=> moModalThemSuaHS(+b.getAttribute('data-sua-hs')));
+  table.querySelectorAll('[data-xoa-hs]').forEach(b=> b.onclick = async ()=>{
+    const i = +b.getAttribute('data-xoa-hs');
+    if(!confirm(`Xóa "${roster[i].name}" khỏi danh sách lớp? Không thể hoàn tác.`)) return;
+    try{
+      const dsMoi = roster.slice(); dsMoi.splice(i,1);
+      await rosterRef.set(dsMoi);
+    }catch(e){ showMsg($('dshsMsg'), baoLoi(e), 'err'); }
+  });
+}
+
+$('dshsThemBtn').onclick = ()=> moModalThemSuaHS(null);
+
+function moModalThemSuaHS(idx){
+  const hs = (idx !== null) ? roster[idx] : null;
+  openModal(`<h3>${hs ? 'Sửa' : 'Thêm'} học sinh</h3>
+    <label style="font-size:12.5px;font-weight:700;">Họ và tên</label>
+    <input type="text" id="dshsFTen" maxlength="60" value="${hs?esc(hs.name||''):''}">
+    <label style="font-size:12.5px;font-weight:700;">Giới tính</label>
+    <select id="dshsFGioiTinh">
+      <option value="Nam" ${hs&&hs.gender==='Nam'?'selected':''}>Nam</option>
+      <option value="Nữ" ${hs&&hs.gender==='Nữ'?'selected':''}>Nữ</option>
+    </select>
+    <label style="font-size:12.5px;font-weight:700;">Ngày sinh (vd: 01/01/2011)</label>
+    <input type="text" id="dshsFNgaySinh" maxlength="12" value="${hs?esc(hs.dob||''):''}">
+    <label style="font-size:12.5px;font-weight:700;">Dân tộc</label>
+    <input type="text" id="dshsFDanToc" maxlength="30" value="${hs?esc(hs.ethnic||''):'Kinh'}">
+    <div id="dshsFErr" class="msg err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary btn-sm" id="dshsFLuu">${hs ? 'Lưu' : 'Thêm'}</button>
+    </div>`, 'gen');
+
+  $('dshsFLuu').onclick = async ()=>{
+    const ten = $('dshsFTen').value.trim();
+    const gioiTinh = $('dshsFGioiTinh').value;
+    const ngaySinh = $('dshsFNgaySinh').value.trim();
+    const danToc = $('dshsFDanToc').value.trim();
+    if(!ten){ showMsg($('dshsFErr'), 'Vui lòng nhập họ tên.', 'err'); return; }
+    try{
+      const dsMoi = roster.slice();
+      const banGhi = { name: ten, gender: gioiTinh, dob: ngaySinh, ethnic: danToc };
+      if(idx !== null) dsMoi[idx] = banGhi; else dsMoi.push(banGhi);
+      await rosterRef.set(dsMoi);
+      closeModal();
+    }catch(e){ showMsg($('dshsFErr'), baoLoi(e), 'err'); }
+  };
 }
 
 /* ================================================================
