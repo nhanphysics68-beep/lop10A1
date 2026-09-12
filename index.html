@@ -616,16 +616,12 @@
     <div class="card">
       <h2>📋 Danh sách học sinh lớp 10A1</h2>
       <p class="section-note">Danh sách chung của cả lớp — khi giáo viên chỉnh sửa ở đây, các mục khác dùng chung danh sách này (Sơ đồ lớp, Ban cán sự, Các khoản thu đầu năm...) sẽ tự động cập nhật theo.</p>
-      <div class="field" style="max-width:280px; margin-bottom:12px;">
-        <label>Sắp xếp theo</label>
-        <select id="dshsSapXep">
-          <option value="mac_dinh">Mặc định (theo thứ tự đã nhập)</option>
-          <option value="ten">Tên (A-Z)</option>
-          <option value="chulot">Chữ lót (A-Z)</option>
-          <option value="ho">Họ (A-Z)</option>
-        </select>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+        <button class="btn btn-clay btn-sm" id="dshsDongBoBtn" style="display:none;">🔄 Đồng bộ theo Hồ sơ đầu năm</button>
+        <button class="btn btn-blue btn-sm" id="dshsSapXepBtn">🔤 Sắp xếp A-Z (Tên → Chữ lót → Họ)</button>
+        <button class="btn btn-primary btn-sm" id="dshsLuuThuTuBtn" style="display:none;">💾 Lưu thứ tự này</button>
+        <button class="btn btn-primary btn-sm" id="dshsThemBtn" style="display:none;">+ Thêm học sinh</button>
       </div>
-      <button class="btn btn-primary btn-sm" id="dshsThemBtn" style="display:none; margin-bottom:12px;">+ Thêm học sinh</button>
       <div id="dshsMsg" class="msg"></div>
       <div class="scroll-x"><table id="dshsTable"></table></div>
     </div>
@@ -1869,31 +1865,36 @@ function tachTenVN(hoTenDayDu){
   if(cacTu.length === 1) return {ho:'', chuLot:'', ten:cacTu[0]};
   return { ho: cacTu[0], ten: cacTu[cacTu.length-1], chuLot: cacTu.slice(1,-1).join(' ') };
 }
+/* So sánh A-Z kiểu Việt Nam: Tên trước, trùng Tên thì xét Chữ lót, trùng tiếp thì xét Họ. */
+function soSanhTenVN(a, b){
+  const ta = tachTenVN(a.name), tb = tachTenVN(b.name);
+  return ta.ten.localeCompare(tb.ten, 'vi')
+      || ta.chuLot.localeCompare(tb.chuLot, 'vi')
+      || ta.ho.localeCompare(tb.ho, 'vi');
+}
+
+let dshsThuTuXemTruoc = null; // null = hiện đúng thứ tự roster gốc; có giá trị = đang xem trước thứ tự đã sắp, chưa lưu
 
 function renderDanhSachHS(){
   const table = $('dshsTable');
   if(!table) return;
-  const nutThem = $('dshsThemBtn');
+  const nutThem = $('dshsThemBtn'), nutDongBo = $('dshsDongBoBtn'), nutLuuThuTu = $('dshsLuuThuTuBtn');
   if(nutThem) nutThem.style.display = isAdmin ? 'inline-block' : 'none';
+  if(nutDongBo) nutDongBo.style.display = isAdmin ? 'inline-block' : 'none';
+  if(nutLuuThuTu) nutLuuThuTu.style.display = (isAdmin && dshsThuTuXemTruoc) ? 'inline-block' : 'none';
 
-  // Ghép kèm chỉ số GỐC trong mảng roster (để Sửa/Xóa luôn trỏ đúng người, dù đã sắp xếp lại thứ tự hiển thị)
-  const dsCoChiSo = roster.map((hs,i)=> Object.assign({ _idxGoc:i }, hs, tachTenVN(hs.name)));
-
-  const kieuSapXep = $('dshsSapXep') ? $('dshsSapXep').value : 'mac_dinh';
-  if(kieuSapXep !== 'mac_dinh'){
-    const truong = kieuSapXep === 'ten' ? 'ten' : (kieuSapXep === 'chulot' ? 'chuLot' : 'ho');
-    dsCoChiSo.sort((a,b)=> (a[truong]||'').localeCompare(b[truong]||'', 'vi'));
-  }
+  const dsHienThi = dshsThuTuXemTruoc || roster;
 
   let h = `<tr><th>STT</th><th>Họ và tên</th><th>Giới tính</th><th>Ngày sinh</th><th>Dân tộc</th>${isAdmin?'<th></th>':''}</tr>`;
-  if(!dsCoChiSo.length){
+  if(!dsHienThi.length){
     h += `<tr><td colspan="${isAdmin?6:5}" style="text-align:center;color:var(--ink-soft);">Chưa có dữ liệu danh sách lớp.</td></tr>`;
   } else {
-    dsCoChiSo.forEach((hs,thuTuHienThi)=>{
+    dsHienThi.forEach((hs,thuTuHienThi)=>{
+      const idxGoc = roster.indexOf(hs); // trỏ đúng vị trí thật trong roster, dù đang xem trước thứ tự đã sắp
       h += `<tr><td>${thuTuHienThi+1}</td><td>${esc(hs.name||'')}</td><td>${esc(hs.gender||'')}</td><td>${esc(hs.dob||'')}</td><td>${esc(hs.ethnic||'')}</td>
         ${isAdmin ? `<td style="white-space:nowrap;">
-          <button class="btn btn-blue btn-sm" data-sua-hs="${hs._idxGoc}">Sửa</button>
-          <button class="btn btn-ghost btn-sm" data-xoa-hs="${hs._idxGoc}">Xóa</button></td>` : ''}</tr>`;
+          <button class="btn btn-blue btn-sm" data-sua-hs="${idxGoc}">Sửa</button>
+          <button class="btn btn-ghost btn-sm" data-xoa-hs="${idxGoc}">Xóa</button></td>` : ''}</tr>`;
     });
   }
   table.innerHTML = h;
@@ -1904,11 +1905,54 @@ function renderDanhSachHS(){
     if(!confirm(`Xóa "${roster[i].name}" khỏi danh sách lớp? Không thể hoàn tác.`)) return;
     try{
       const dsMoi = roster.slice(); dsMoi.splice(i,1);
+      dshsThuTuXemTruoc = null;
       await rosterRef.set(dsMoi);
     }catch(e){ showMsg($('dshsMsg'), baoLoi(e), 'err'); }
   });
 }
-if($('dshsSapXep')) $('dshsSapXep').onchange = renderDanhSachHS;
+
+$('dshsSapXepBtn').onclick = ()=>{
+  dshsThuTuXemTruoc = roster.slice().sort(soSanhTenVN);
+  renderDanhSachHS();
+};
+$('dshsLuuThuTuBtn').onclick = async ()=>{
+  if(!dshsThuTuXemTruoc) return;
+  const dsCanLuu = dshsThuTuXemTruoc;
+  dshsThuTuXemTruoc = null; // xóa TRƯỚC khi ghi, để nếu Firebase báo dữ liệu về ngay trong lúc ghi thì vẫn hiện đúng
+  try{
+    await rosterRef.set(dsCanLuu);
+    showMsg($('dshsMsg'), '✅ Đã lưu lại thứ tự mới cho danh sách lớp.', 'ok');
+  }catch(e){ showMsg($('dshsMsg'), baoLoi(e), 'err'); }
+};
+
+/* Đồng bộ Ngày sinh/Giới tính/Dân tộc từ Hồ sơ đầu năm vào đúng người (khớp theo tên) trong
+   danh sách lớp — không đổi/thêm/xóa tên nào, chỉ bổ sung thông tin còn thiếu hoặc sai lệch. */
+$('dshsDongBoBtn').onclick = async ()=>{
+  const btn = $('dshsDongBoBtn');
+  btn.disabled = true;
+  showMsg($('dshsMsg'), 'Đang đồng bộ...', 'info');
+  try{
+    const tatCaHoSo = (await hosoRef.once('value')).val() || {};
+    const dsMoi = roster.slice();
+    let capNhat = 0, khongKhop = 0;
+    Object.values(tatCaHoSo).forEach(raw=>{
+      const hoso = hsTuDangFirebase(raw);
+      if(!hoso || !hoso[3]) return;
+      const tenChuan = chuanTen(hoso[3]);
+      const idx = dsMoi.findIndex(hs=> chuanTen(hs.name) === tenChuan);
+      if(idx === -1){ khongKhop++; return; }
+      dsMoi[idx] = Object.assign({}, dsMoi[idx], {
+        dob: hoso[4] || dsMoi[idx].dob,
+        gender: hoso[5] || dsMoi[idx].gender,
+        ethnic: hoso[12] || dsMoi[idx].ethnic
+      });
+      capNhat++;
+    });
+    await rosterRef.set(dsMoi);
+    showMsg($('dshsMsg'), `✅ Đã đồng bộ ${capNhat} học sinh từ Hồ sơ đầu năm.${khongKhop ? ' ('+khongKhop+' hồ sơ không khớp được tên nào trong danh sách lớp — có thể do gõ tên khác nhau.)' : ''}`, 'ok');
+  }catch(e){ showMsg($('dshsMsg'), baoLoi(e), 'err'); }
+  btn.disabled = false;
+};
 
 $('dshsThemBtn').onclick = ()=> moModalThemSuaHS(null);
 
@@ -1942,6 +1986,7 @@ function moModalThemSuaHS(idx){
       const dsMoi = roster.slice();
       const banGhi = { name: ten, gender: gioiTinh, dob: ngaySinh, ethnic: danToc };
       if(idx !== null) dsMoi[idx] = banGhi; else dsMoi.push(banGhi);
+      dshsThuTuXemTruoc = null; // hủy bản xem trước (nếu có), tránh lẫn dữ liệu cũ/mới
       await rosterRef.set(dsMoi);
       closeModal();
     }catch(e){ showMsg($('dshsFErr'), baoLoi(e), 'err'); }
