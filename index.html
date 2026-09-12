@@ -616,6 +616,15 @@
     <div class="card">
       <h2>📋 Danh sách học sinh lớp 10A1</h2>
       <p class="section-note">Danh sách chung của cả lớp — khi giáo viên chỉnh sửa ở đây, các mục khác dùng chung danh sách này (Sơ đồ lớp, Ban cán sự, Các khoản thu đầu năm...) sẽ tự động cập nhật theo.</p>
+      <div class="field" style="max-width:280px; margin-bottom:12px;">
+        <label>Sắp xếp theo</label>
+        <select id="dshsSapXep">
+          <option value="mac_dinh">Mặc định (theo thứ tự đã nhập)</option>
+          <option value="ten">Tên (A-Z)</option>
+          <option value="chulot">Chữ lót (A-Z)</option>
+          <option value="ho">Họ (A-Z)</option>
+        </select>
+      </div>
       <button class="btn btn-primary btn-sm" id="dshsThemBtn" style="display:none; margin-bottom:12px;">+ Thêm học sinh</button>
       <div id="dshsMsg" class="msg"></div>
       <div class="scroll-x"><table id="dshsTable"></table></div>
@@ -1852,21 +1861,39 @@ async function loadRoster(){
    LƯU Ý KỸ THUẬT: luôn ghi lại TOÀN BỘ mảng mỗi lần đổi (không ghi từng phần tử theo chỉ số),
    để tránh rủi ro Firebase hiểu nhầm mảng có khoảng trống thành object khi xóa ở giữa danh sách.
    ================================================================ */
+/* Tách họ tên tiếng Việt thành 3 phần: Họ (từ đầu), Tên (từ cuối), Chữ lót (các từ ở giữa).
+   VD "Nguyễn Thị Hồng Tím" -> Họ: "Nguyễn", Chữ lót: "Thị Hồng", Tên: "Tím". */
+function tachTenVN(hoTenDayDu){
+  const cacTu = (hoTenDayDu||'').trim().split(/\s+/).filter(Boolean);
+  if(cacTu.length === 0) return {ho:'', chuLot:'', ten:''};
+  if(cacTu.length === 1) return {ho:'', chuLot:'', ten:cacTu[0]};
+  return { ho: cacTu[0], ten: cacTu[cacTu.length-1], chuLot: cacTu.slice(1,-1).join(' ') };
+}
+
 function renderDanhSachHS(){
   const table = $('dshsTable');
   if(!table) return;
   const nutThem = $('dshsThemBtn');
   if(nutThem) nutThem.style.display = isAdmin ? 'inline-block' : 'none';
 
+  // Ghép kèm chỉ số GỐC trong mảng roster (để Sửa/Xóa luôn trỏ đúng người, dù đã sắp xếp lại thứ tự hiển thị)
+  const dsCoChiSo = roster.map((hs,i)=> Object.assign({ _idxGoc:i }, hs, tachTenVN(hs.name)));
+
+  const kieuSapXep = $('dshsSapXep') ? $('dshsSapXep').value : 'mac_dinh';
+  if(kieuSapXep !== 'mac_dinh'){
+    const truong = kieuSapXep === 'ten' ? 'ten' : (kieuSapXep === 'chulot' ? 'chuLot' : 'ho');
+    dsCoChiSo.sort((a,b)=> (a[truong]||'').localeCompare(b[truong]||'', 'vi'));
+  }
+
   let h = `<tr><th>STT</th><th>Họ và tên</th><th>Giới tính</th><th>Ngày sinh</th><th>Dân tộc</th>${isAdmin?'<th></th>':''}</tr>`;
-  if(!roster.length){
+  if(!dsCoChiSo.length){
     h += `<tr><td colspan="${isAdmin?6:5}" style="text-align:center;color:var(--ink-soft);">Chưa có dữ liệu danh sách lớp.</td></tr>`;
   } else {
-    roster.forEach((hs,i)=>{
-      h += `<tr><td>${i+1}</td><td>${esc(hs.name||'')}</td><td>${esc(hs.gender||'')}</td><td>${esc(hs.dob||'')}</td><td>${esc(hs.ethnic||'')}</td>
+    dsCoChiSo.forEach((hs,thuTuHienThi)=>{
+      h += `<tr><td>${thuTuHienThi+1}</td><td>${esc(hs.name||'')}</td><td>${esc(hs.gender||'')}</td><td>${esc(hs.dob||'')}</td><td>${esc(hs.ethnic||'')}</td>
         ${isAdmin ? `<td style="white-space:nowrap;">
-          <button class="btn btn-blue btn-sm" data-sua-hs="${i}">Sửa</button>
-          <button class="btn btn-ghost btn-sm" data-xoa-hs="${i}">Xóa</button></td>` : ''}</tr>`;
+          <button class="btn btn-blue btn-sm" data-sua-hs="${hs._idxGoc}">Sửa</button>
+          <button class="btn btn-ghost btn-sm" data-xoa-hs="${hs._idxGoc}">Xóa</button></td>` : ''}</tr>`;
     });
   }
   table.innerHTML = h;
@@ -1881,6 +1908,7 @@ function renderDanhSachHS(){
     }catch(e){ showMsg($('dshsMsg'), baoLoi(e), 'err'); }
   });
 }
+if($('dshsSapXep')) $('dshsSapXep').onchange = renderDanhSachHS;
 
 $('dshsThemBtn').onclick = ()=> moModalThemSuaHS(null);
 
