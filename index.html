@@ -4465,10 +4465,11 @@ $('ttNhanQuyenBtn').onclick = async ()=>{
   if(!myUid){ showMsg($('ttNhanQuyenMsg'), 'Đang kết nối, thử lại sau vài giây.', 'info'); return; }
   showMsg($('ttNhanQuyenMsg'), 'Đang kiểm tra...', 'info');
   try{
-    const updates = {};
-    updates['nhapMaToTuan2026/to'+soTo] = ma;
-    updates['quyenToTuan2026/to'+soTo+'/'+myUid] = true;
-    await db.ref().update(updates);
+    // Ghi 2 bước TUẦN TỰ riêng biệt (không gộp chung 1 update() nhiều-đường-dẫn) — cách này
+    // đã kiểm chứng hoạt động đúng, trong khi ghi gộp bị Firebase từ chối do không nhận diện
+    // đúng giá trị mã vừa "trình" ra khi so khớp trong cùng 1 lượt ghi.
+    await db.ref('nhapMaToTuan2026/to'+soTo).set(ma);
+    await db.ref('quyenToTuan2026/to'+soTo+'/'+myUid).set(true);
     showMsg($('ttNhanQuyenMsg'), `✅ Đã nhận quyền Tổ ${soTo} thành công! Từ nay máy này tự động có quyền tổng kết tuần cho Tổ ${soTo}, không cần nhập lại mã.`, 'ok');
     $('ttMaXacNhan').value = '';
   }catch(e){ showMsg($('ttNhanQuyenMsg'), '❌ Mã xác nhận không đúng. Kiểm tra lại đúng mã Thầy đã cung cấp cho Tổ này rồi thử lại.', 'err'); }
