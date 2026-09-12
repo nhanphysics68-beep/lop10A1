@@ -617,6 +617,8 @@
       <h2>📋 Danh sách học sinh lớp 10A1</h2>
       <p class="section-note">Danh sách chung của cả lớp — khi giáo viên chỉnh sửa ở đây, các mục khác dùng chung danh sách này (Sơ đồ lớp, Ban cán sự, Các khoản thu đầu năm...) sẽ tự động cập nhật theo.</p>
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+        <button class="btn btn-clay btn-sm" id="dshsNhapExcelBtn" style="display:none;">📤 Nhập từ Excel (danh sách trường)</button>
+        <input type="file" id="dshsNhapExcelInput" accept=".xlsx,.xls" style="display:none;">
         <button class="btn btn-clay btn-sm" id="dshsDongBoBtn" style="display:none;">🔄 Đồng bộ theo Hồ sơ đầu năm</button>
         <button class="btn btn-blue btn-sm" id="dshsSapXepBtn">🔤 Sắp xếp A-Z (Tên → Chữ lót → Họ)</button>
         <button class="btn btn-primary btn-sm" id="dshsLuuThuTuBtn" style="display:none;">💾 Lưu thứ tự này</button>
@@ -1878,9 +1880,10 @@ let dshsThuTuXemTruoc = null; // null = hiện đúng thứ tự roster gốc; c
 function renderDanhSachHS(){
   const table = $('dshsTable');
   if(!table) return;
-  const nutThem = $('dshsThemBtn'), nutDongBo = $('dshsDongBoBtn'), nutLuuThuTu = $('dshsLuuThuTuBtn');
+  const nutThem = $('dshsThemBtn'), nutDongBo = $('dshsDongBoBtn'), nutLuuThuTu = $('dshsLuuThuTuBtn'), nutNhapExcel = $('dshsNhapExcelBtn');
   if(nutThem) nutThem.style.display = isAdmin ? 'inline-block' : 'none';
   if(nutDongBo) nutDongBo.style.display = isAdmin ? 'inline-block' : 'none';
+  if(nutNhapExcel) nutNhapExcel.style.display = isAdmin ? 'inline-block' : 'none';
   if(nutLuuThuTu) nutLuuThuTu.style.display = (isAdmin && dshsThuTuXemTruoc) ? 'inline-block' : 'none';
 
   const dsHienThi = dshsThuTuXemTruoc || roster;
@@ -1924,6 +1927,95 @@ $('dshsLuuThuTuBtn').onclick = async ()=>{
     showMsg($('dshsMsg'), '✅ Đã lưu lại thứ tự mới cho danh sách lớp.', 'ok');
   }catch(e){ showMsg($('dshsMsg'), baoLoi(e), 'err'); }
 };
+
+/* Chuẩn hóa viết hoa đúng chuẩn tên riêng tiếng Việt: mỗi từ viết hoa chữ đầu, còn lại viết thường.
+   VD "NGUYỄN gia bảo" -> "Nguyễn Gia Bảo". */
+function chuanHoaHoaTen(ten){
+  return (ten||'').trim().split(/\s+/).filter(Boolean)
+    .map(tu=> tu.charAt(0).toUpperCase() + tu.slice(1).toLowerCase()).join(' ');
+}
+
+/* Nhập danh sách lớp từ file Excel xuất ra từ hệ thống nhà trường (VNEdu/SMAS...) — tự dò đúng
+   cột theo TÊN TIÊU ĐỀ ("Họ tên", "Ngày sinh", "Giới tính", "Dân tộc") thay vì cố định vị trí cột,
+   để vẫn đọc đúng dù file có thêm/bớt/đổi chỗ cột. Tự bỏ dòng trùng lặp hoàn toàn, tự viết hoa
+   đúng chuẩn tên riêng. Luôn hiện xem trước, chờ Thầy xác nhận mới thật sự ghi đè danh sách cũ. */
+$('dshsNhapExcelBtn').onclick = ()=> $('dshsNhapExcelInput').click();
+$('dshsNhapExcelInput').onchange = async e=>{
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  try{
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, {type:'array'});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+
+    let dongTieuDe = -1, colHoTen = -1, colNgaySinh = -1, colGioiTinh = -1, colDanToc = -1;
+    for(let r=0; r<Math.min(rows.length,10); r++){
+      const idx = rows[r].findIndex(o=> String(o||'').trim()==='Họ tên');
+      if(idx !== -1){
+        dongTieuDe = r; colHoTen = idx;
+        colNgaySinh = rows[r].findIndex(o=> String(o||'').trim()==='Ngày sinh');
+        colGioiTinh = rows[r].findIndex(o=> String(o||'').trim()==='Giới tính');
+        colDanToc   = rows[r].findIndex(o=> String(o||'').trim()==='Dân tộc');
+        break;
+      }
+    }
+    if(dongTieuDe === -1){
+      showMsg($('dshsMsg'), '❌ Không tìm thấy cột "Họ tên" trong file — kiểm tra lại đúng file xuất từ nhà trường.', 'err');
+      return;
+    }
+
+    const dsMoi = [];
+    const daThay = new Set();
+    for(let r=dongTieuDe+1; r<rows.length; r++){
+      const tenTho = rows[r][colHoTen];
+      if(!tenTho || !String(tenTho).trim()) continue;
+      const ten = chuanHoaHoaTen(tenTho);
+      const dob = colNgaySinh!==-1 ? String(rows[r][colNgaySinh]||'').trim() : '';
+      // Sửa đúng theo xác nhận của Thầy: vài dòng trong file gốc bị gõ nhầm năm sinh thành 2026
+      // (trong khi cả lớp sinh năm 2010-2011) — tự động sửa lại thành 2011 khi gặp lỗi này.
+      const dobDaSua = dob.replace(/\/2026$/, '/2011');
+      const gender = colGioiTinh!==-1 ? String(rows[r][colGioiTinh]||'').trim() : '';
+      const ethnic = colDanToc!==-1 ? String(rows[r][colDanToc]||'').trim() : '';
+      const khoaTrung = [ten,dobDaSua,gender,ethnic].join('|');
+      if(daThay.has(khoaTrung)) continue; // bỏ đúng dòng bị lặp hoàn toàn, không phải trùng tên thường
+      daThay.add(khoaTrung);
+      dsMoi.push({name:ten, dob:dobDaSua, gender, ethnic});
+    }
+    if(!dsMoi.length){
+      showMsg($('dshsMsg'), '❌ Không đọc được học sinh nào từ file.', 'err');
+      return;
+    }
+    moModalXacNhanNhapExcel(dsMoi);
+  }catch(err){ showMsg($('dshsMsg'), '❌ Lỗi đọc file: ' + baoLoi(err), 'err'); }
+};
+
+function moModalXacNhanNhapExcel(dsMoi){
+  openModal(`<h3>Xác nhận nhập danh sách từ Excel</h3>
+    <p class="msg err show">⚠️ Việc này sẽ <b>THAY THẾ TOÀN BỘ</b> danh sách học sinh hiện tại (${roster.length} bạn)
+      bằng đúng ${dsMoi.length} bạn đọc được từ file. Xem lại kỹ trước khi xác nhận.</p>
+    <div style="max-height:320px; overflow-y:auto; border:1px solid var(--line); border-radius:8px;">
+      <table style="width:100%; font-size:12px;">
+        <tr><th>STT</th><th>Họ và tên</th><th>Ngày sinh</th><th>Giới tính</th><th>Dân tộc</th></tr>
+        ${dsMoi.map((hs,i)=> `<tr><td>${i+1}</td><td>${esc(hs.name)}</td><td>${esc(hs.dob)}</td><td>${esc(hs.gender)}</td><td>${esc(hs.ethnic)}</td></tr>`).join('')}
+      </table>
+    </div>
+    <div id="dshsNhapErr" class="msg err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary btn-sm" id="dshsNhapXacNhanBtn">Xác nhận, thay thế danh sách</button>
+    </div>`, 'gen');
+
+  $('dshsNhapXacNhanBtn').onclick = async ()=>{
+    try{
+      dshsThuTuXemTruoc = null;
+      await rosterRef.set(dsMoi);
+      closeModal();
+      showMsg($('dshsMsg'), `✅ Đã nhập ${dsMoi.length} học sinh từ Excel, thay thế danh sách cũ.`, 'ok');
+    }catch(e){ showMsg($('dshsNhapErr'), baoLoi(e), 'err'); }
+  };
+}
 
 /* Đồng bộ Ngày sinh/Giới tính/Dân tộc từ Hồ sơ đầu năm vào đúng người (khớp theo tên) trong
    danh sách lớp — không đổi/thêm/xóa tên nào, chỉ bổ sung thông tin còn thiếu hoặc sai lệch. */
