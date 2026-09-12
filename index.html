@@ -3746,44 +3746,93 @@ const BCS_CHUC_VU_CO_SAN = [
 function moModalThemSuaBCS(id){
   const x = id ? banCanSu.find(b=> b.id===id) : null;
   const dsTenHocSinh = roster.map(r=> r.name);
-  const chucVuCoSanKhopSan = x && BCS_CHUC_VU_CO_SAN.includes(x.chucVu);
 
-  openModal(`<h3>${x ? 'Sửa' : 'Thêm'} chức vụ Ban cán sự</h3>
-    <label style="font-size:12.5px;font-weight:700;">Chức vụ</label>
-    <select id="bcsFChucVu">
-      <option value="">— Chọn chức vụ —</option>
-      ${BCS_CHUC_VU_CO_SAN.map(cv=> `<option ${x && x.chucVu===cv ? 'selected':''}>${esc(cv)}</option>`).join('')}
-      <option value="__khac__" ${x && !chucVuCoSanKhopSan ? 'selected':''}>Khác (tự nhập)...</option>
-    </select>
-    <input type="text" id="bcsFChucVuKhac" placeholder="Nhập chức vụ khác" maxlength="60"
-      style="${x && !chucVuCoSanKhopSan ? '' : 'display:none;'} margin-top:6px;"
-      value="${x && !chucVuCoSanKhopSan ? esc(x.chucVu) : ''}">
+  if(x){
+    // SỬA 1 mục đã có sẵn — vẫn 1 chức vụ cho đúng mục đang sửa
+    const chucVuCoSanKhopSan = BCS_CHUC_VU_CO_SAN.includes(x.chucVu);
+    openModal(`<h3>Sửa chức vụ Ban cán sự</h3>
+      <label style="font-size:12.5px;font-weight:700;">Chức vụ</label>
+      <select id="bcsFChucVu">
+        <option value="">— Chọn chức vụ —</option>
+        ${BCS_CHUC_VU_CO_SAN.map(cv=> `<option ${x.chucVu===cv?'selected':''}>${esc(cv)}</option>`).join('')}
+        <option value="__khac__" ${!chucVuCoSanKhopSan?'selected':''}>Khác (tự nhập)...</option>
+      </select>
+      <input type="text" id="bcsFChucVuKhac" placeholder="Nhập chức vụ khác" maxlength="60"
+        style="${!chucVuCoSanKhopSan?'':'display:none;'} margin-top:6px;"
+        value="${!chucVuCoSanKhopSan?esc(x.chucVu):''}">
+      <label style="font-size:12.5px;font-weight:700;">Họ và tên</label>
+      <select id="bcsFHoTen">
+        <option value="">— Chọn tên học sinh —</option>
+        ${dsTenHocSinh.map(ten=> `<option ${x.hoTen===ten?'selected':''}>${esc(ten)}</option>`).join('')}
+      </select>
+      <label style="font-size:12.5px;font-weight:700;">Thứ tự hiển thị</label>
+      <input type="number" id="bcsFThuTu" value="${x.thuTu||0}" min="0">
+      <div id="bcsFErr" class="msg err"></div>
+      <div class="modal-btns">
+        <button class="btn btn-ghost btn-sm" onclick="closeModal()">Hủy</button>
+        <button class="btn btn-primary btn-sm" id="bcsFLuu">Lưu</button>
+      </div>`, 'gen');
+
+    $('bcsFChucVu').onchange = ()=>{
+      $('bcsFChucVuKhac').style.display = ($('bcsFChucVu').value === '__khac__') ? 'block' : 'none';
+    };
+    $('bcsFLuu').onclick = async ()=>{
+      const chonChucVu = $('bcsFChucVu').value;
+      const chucVu = (chonChucVu === '__khac__') ? $('bcsFChucVuKhac').value.trim() : chonChucVu;
+      const hoTen = $('bcsFHoTen').value;
+      const thuTu = parseInt($('bcsFThuTu').value, 10) || 0;
+      if(!chucVu){ showMsg($('bcsFErr'), 'Vui lòng chọn hoặc nhập Chức vụ.', 'err'); return; }
+      if(!hoTen){ showMsg($('bcsFErr'), 'Vui lòng chọn Họ và tên.', 'err'); return; }
+      try{
+        await bcsRef.child(x.id).update({ chucVu, hoTen, thuTu });
+        closeModal();
+      }catch(e){ showMsg($('bcsFErr'), baoLoi(e),'err'); }
+    };
+    return;
+  }
+
+  // THÊM MỚI — chọn được NHIỀU chức vụ cùng lúc cho 1 học sinh (VD vừa Tổ trưởng vừa Lớp phó)
+  openModal(`<h3>Thêm chức vụ Ban cán sự</h3>
     <label style="font-size:12.5px;font-weight:700;">Họ và tên</label>
     <select id="bcsFHoTen">
       <option value="">— Chọn tên học sinh —</option>
-      ${dsTenHocSinh.map(ten=> `<option ${x && x.hoTen===ten ? 'selected':''}>${esc(ten)}</option>`).join('')}
+      ${dsTenHocSinh.map(ten=> `<option>${esc(ten)}</option>`).join('')}
     </select>
-    <label style="font-size:12.5px;font-weight:700;">Thứ tự hiển thị</label>
-    <input type="number" id="bcsFThuTu" value="${x ? (x.thuTu||0) : (banCanSu.length+1)}" min="0">
+    <label style="font-size:12.5px;font-weight:700; display:block; margin-top:10px;">Chức vụ (chọn được nhiều)</label>
+    <div style="max-height:220px; overflow-y:auto; border:1px solid var(--line); border-radius:8px; padding:6px 10px; margin-top:4px;">
+      ${BCS_CHUC_VU_CO_SAN.map(cv=> `<label style="display:flex; align-items:center; gap:8px; padding:4px 0; font-size:13px; font-weight:400;">
+        <input type="checkbox" class="bcsFChucVuCheckbox" value="${esc(cv)}"> ${esc(cv)}
+      </label>`).join('')}
+      <label style="display:flex; align-items:center; gap:8px; padding:4px 0; font-size:13px; font-weight:400;">
+        <input type="checkbox" id="bcsFChucVuKhacCheck"> Khác (tự nhập)...
+      </label>
+    </div>
+    <input type="text" id="bcsFChucVuKhac" placeholder="Nhập chức vụ khác" maxlength="60" style="display:none; margin-top:6px;">
+    <label style="font-size:12.5px;font-weight:700; display:block; margin-top:10px;">Thứ tự hiển thị (bắt đầu từ)</label>
+    <input type="number" id="bcsFThuTu" value="${banCanSu.length+1}" min="0">
     <div id="bcsFErr" class="msg err"></div>
     <div class="modal-btns">
       <button class="btn btn-ghost btn-sm" onclick="closeModal()">Hủy</button>
-      <button class="btn btn-primary btn-sm" id="bcsFLuu">${x ? 'Lưu' : 'Thêm'}</button>
+      <button class="btn btn-primary btn-sm" id="bcsFLuu">Thêm</button>
     </div>`, 'gen');
 
-  $('bcsFChucVu').onchange = ()=>{
-    $('bcsFChucVuKhac').style.display = ($('bcsFChucVu').value === '__khac__') ? 'block' : 'none';
+  $('bcsFChucVuKhacCheck').onchange = ()=>{
+    $('bcsFChucVuKhac').style.display = $('bcsFChucVuKhacCheck').checked ? 'block' : 'none';
   };
   $('bcsFLuu').onclick = async ()=>{
-    const chonChucVu = $('bcsFChucVu').value;
-    const chucVu = (chonChucVu === '__khac__') ? $('bcsFChucVuKhac').value.trim() : chonChucVu;
     const hoTen = $('bcsFHoTen').value;
-    const thuTu = parseInt($('bcsFThuTu').value, 10) || 0;
-    if(!chucVu){ showMsg($('bcsFErr'), 'Vui lòng chọn hoặc nhập Chức vụ.', 'err'); return; }
     if(!hoTen){ showMsg($('bcsFErr'), 'Vui lòng chọn Họ và tên.', 'err'); return; }
+    const dsChucVuChon = [...document.querySelectorAll('.bcsFChucVuCheckbox:checked')].map(cb=> cb.value);
+    if($('bcsFChucVuKhacCheck').checked){
+      const khac = $('bcsFChucVuKhac').value.trim();
+      if(khac) dsChucVuChon.push(khac);
+    }
+    if(!dsChucVuChon.length){ showMsg($('bcsFErr'), 'Vui lòng chọn ít nhất 1 chức vụ.', 'err'); return; }
+    const thuTuBatDau = parseInt($('bcsFThuTu').value, 10) || 0;
     try{
-      if(x) await bcsRef.child(x.id).update({ chucVu, hoTen, thuTu });
-      else  await bcsRef.push({ chucVu, hoTen, thuTu });
+      for(let i=0;i<dsChucVuChon.length;i++){
+        await bcsRef.push({ chucVu: dsChucVuChon[i], hoTen, thuTu: thuTuBatDau + i });
+      }
       closeModal();
     }catch(e){ showMsg($('bcsFErr'), baoLoi(e),'err'); }
   };
