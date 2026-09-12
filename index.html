@@ -94,6 +94,13 @@
   .tt-form-field textarea{width:100%; min-height:60px; padding:8px 10px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13px;}
   .tt-anh-xemtruoc-nho{display:flex; gap:6px; flex-wrap:wrap; margin:6px 0;}
   .tt-anh-xemtruoc-nho img{width:52px; height:52px; object-fit:cover; border-radius:6px; border:1px solid var(--line);}
+  .tt-nhanquyen-hang{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+  .tt-nhanquyen-hang select, .tt-nhanquyen-hang input{padding:9px 12px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13.5px;}
+  .tt-nhanquyen-hang input{flex:1; min-width:160px;}
+  .tt-admin-ma-luoi{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px;}
+  .tt-admin-ma-hang{display:flex; align-items:center; gap:8px; background:#f7fbf8; border:1px solid var(--line); border-radius:8px; padding:8px 10px;}
+  .tt-admin-ma-hang label{font-weight:700; color:var(--leaf-dark); font-size:12.5px; white-space:nowrap;}
+  .tt-admin-ma-hang input{flex:1; min-width:0; padding:6px 8px; border:1px solid var(--line); border-radius:6px; font-size:12.5px;}
   .sap-xep-nhom{margin-bottom:16px;}
   .sap-xep-tieude{font-weight:800; color:var(--leaf-dark); font-size:12.5px; margin-bottom:6px;}
   .sap-xep-item{display:flex; align-items:center; gap:10px; background:#fff; border:1px solid var(--line);
@@ -783,6 +790,29 @@
       <h2>📊 Tổng kết tuần theo Tổ</h2>
       <p class="section-note">Tổ trưởng/Tổ phó của từng Tổ tổng kết vào thứ 6 hàng tuần — mỗi lần thêm sẽ tự đánh số Tuần kế tiếp, hiển thị dồn dần xuống dưới.</p>
     </div>
+
+    <!-- Nhận quyền chỉnh sửa — thay cho cách đối chiếu tên cũ, được Firebase xác thực thật -->
+    <div class="card" id="ttNhanQuyenCard">
+      <h2>🔑 Nhận quyền Tổ trưởng / Tổ phó</h2>
+      <p class="section-note">Tổ trưởng, Tổ phó nhập đúng mã xác nhận Thầy cung cấp — chỉ cần làm 1 lần trên máy đang dùng, lần sau tự động có quyền, không cần nhập lại.</p>
+      <div class="tt-nhanquyen-hang">
+        <select id="ttChonToNhanQuyen">
+          <option value="1">Tổ 1</option><option value="2">Tổ 2</option><option value="3">Tổ 3</option><option value="4">Tổ 4</option>
+        </select>
+        <input type="password" id="ttMaXacNhan" placeholder="Nhập mã xác nhận">
+        <button class="btn btn-primary btn-sm" id="ttNhanQuyenBtn">Xác nhận</button>
+      </div>
+      <div id="ttNhanQuyenMsg" class="msg"></div>
+      <div id="ttQuyenCuaToi" class="section-note"></div>
+    </div>
+
+    <!-- Admin: đặt/đổi mã xác nhận cho từng Tổ -->
+    <div class="card" id="ttAdminMaCard" style="display:none;">
+      <h2>⚙️ Đặt mã xác nhận cho từng Tổ (chỉ giáo viên)</h2>
+      <div id="ttAdminMaLuoi" class="tt-admin-ma-luoi"></div>
+      <div id="ttAdminMaMsg" class="msg"></div>
+    </div>
+
     <div id="ttLuoiTo" class="tt-luoi-to"></div>
   </div>
 
@@ -1297,6 +1327,9 @@ const clbDiemRef = db.ref('clbDiem2026');   // điểm uy tín đóng góp — c
 const chsRef = db.ref('hosocanhan2026');    // dữ liệu cá nhân học sinh — riêng tư, giống hoso2026
 const thanhVienRef = db.ref('thanhvien2026'); // bản CÔNG KHAI rút gọn (ảnh thẻ, tên, giới tính, ngày sinh) — không có CCCD/thành tích
 const totuanRef = db.ref('totuan2026'); // tổng kết tuần theo Tổ — công khai đọc, tổ trưởng/tổ phó (đối chiếu tên) hoặc admin mới ghi được
+const maToTuanRef = db.ref('matoTuan2026');       // mã xác nhận từng Tổ — chỉ admin xem/đặt
+const quyenToTuanRef = db.ref('quyenToTuan2026'); // ai đã được cấp quyền Tổ nào — công khai đọc
+const nhapMaToTuanRef = db.ref('nhapMaToTuan2026'); // nhánh tạm để Rules so khớp mã, không cần đọc lại
 const khoanThuRef = db.ref('khoanthu2026'); // các khoản thu đầu năm — công khai đọc, mỗi người tự ghi phần của mình
 const hosoRef   = db.ref('hoso2026/hoso');         // riêng tư: khóa theo uid, giống hotro2026
 
@@ -1772,6 +1805,8 @@ auth.onAuthStateChanged(async user=>{
   renderDanhSachKhoanThu();
   renderThanhVien();
   renderTongKetTuan();
+  renderQuyenCuaToi();
+  renderAdminMaTo();
 });
 
 $('adminUnlockBtn').onclick = async ()=>{
@@ -4414,14 +4449,69 @@ function tenCuaToiTheoSeats(){
   const ghe = Object.values(seats).find(s=> s && s.uid === myUid);
   return ghe ? ghe.name : null;
 }
+/* Phân quyền THẬT qua "mã xác nhận" — Tổ trưởng/Tổ phó nhập đúng mã 1 lần, được Firebase Rules
+   xác thực và cấp quyền vĩnh viễn cho đúng thiết bị đó (không còn đối chiếu tên như trước). */
+let quyenToTuanState = {}; // { to1: {uid1:true, uid2:true}, to2: {...}, ... }
 function coQuyenSuaTo(soTo){
   if(isAdmin) return true;
-  const tenToi = tenCuaToiTheoSeats();
-  if(!tenToi) return false;
-  const tenToiChuan = chuanTen(tenToi);
-  return banCanSu.some(x=>{
-    const cv = chuanTen(x.chucVu);
-    return chuanTen(x.hoTen) === tenToiChuan && (cv.includes('tổ trưởng tổ '+soTo) || cv.includes('tổ phó tổ '+soTo));
+  if(!myUid) return false;
+  return !!(quyenToTuanState['to'+soTo] && quyenToTuanState['to'+soTo][myUid]);
+}
+
+$('ttNhanQuyenBtn').onclick = async ()=>{
+  const soTo = $('ttChonToNhanQuyen').value;
+  const ma = $('ttMaXacNhan').value.trim();
+  if(!ma){ showMsg($('ttNhanQuyenMsg'), 'Vui lòng nhập mã xác nhận.', 'err'); return; }
+  if(!myUid){ showMsg($('ttNhanQuyenMsg'), 'Đang kết nối, thử lại sau vài giây.', 'info'); return; }
+  showMsg($('ttNhanQuyenMsg'), 'Đang kiểm tra...', 'info');
+  try{
+    const updates = {};
+    updates['nhapMaToTuan2026/to'+soTo] = ma;
+    updates['quyenToTuan2026/to'+soTo+'/'+myUid] = true;
+    await db.ref().update(updates);
+    showMsg($('ttNhanQuyenMsg'), `✅ Đã nhận quyền Tổ ${soTo} thành công! Từ nay máy này tự động có quyền tổng kết tuần cho Tổ ${soTo}, không cần nhập lại mã.`, 'ok');
+    $('ttMaXacNhan').value = '';
+  }catch(e){ showMsg($('ttNhanQuyenMsg'), '❌ Mã xác nhận không đúng. Kiểm tra lại đúng mã Thầy đã cung cấp cho Tổ này rồi thử lại.', 'err'); }
+};
+
+function renderQuyenCuaToi(){
+  const box = $('ttQuyenCuaToi');
+  if(!box) return;
+  if(isAdmin){ box.textContent = 'Thầy (quản trị) luôn có quyền chỉnh sửa mọi Tổ.'; return; }
+  const dsTo = [1,2,3,4].filter(soTo=> coQuyenSuaTo(soTo));
+  box.textContent = dsTo.length
+    ? `Máy này hiện có quyền tổng kết tuần cho: ${dsTo.map(t=>'Tổ '+t).join(', ')}.`
+    : 'Máy này chưa được cấp quyền tổng kết tuần cho Tổ nào.';
+}
+
+/* -------------------- ADMIN: đặt mã xác nhận cho từng Tổ -------------------- */
+let maToTuanState = {};
+let daDangKyMaToTuan = false;
+function renderAdminMaTo(){
+  const box = $('ttAdminMaCard');
+  if(!box) return;
+  box.style.display = isAdmin ? 'block' : 'none';
+  if(!isAdmin) return;
+  if(!daDangKyMaToTuan){
+    daDangKyMaToTuan = true;
+    maToTuanRef.on('value', s=>{ maToTuanState = s.val() || {}; renderAdminMaTo(); });
+    return; // lần gọi này sẽ được listener ở trên gọi lại ngay khi có dữ liệu
+  }
+  const host = $('ttAdminMaLuoi');
+  host.innerHTML = [1,2,3,4].map(soTo=> `
+    <div class="tt-admin-ma-hang">
+      <label>Tổ ${soTo}:</label>
+      <input type="text" id="ttMaTo${soTo}" placeholder="Mã xác nhận" value="${esc(maToTuanState['to'+soTo]||'')}">
+      <button class="btn btn-blue btn-sm" data-luu-ma="${soTo}">Lưu</button>
+    </div>`).join('');
+  host.querySelectorAll('[data-luu-ma]').forEach(b=> b.onclick = async ()=>{
+    const soTo = b.getAttribute('data-luu-ma');
+    const ma = $('ttMaTo'+soTo).value.trim();
+    if(!ma){ showMsg($('ttAdminMaMsg'), 'Mã không được để trống.', 'err'); return; }
+    try{
+      await maToTuanRef.child('to'+soTo).set(ma);
+      showMsg($('ttAdminMaMsg'), `✅ Đã lưu mã Tổ ${soTo}. Báo mã này cho đúng Tổ trưởng/Tổ phó Tổ ${soTo}.`, 'ok');
+    }catch(e){ showMsg($('ttAdminMaMsg'), baoLoi(e), 'err'); }
   });
 }
 
@@ -4552,6 +4642,11 @@ function moModalThemTuan(soTo, idSua){
 totuanRef.on('value', s=>{
   totuanState = s.val() || {};
   renderTongKetTuan();
+});
+quyenToTuanRef.on('value', s=>{
+  quyenToTuanState = s.val() || {};
+  renderTongKetTuan();
+  renderQuyenCuaToi();
 });
 
 
