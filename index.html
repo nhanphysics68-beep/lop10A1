@@ -1065,6 +1065,7 @@
 
     <div class="card" id="ktDanhSachCard" style="display:none;">
       <h2>📋 Danh sách (chỉ giáo viên xem)</h2>
+      <button class="btn btn-clay btn-sm" id="ktXuatExcelBtn" style="margin-bottom:10px;">📊 Xuất Excel</button>
       <div class="scroll-x"><table id="ktDanhSachTable"></table></div>
     </div>
   </div>
@@ -4787,6 +4788,35 @@ async function renderDanhSachKhoanThu(){
       btn.onclick = ()=> moXemAnhChuyenKhoan(btn.getAttribute('data-xem-anh'), 'minhchung'));
   }catch(e){ $('ktDanhSachTable').innerHTML = `<tr><td>${baoLoi(e)}</td></tr>`; }
 }
+
+$('ktXuatExcelBtn') && ($('ktXuatExcelBtn').onclick = async ()=>{
+  const btn = $('ktXuatExcelBtn');
+  btn.disabled = true;
+  try{
+    const v = (await khoanThuRef.once('value')).val() || {};
+    const dsNop = Object.keys(v).map(uid=> Object.assign({uid}, v[uid]));
+    const theoTen = new Map(dsNop.map(x=> [chuanTen(x.hoTen), x]));
+
+    const headers = ['STT','Họ và tên','Ngày sinh','Giới tính','Dân tộc', ...KHOAN_THU_DINH_NGHIA.map(k=> k.ten)];
+    const rows = [headers];
+    if(roster.length){
+      roster.forEach((hs,i)=>{
+        const dn = theoTen.get(chuanTen(hs.name));
+        const row = [i+1, hs.name||'', hs.dob||'', hs.gender||'', hs.ethnic||''];
+        KHOAN_THU_DINH_NGHIA.forEach(k=>{
+          row.push((dn && dn.cacKhoanDong && dn.cacKhoanDong[k.id]) ? 'x' : '');
+        });
+        rows.push(row);
+      });
+    }
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:5},{wch:24},{wch:12},{wch:9},{wch:10}, ...KHOAN_THU_DINH_NGHIA.map(()=>({wch:16}))];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Khoan thu dau nam');
+    XLSX.writeFile(wb, `khoan-thu-dau-nam-10A1-${new Date().toISOString().slice(0,10)}.xlsx`);
+  }catch(e){ alert(baoLoi(e)); }
+  btn.disabled = false;
+});
 
 function moXemAnhChuyenKhoan(uid, loai){
   const dn = ktDuLieuAdmin[uid];
