@@ -110,6 +110,9 @@
   .pt-anh-luoi{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
   .pt-anh-luoi img{width:70px; height:70px; object-fit:cover; border-radius:8px; border:1px solid var(--line); cursor:pointer;}
   .tt-nhanquyen-hang{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+  .hang-nhap-vitri{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:8px;}
+  .hang-nhap-vitri input{padding:9px 12px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13.5px; flex:1; min-width:180px;}
+  .vt-khoangcach{font-weight:800; color:#b45309;}
   .tt-nhanquyen-hang select, .tt-nhanquyen-hang input{padding:9px 12px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13.5px;}
   .tt-nhanquyen-hang input{flex:1; min-width:160px;}
   .tt-admin-ma-luoi{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px;}
@@ -648,6 +651,48 @@
     </div>
   </div>
 
+  <!-- ============ VỊ TRÍ — KHOẢNG CÁCH TỪ NHÀ ĐẾN TRƯỜNG ============ -->
+  <div class="panel" id="panel-vitri" data-group="thongtin">
+    <div class="card">
+      <h2>🗺️ Vị trí nhà — Khoảng cách đến trường</h2>
+      <p class="section-note">
+        <b>Cách lấy vị trí từ Zalo:</b> mở Zalo → chọn cuộc trò chuyện bất kỳ (VD nhắn cho chính mình) →
+        bấm biểu tượng đính kèm (+) → chọn <b>"Vị trí"</b> → xác nhận đúng vị trí nhà mình trên bản đồ hiện ra →
+        gửi đi → nhấn giữ vào tin nhắn vị trí đó → chọn <b>"Chuyển tiếp"</b> hoặc <b>"Sao chép liên kết"</b> →
+        dán liên kết đó vào ô bên dưới.<br>
+        <i>Khoảng cách hiển thị được tính theo <b>đường đi thật</b> (không phải đường thẳng) qua dịch vụ bản đồ
+        OpenRouteService. 🛣️ = đã tính đường thật, 📏 = tạm tính đường chim bay (khi dịch vụ bận/lỗi).</i>
+      </p>
+      <div class="hang-nhap-vitri">
+        <input type="text" id="vtNhapLink" placeholder="Dán liên kết vị trí từ Zalo vào đây">
+        <button class="btn btn-primary btn-sm" id="vtXacNhanBtn">Xác nhận vị trí</button>
+      </div>
+      <div id="vtMsg" class="msg"></div>
+      <p class="section-note" id="vtKhongDocDuoc" style="display:none;">
+        Không tự đọc được liên kết này. Thầy/em thử cách khác: mở liên kết đó trong trình duyệt, xem trên
+        thanh địa chỉ có 2 số cách nhau bởi dấu phẩy (VD "10.762622,106.660172") — copy đúng 2 số đó
+        (bỏ hết chữ khác) rồi dán lại vào đúng ô nhập ở trên.
+      </p>
+    </div>
+
+    <div class="card" id="vtAdminCard" style="display:none;">
+      <h2>⚙️ Tọa độ trường (chỉ giáo viên)</h2>
+      <p class="section-note">Lấy tọa độ: mở Google Maps → chuột phải đúng vị trí trường → bấm vào dãy số hiện ra đầu tiên để copy.</p>
+      <div class="hang-nhap-vitri">
+        <input type="text" id="vtTruongLat" placeholder="Vĩ độ (lat)">
+        <input type="text" id="vtTruongLng" placeholder="Kinh độ (lng)">
+        <button class="btn btn-primary btn-sm" id="vtLuuToaDoTruongBtn">Lưu tọa độ trường</button>
+      </div>
+      <div id="vtAdminMsg" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <h2>📋 Danh sách vị trí học sinh</h2>
+      <div class="scroll-x"><table id="vtBang"></table></div>
+      <div id="vtRong" class="empty" style="display:none;">Chưa có bạn nào nộp vị trí.</div>
+    </div>
+  </div>
+
   <div class="panel" id="panel-thanhvien" data-group="thongtin">
     <div class="card">
       <h2>🆔 Thành viên lớp 10A1</h2>
@@ -1065,7 +1110,6 @@
 
     <div class="card" id="ktDanhSachCard" style="display:none;">
       <h2>📋 Danh sách (chỉ giáo viên xem)</h2>
-      <button class="btn btn-clay btn-sm" id="ktXuatExcelBtn" style="margin-bottom:10px;">📊 Xuất Excel</button>
       <div class="scroll-x"><table id="ktDanhSachTable"></table></div>
     </div>
   </div>
@@ -1378,6 +1422,8 @@ const clbDiemRef = db.ref('clbDiem2026');   // điểm uy tín đóng góp — c
 const chsRef = db.ref('hosocanhan2026');    // dữ liệu cá nhân học sinh — riêng tư, giống hoso2026
 const thanhVienRef = db.ref('thanhvien2026'); // bản CÔNG KHAI rút gọn (ảnh thẻ, tên, giới tính, ngày sinh) — không có CCCD/thành tích
 const totuanRef = db.ref('totuan2026'); // tổng kết tuần theo Tổ — công khai đọc, tổ trưởng/tổ phó (đối chiếu tên) hoặc admin mới ghi được
+const vitriRef = db.ref('vitri2026'); // vị trí nhà + khoảng cách đến trường — công khai đọc, mỗi người tự ghi phần của mình
+const caiDatRef = db.ref('caidat2026'); // cài đặt chung (tọa độ trường...) — công khai đọc, chỉ admin ghi
 const maToTuanRef = db.ref('matoTuan2026');       // mã xác nhận từng Tổ — chỉ admin xem/đặt
 const quyenToTuanRef = db.ref('quyenToTuan2026'); // ai đã được cấp quyền Tổ nào — công khai đọc
 const quyenToTuanTenRef = db.ref('quyenToTuanTen2026'); // tên đã xác nhận của người giữ quyền, để hiện đúng "Tuần N — Tên" thay vì "Không rõ"
@@ -1729,6 +1775,7 @@ const THU_TU_CHINH_MAC_DINH = ['thongtin', 'hoatdong', 'hoatdongto', 'bangtin', 
 const SUBTAB_DINH_NGHIA = {
   sodo:      {icon:'📍', ten:'Sơ đồ lớp'},
   danhsachhs:{icon:'📋', ten:'Danh sách học sinh'},
+  vitri:     {icon:'🗺️', ten:'Vị trí'},
   thanhvien: {icon:'🆔', ten:'Thành viên lớp'},
   hoso:      {icon:'🧾', ten:'Hồ sơ đầu năm'},
   bancansu:  {icon:'👥', ten:'Ban cán sự lớp'},
@@ -1746,7 +1793,7 @@ const SUBTAB_DINH_NGHIA = {
   tracnghiem:{icon:'❓', ten:'Trắc nghiệm'},
 };
 const NHOM_TAB = {
-  thongtin: ['sodo', 'danhsachhs', 'thanhvien', 'hoso', 'bancansu', 'caulacbo', 'canhanhs', 'khoanthu'],
+  thongtin: ['sodo', 'danhsachhs', 'vitri', 'thanhvien', 'hoso', 'bancansu', 'caulacbo', 'canhanhs', 'khoanthu'],
   hoatdong: ['laodong', 'phongtrao', 'khaigiang', 'hotro'],
   hoatdongto: ['tongketTuan'],
   games:    ['quayten', 'duoihinh', 'ghepdoi', 'tracnghiem'],
@@ -1886,6 +1933,7 @@ auth.onAuthStateChanged(async user=>{
   renderQuyenCuaToi();
   renderAdminMaTo();
   renderDanhSachHS();
+  renderVtAdmin();
 });
 
 $('adminUnlockBtn').onclick = async ()=>{
@@ -1906,6 +1954,7 @@ async function loadRoster(){
       const v = s.val();
       roster = !v ? [] : (Array.isArray(v)? v.filter(Boolean) : Object.values(v));
       renderDanhSachHS();
+      renderVitriBang();
       if(laLanDau){ laLanDau = false; resolve(); }
       else { if(isAdmin) renderAdmin(); renderDanhSachKhoanThu(); } // các lần sau (có người vừa thêm/sửa danh sách lớp) tự vẽ lại ngay
     });
@@ -4789,35 +4838,6 @@ async function renderDanhSachKhoanThu(){
   }catch(e){ $('ktDanhSachTable').innerHTML = `<tr><td>${baoLoi(e)}</td></tr>`; }
 }
 
-$('ktXuatExcelBtn') && ($('ktXuatExcelBtn').onclick = async ()=>{
-  const btn = $('ktXuatExcelBtn');
-  btn.disabled = true;
-  try{
-    const v = (await khoanThuRef.once('value')).val() || {};
-    const dsNop = Object.keys(v).map(uid=> Object.assign({uid}, v[uid]));
-    const theoTen = new Map(dsNop.map(x=> [chuanTen(x.hoTen), x]));
-
-    const headers = ['STT','Họ và tên','Ngày sinh','Giới tính','Dân tộc', ...KHOAN_THU_DINH_NGHIA.map(k=> k.ten)];
-    const rows = [headers];
-    if(roster.length){
-      roster.forEach((hs,i)=>{
-        const dn = theoTen.get(chuanTen(hs.name));
-        const row = [i+1, hs.name||'', hs.dob||'', hs.gender||'', hs.ethnic||''];
-        KHOAN_THU_DINH_NGHIA.forEach(k=>{
-          row.push((dn && dn.cacKhoanDong && dn.cacKhoanDong[k.id]) ? 'x' : '');
-        });
-        rows.push(row);
-      });
-    }
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [{wch:5},{wch:24},{wch:12},{wch:9},{wch:10}, ...KHOAN_THU_DINH_NGHIA.map(()=>({wch:16}))];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Khoan thu dau nam');
-    XLSX.writeFile(wb, `khoan-thu-dau-nam-10A1-${new Date().toISOString().slice(0,10)}.xlsx`);
-  }catch(e){ alert(baoLoi(e)); }
-  btn.disabled = false;
-});
-
 function moXemAnhChuyenKhoan(uid, loai){
   const dn = ktDuLieuAdmin[uid];
   if(!dn) return;
@@ -4843,6 +4863,151 @@ function moXemAnhChuyenKhoan(uid, loai){
     </div>`;
   $('ktXemAnhModal').classList.add('show');
 }
+
+
+/* ================================================================
+   VỊ TRÍ — KHOẢNG CÁCH TỪ NHÀ ĐẾN TRƯỜNG (theo xe máy, dùng Google Distance Matrix API)
+   Học sinh dán liên kết vị trí chia sẻ từ Zalo, hệ thống tự tách tọa độ, tính khoảng cách đến
+   tọa độ trường (do admin cài đặt), lưu lại. Bảng hiển thị lấy Giới tính/Ngày sinh/Dân tộc từ
+   "Danh sách học sinh" (roster) — công khai, khớp theo tên — không đụng đến Hồ sơ đầu năm
+   (dữ liệu riêng tư của từng em, không được phép đọc chéo giữa các em).
+   ================================================================ */
+let vitriState = {};
+
+/* Tách tọa độ (lat,lng) từ 1 đường link Google Maps / Zalo chia sẻ, thử lần lượt nhiều kiểu
+   định dạng phổ biến nhất, ưu tiên kiểu đáng tin cậy nhất trước. */
+function tachToaDoTuLienKet(vanBan){
+  const s = String(vanBan||'').trim();
+  const cacMau = [
+    /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,                    // dạng đầy đủ trong URL Google Maps ("...!3d10.76!4d106.66...")
+    /[?&](?:q|ll|query)=(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/, // dạng ?q=lat,lng hoặc ?ll=lat,lng
+    /@(-?\d+\.\d+),(-?\d+\.\d+)/,                         // dạng /@lat,lng,zoom
+    /^(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)$/,                  // chỉ gõ/dán đúng "lat,lng"
+  ];
+  for(const mau of cacMau){
+    const kq = s.match(mau);
+    if(kq) return { lat: parseFloat(kq[1]), lng: parseFloat(kq[2]) };
+  }
+  return null;
+}
+
+/* Tính khoảng cách ĐƯỜNG CHIM BAY (đường thẳng) bằng công thức Haversine — dùng làm phương án dự
+   phòng khi chưa cấu hình OpenRouteService, hoặc khi OpenRouteService báo lỗi (VD quá xa/hết hạn mức). */
+function tinhKhoangCachDuongChim(diemBatDau, diemKetThuc){
+  const R = 6371; // bán kính Trái Đất (km)
+  const dLat = (diemKetThuc.lat - diemBatDau.lat) * Math.PI/180;
+  const dLng = (diemKetThuc.lng - diemBatDau.lng) * Math.PI/180;
+  const a = Math.sin(dLat/2)**2
+    + Math.cos(diemBatDau.lat*Math.PI/180) * Math.cos(diemKetThuc.lat*Math.PI/180) * Math.sin(dLng/2)**2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const khoangCachKm = R * c;
+  const TOC_DO_UOC_LUONG_KMH = 30;
+  return { khoangCachKm, thoiGianPhut: Math.round((khoangCachKm / TOC_DO_UOC_LUONG_KMH) * 60), duongThat: false };
+}
+
+/* Tính khoảng cách ĐI ĐƯỜNG THẬT (theo đúng đường xá, không phải đường thẳng) bằng OpenRouteService —
+   dịch vụ bản đồ miễn phí, chỉ cần đăng ký email, không cần khai báo thẻ ngân hàng. Dùng chế độ
+   "driving-car" — OpenRouteService chưa có chế độ riêng cho xe máy, đây là chế độ gần đúng nhất.
+   Nếu chưa cấu hình API Key (hoặc dịch vụ báo lỗi), tự động dùng tạm đường chim bay để tính năng
+   vẫn hoạt động được, có đánh dấu rõ trong dữ liệu lưu để phân biệt. */
+const ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6Ijc0MTU0NjE0NjM3ZjRjMTc4OGFiNzc3Y2Q2NGE5Yjg2IiwiaCI6Im11cm11cjY0In0=';
+function dungORS(){ return ORS_API_KEY && !ORS_API_KEY.includes('DIEN_'); }
+async function tinhKhoangCachXeMay(diemBatDau, diemKetThuc){
+  if(!dungORS()) return tinhKhoangCachDuongChim(diemBatDau, diemKetThuc);
+  try{
+    const url = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${encodeURIComponent(ORS_API_KEY)}&start=${diemBatDau.lng},${diemBatDau.lat}&end=${diemKetThuc.lng},${diemKetThuc.lat}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if(!resp.ok || !data.features || !data.features[0]) throw new Error('Không tính được đường đi.');
+    const doan = data.features[0].properties.segments[0];
+    return { khoangCachKm: doan.distance/1000, thoiGianPhut: Math.round(doan.duration/60), duongThat: true };
+  }catch(e){
+    return tinhKhoangCachDuongChim(diemBatDau, diemKetThuc); // dịch vụ lỗi/hết hạn mức -> tạm dùng đường chim bay, không chặn học sinh nộp
+  }
+}
+
+$('vtXacNhanBtn').onclick = async ()=>{
+  const link = $('vtNhapLink').value.trim();
+  $('vtKhongDocDuoc').style.display = 'none';
+  if(!link){ showMsg($('vtMsg'), 'Vui lòng dán liên kết vị trí.', 'err'); return; }
+  const toaDo = tachToaDoTuLienKet(link);
+  if(!toaDo){
+    showMsg($('vtMsg'), '❌ Không đọc được tọa độ từ liên kết này.', 'err');
+    $('vtKhongDocDuoc').style.display = 'block';
+    return;
+  }
+  if(!myUid){ showMsg($('vtMsg'), 'Đang kết nối, thử lại sau vài giây.', 'info'); return; }
+  try{
+    const toaDoTruong = (await caiDatRef.child('toaDoTruong').once('value')).val();
+    if(!toaDoTruong || toaDoTruong.lat == null){
+      showMsg($('vtMsg'), 'Thầy chưa cài đặt tọa độ trường — báo Thầy vào mục này cài đặt trước.', 'err');
+      return;
+    }
+    showMsg($('vtMsg'), 'Đang tính khoảng cách...', 'info');
+    const kq = await tinhKhoangCachXeMay(toaDo, toaDoTruong);
+    const hoTen = tenCuaToiTheoSeats() || (isAdmin ? 'Giáo viên chủ nhiệm' : 'Không rõ');
+    await vitriRef.child(myUid).set({
+      hoTen, lat: toaDo.lat, lng: toaDo.lng,
+      khoangCachKm: Math.round(kq.khoangCachKm*10)/10,
+      thoiGianPhut: kq.thoiGianPhut,
+      duongThat: !!kq.duongThat,
+      ngayNop: new Date().toISOString()
+    });
+    const kieuTinh = kq.duongThat ? 'đi đường thật' : 'đường chim bay (tạm tính, xem "Xem bản đồ" để biết đường đi thật)';
+    showMsg($('vtMsg'), `✅ Đã lưu! Khoảng cách ${kieuTinh} khoảng ${Math.round(kq.khoangCachKm*10)/10} km, khoảng ${kq.thoiGianPhut} phút.`, 'ok');
+    $('vtNhapLink').value = '';
+  }catch(e){ showMsg($('vtMsg'), '❌ ' + (e.message || baoLoi(e)), 'err'); }
+};
+
+function renderVitriBang(){
+  const table = $('vtBang');
+  if(!table) return;
+  const ds = Object.entries(vitriState);
+  $('vtRong').style.display = ds.length ? 'none' : 'block';
+
+  let h = `<tr><th>Họ và tên</th><th>Giới tính</th><th>Ngày sinh</th><th>Dân tộc</th><th>Khoảng cách</th><th>Thời gian</th><th></th></tr>`;
+  if(ds.length){
+    ds.forEach(([uid,vt])=>{
+      const hsRoster = roster.find(r=> chuanTen(r.name) === chuanTen(vt.hoTen));
+      const nhanKieu = vt.duongThat ? '<span title="Tính theo đường đi thật">🛣️</span>' : '<span title="Tạm tính đường chim bay">📏</span>';
+      h += `<tr><td>${esc(vt.hoTen||'')}</td><td>${esc(hsRoster?hsRoster.gender:'')||'—'}</td>
+        <td>${esc(hsRoster?hsRoster.dob:'')||'—'}</td><td>${esc(hsRoster?hsRoster.ethnic:'')||'—'}</td>
+        <td class="vt-khoangcach">${nhanKieu} ${vt.khoangCachKm!=null ? vt.khoangCachKm+' km' : '—'}</td>
+        <td>${vt.thoiGianPhut!=null ? '~'+vt.thoiGianPhut+' phút' : '—'}</td>
+        <td><button class="btn btn-clay btn-sm" data-vt-xemban-do="${uid}">🗺️ Xem bản đồ</button></td></tr>`;
+    });
+  }
+  table.innerHTML = h;
+  table.querySelectorAll('[data-vt-xemban-do]').forEach(b=> b.onclick = async ()=>{
+    const uid = b.getAttribute('data-vt-xemban-do');
+    const vt = vitriState[uid];
+    const toaDoTruong = (await caiDatRef.child('toaDoTruong').once('value')).val();
+    if(!toaDoTruong){ alert('Chưa có tọa độ trường.'); return; }
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${vt.lat},${vt.lng}&destination=${toaDoTruong.lat},${toaDoTruong.lng}&travelmode=driving`;
+    window.open(url, '_blank');
+  });
+}
+vitriRef.on('value', s=>{ vitriState = s.val() || {}; renderVitriBang(); });
+
+/* -------------------- ADMIN: cài đặt tọa độ trường -------------------- */
+function renderVtAdmin(){
+  const card = $('vtAdminCard');
+  if(!card) return;
+  card.style.display = isAdmin ? 'block' : 'none';
+  if(!isAdmin) return;
+  caiDatRef.child('toaDoTruong').once('value').then(s=>{
+    const td = s.val();
+    if(td){ $('vtTruongLat').value = td.lat; $('vtTruongLng').value = td.lng; }
+  });
+}
+$('vtLuuToaDoTruongBtn').onclick = async ()=>{
+  const lat = parseFloat($('vtTruongLat').value), lng = parseFloat($('vtTruongLng').value);
+  if(isNaN(lat) || isNaN(lng)){ showMsg($('vtAdminMsg'), 'Vui lòng nhập đúng số cho cả 2 ô.', 'err'); return; }
+  try{
+    await caiDatRef.child('toaDoTruong').set({ lat, lng });
+    showMsg($('vtAdminMsg'), '✅ Đã lưu tọa độ trường.', 'ok');
+  }catch(e){ showMsg($('vtAdminMsg'), baoLoi(e), 'err'); }
+};
 
 
 /* ================================================================
