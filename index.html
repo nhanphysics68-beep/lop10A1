@@ -708,6 +708,7 @@
 
     <div class="card">
       <h2>📋 Danh sách vị trí học sinh</h2>
+      <button class="btn btn-blue btn-sm" id="vtSapXepBtn" style="margin-bottom:10px;">🔽 Khoảng cách: Gần → Xa</button>
       <div class="scroll-x"><table id="vtBang"></table></div>
       <div id="vtRong" class="empty" style="display:none;">Chưa có bạn nào nộp vị trí.</div>
     </div>
@@ -5003,11 +5004,22 @@ $('vtXacNhanBtn').onclick = async ()=>{
   }catch(e){ showMsg($('vtMsg'), '❌ ' + (e.message || baoLoi(e)), 'err'); }
 };
 
+let vtSapXepTang = true; // true = Gần -> Xa, false = Xa -> Gần
 function renderVitriBang(){
   const table = $('vtBang');
   if(!table) return;
-  const ds = Object.entries(vitriState);
+  // Sắp xếp theo khoảng cách, chiều tùy theo nút bấm; bạn nào chưa rõ khoảng cách (lỗi/chưa tính
+  // được) luôn xếp xuống cuối cùng, không phụ thuộc chiều đang chọn.
+  const ds = Object.entries(vitriState).sort((a,b)=>{
+    const ka = a[1].khoangCachKm, kb = b[1].khoangCachKm;
+    if(ka == null && kb == null) return 0;
+    if(ka == null) return 1;
+    if(kb == null) return -1;
+    return vtSapXepTang ? ka - kb : kb - ka;
+  });
   $('vtRong').style.display = ds.length ? 'none' : 'block';
+  const nutSapXep = $('vtSapXepBtn');
+  if(nutSapXep) nutSapXep.textContent = vtSapXepTang ? '🔽 Khoảng cách: Gần → Xa' : '🔼 Khoảng cách: Xa → Gần';
 
   let h = `<tr><th>STT</th><th>Họ và tên</th><th>Giới tính</th><th>Ngày sinh</th><th>Dân tộc</th><th>Khoảng cách</th><th>Thời gian</th><th></th>${isAdmin?'<th></th>':''}</tr>`;
   if(ds.length){
@@ -5068,6 +5080,7 @@ function capNhatTrangThaiDaNop(){
   }
 }
 vitriRef.on('value', s=>{ vitriState = s.val() || {}; renderVitriBang(); capNhatTrangThaiDaNop(); if(banDoVitri) khoiTaoHoacCapNhatBanDoVitri(); });
+$('vtSapXepBtn').onclick = ()=>{ vtSapXepTang = !vtSapXepTang; renderVitriBang(); };
 
 /* Bản đồ hiện ĐỒNG THỜI vị trí + khoảng cách của tất cả học sinh, dùng Leaflet + OpenStreetMap —
    thư viện bản đồ mã nguồn mở, hoàn toàn miễn phí, không cần API Key hay đăng ký gì cả. */
