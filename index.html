@@ -115,6 +115,9 @@
   .hang-nhap-vitri input{padding:9px 12px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13.5px; flex:1; min-width:180px;}
   .vt-khoangcach{font-weight:800; color:#b45309;}
   .vt-icon-truong, .vt-icon-hs{font-size:22px; text-align:center; line-height:1; filter:drop-shadow(0 1px 2px rgba(0,0,0,.4));}
+  .vt-nhan-ten{background:#fff; border:1px solid var(--leaf); color:var(--leaf-dark); font-weight:700; font-size:11.5px;
+    padding:1px 7px; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.2);}
+  .vt-nhan-ten::before{border-top-color:var(--leaf);}
   .tt-nhanquyen-hang select, .tt-nhanquyen-hang input{padding:9px 12px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13.5px;}
   .tt-nhanquyen-hang input{flex:1; min-width:160px;}
   .tt-admin-ma-luoi{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px;}
@@ -5096,6 +5099,7 @@ function khoiTaoHoacCapNhatBanDoVitri(){
         L.marker([vt.lat, vt.lng], {
           icon: L.divIcon({html:'📍', className:'vt-icon-hs', iconSize:[24,24]})
         }).addTo(lopMarkerVitri)
+          .bindTooltip(esc(vt.hoTen||''), {permanent:true, direction:'top', offset:[0,-6], className:'vt-nhan-ten'})
           .bindPopup(`<b>${esc(vt.hoTen||'')}</b><br>${vt.khoangCachKm!=null ? vt.khoangCachKm+' km' : 'Chưa rõ khoảng cách'}${vt.duongThat===false ? ' (tạm tính)' : ''}`);
         L.polyline([[toaDoTruong.lat, toaDoTruong.lng],[vt.lat, vt.lng]], {color:'#d97706', weight:2, dashArray:'5,6', opacity:0.7}).addTo(lopMarkerVitri);
         cacToaDo.push([vt.lat, vt.lng]);
