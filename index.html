@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lớp 10A1 — THCS &amp; THPT Hòa Thuận</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   :root{
     --leaf:#1f7a4d; --leaf-dark:#14532d; --sky:#eef5f0; --paper:#fffefb;
@@ -113,6 +114,7 @@
   .hang-nhap-vitri{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:8px;}
   .hang-nhap-vitri input{padding:9px 12px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13.5px; flex:1; min-width:180px;}
   .vt-khoangcach{font-weight:800; color:#b45309;}
+  .vt-icon-truong, .vt-icon-hs{font-size:22px; text-align:center; line-height:1; filter:drop-shadow(0 1px 2px rgba(0,0,0,.4));}
   .tt-nhanquyen-hang select, .tt-nhanquyen-hang input{padding:9px 12px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13.5px;}
   .tt-nhanquyen-hang input{flex:1; min-width:160px;}
   .tt-admin-ma-luoi{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px;}
@@ -684,6 +686,12 @@
         <button class="btn btn-primary btn-sm" id="vtLuuToaDoTruongBtn">Lưu tọa độ trường</button>
       </div>
       <div id="vtAdminMsg" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <h2>🗺️ Bản đồ vị trí tất cả học sinh</h2>
+      <p class="section-note">Chấm đỏ 🏫 là trường, mỗi chấm xanh là 1 bạn — bấm vào từng chấm để xem tên và khoảng cách. Đường nối chỉ mang tính minh họa (đường thẳng), không phải đường đi thật.</p>
+      <div id="vtBanDoTatCa" style="height:420px; border-radius:12px; overflow:hidden; border:1px solid var(--line);"></div>
     </div>
 
     <div class="card">
@@ -1358,6 +1366,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 /* =========================================================
    LỚP 10A1 — trang gộp: Sơ đồ lớp + Đăng ký lao động + Khai giảng
@@ -1858,6 +1867,7 @@ function moTab(tabId, subId){
     $('panel-' + tabId).classList.add('active');
     location.hash = tabId;
   }
+  if(subDangMo === 'vitri') setTimeout(khoiTaoHoacCapNhatBanDoVitri, 50); // panel vừa hiện ra, chờ 1 nhịp để có đúng kích thước rồi mới vẽ bản đồ
 }
 
 renderToanBoDieuHuong();
@@ -4911,6 +4921,19 @@ function tinhKhoangCachDuongChim(diemBatDau, diemKetThuc){
    Nếu chưa cấu hình API Key (hoặc dịch vụ báo lỗi), tự động dùng tạm đường chim bay để tính năng
    vẫn hoạt động được, có đánh dấu rõ trong dữ liệu lưu để phân biệt. */
 const ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6Ijc0MTU0NjE0NjM3ZjRjMTc4OGFiNzc3Y2Q2NGE5Yjg2IiwiaCI6Im11cm11cjY0In0=';
+
+/* Giải mã link rút gọn (VD https://maps.app.goo.gl/xxxx) qua Apps Script chạy phía máy chủ —
+   trình duyệt không cho phép JS trên trang tự "mở" link chéo tên miền khác vì lý do bảo mật. */
+const GIAI_MA_LINK_URL = 'https://script.google.com/macros/s/AKfycbxB06m-gCLSev3l4vlUIL11pK73HBsxrRIpph3tSOy1orzOFgJhlvCEvyDtv_AHufd6/exec';
+function dungGiaiMaLink(){ return GIAI_MA_LINK_URL && !GIAI_MA_LINK_URL.includes('DIEN_'); }
+async function thuGiaiMaLinkRutGon(link){
+  if(!dungGiaiMaLink()) return null;
+  try{
+    const resp = await fetch(`${GIAI_MA_LINK_URL}?url=${encodeURIComponent(link)}`);
+    const data = await resp.json();
+    return (data.ok && data.urlDich) ? data.urlDich : null;
+  }catch(e){ return null; }
+}
 function dungORS(){ return ORS_API_KEY && !ORS_API_KEY.includes('DIEN_'); }
 async function tinhKhoangCachXeMay(diemBatDau, diemKetThuc){
   if(!dungORS()) return tinhKhoangCachDuongChim(diemBatDau, diemKetThuc);
@@ -4930,7 +4953,12 @@ $('vtXacNhanBtn').onclick = async ()=>{
   const link = $('vtNhapLink').value.trim();
   $('vtKhongDocDuoc').style.display = 'none';
   if(!link){ showMsg($('vtMsg'), 'Vui lòng dán liên kết vị trí.', 'err'); return; }
-  const toaDo = tachToaDoTuLienKet(link);
+  let toaDo = tachToaDoTuLienKet(link);
+  if(!toaDo && dungGiaiMaLink()){
+    showMsg($('vtMsg'), 'Đang xử lý liên kết...', 'info');
+    const urlDaGiaiMa = await thuGiaiMaLinkRutGon(link);
+    if(urlDaGiaiMa) toaDo = tachToaDoTuLienKet(urlDaGiaiMa);
+  }
   if(!toaDo){
     showMsg($('vtMsg'), '❌ Không đọc được tọa độ từ liên kết này.', 'err');
     $('vtKhongDocDuoc').style.display = 'block';
@@ -4987,7 +5015,47 @@ function renderVitriBang(){
     window.open(url, '_blank');
   });
 }
-vitriRef.on('value', s=>{ vitriState = s.val() || {}; renderVitriBang(); });
+let banDoVitri = null, lopMarkerVitri = null;
+vitriRef.on('value', s=>{ vitriState = s.val() || {}; renderVitriBang(); if(banDoVitri) khoiTaoHoacCapNhatBanDoVitri(); });
+
+/* Bản đồ hiện ĐỒNG THỜI vị trí + khoảng cách của tất cả học sinh, dùng Leaflet + OpenStreetMap —
+   thư viện bản đồ mã nguồn mở, hoàn toàn miễn phí, không cần API Key hay đăng ký gì cả. */
+function khoiTaoHoacCapNhatBanDoVitri(){
+  const host = $('vtBanDoTatCa');
+  if(!host || typeof L === 'undefined') return; // chưa tải xong thư viện Leaflet, hoặc không ở đúng panel
+
+  if(!banDoVitri){
+    banDoVitri = L.map(host).setView([10, 106], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap', maxZoom: 19
+    }).addTo(banDoVitri);
+    lopMarkerVitri = L.layerGroup().addTo(banDoVitri);
+  }
+  lopMarkerVitri.clearLayers();
+
+  const cacToaDo = [];
+  caiDatRef.child('toaDoTruong').once('value').then(s=>{
+    const toaDoTruong = s.val();
+    if(toaDoTruong && toaDoTruong.lat != null){
+      L.marker([toaDoTruong.lat, toaDoTruong.lng], {
+        icon: L.divIcon({html:'🏫', className:'vt-icon-truong', iconSize:[28,28]})
+      }).addTo(lopMarkerVitri).bindPopup('<b>Trường THCS &amp; THPT Hòa Thuận</b>');
+      cacToaDo.push([toaDoTruong.lat, toaDoTruong.lng]);
+
+      Object.values(vitriState).forEach(vt=>{
+        if(vt.lat == null || vt.lng == null) return;
+        L.marker([vt.lat, vt.lng], {
+          icon: L.divIcon({html:'📍', className:'vt-icon-hs', iconSize:[24,24]})
+        }).addTo(lopMarkerVitri)
+          .bindPopup(`<b>${esc(vt.hoTen||'')}</b><br>${vt.khoangCachKm!=null ? vt.khoangCachKm+' km' : 'Chưa rõ khoảng cách'}${vt.duongThat===false ? ' (tạm tính)' : ''}`);
+        L.polyline([[toaDoTruong.lat, toaDoTruong.lng],[vt.lat, vt.lng]], {color:'#d97706', weight:2, dashArray:'5,6', opacity:0.7}).addTo(lopMarkerVitri);
+        cacToaDo.push([vt.lat, vt.lng]);
+      });
+    }
+    if(cacToaDo.length) banDoVitri.fitBounds(cacToaDo, {padding:[30,30]});
+    setTimeout(()=> banDoVitri.invalidateSize(), 100); // đảm bảo bản đồ vẽ đúng kích thước khung, tránh bị xám 1 phần
+  });
+}
 
 /* -------------------- ADMIN: cài đặt tọa độ trường -------------------- */
 function renderVtAdmin(){
