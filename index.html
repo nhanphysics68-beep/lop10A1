@@ -5006,9 +5006,9 @@ function renderVitriBang(){
   const ds = Object.entries(vitriState);
   $('vtRong').style.display = ds.length ? 'none' : 'block';
 
-  let h = `<tr><th>Họ và tên</th><th>Giới tính</th><th>Ngày sinh</th><th>Dân tộc</th><th>Khoảng cách</th><th>Thời gian</th><th></th>${isAdmin?'<th></th>':''}</tr>`;
+  let h = `<tr><th>STT</th><th>Họ và tên</th><th>Giới tính</th><th>Ngày sinh</th><th>Dân tộc</th><th>Khoảng cách</th><th>Thời gian</th><th></th>${isAdmin?'<th></th>':''}</tr>`;
   if(ds.length){
-    ds.forEach(([uid,vt])=>{
+    ds.forEach(([uid,vt],i)=>{
       const hsRoster = roster.find(r=> chuanTen(r.name) === chuanTen(vt.hoTen));
       // Ưu tiên dữ liệu đã đồng bộ + lưu cứng vào đúng bản ghi (bấm nút "Đồng bộ"), nếu chưa có
       // thì tra trực tiếp theo Danh sách học sinh (roster) hiện tại — vẫn hiện đúng ngay cả khi
@@ -5017,7 +5017,7 @@ function renderVitriBang(){
       const ngaySinh = vt.ngaySinh || (hsRoster ? hsRoster.dob : '');
       const danToc = vt.danToc || (hsRoster ? hsRoster.ethnic : '');
       const nhanKieu = vt.duongThat ? '<span title="Tính theo đường đi thật">🛣️</span>' : '<span title="Tạm tính đường chim bay">📏</span>';
-      h += `<tr><td>${esc(vt.hoTen||'')}</td><td>${esc(gioiTinh)||'—'}</td>
+      h += `<tr><td>${i+1}</td><td>${esc(vt.hoTen||'')}</td><td>${esc(gioiTinh)||'—'}</td>
         <td>${esc(ngaySinh)||'—'}</td><td>${esc(danToc)||'—'}</td>
         <td class="vt-khoangcach">${nhanKieu} ${vt.khoangCachKm!=null ? vt.khoangCachKm+' km' : '—'}</td>
         <td>${vt.thoiGianPhut!=null ? '~'+vt.thoiGianPhut+' phút' : '—'}</td>
