@@ -688,6 +688,8 @@
         <button class="btn btn-primary btn-sm" id="vtLuuToaDoTruongBtn">Lưu tọa độ trường</button>
       </div>
       <div id="vtAdminMsg" class="msg"></div>
+      <button class="btn btn-clay btn-sm" id="vtDongBoBtn" style="margin-top:12px;">🔄 Đồng bộ Giới tính/Ngày sinh/Dân tộc theo Danh sách học sinh</button>
+      <div id="vtDongBoMsg" class="msg"></div>
     </div>
 
     <div class="card">
@@ -5002,9 +5004,15 @@ function renderVitriBang(){
   if(ds.length){
     ds.forEach(([uid,vt])=>{
       const hsRoster = roster.find(r=> chuanTen(r.name) === chuanTen(vt.hoTen));
+      // Ưu tiên dữ liệu đã đồng bộ + lưu cứng vào đúng bản ghi (bấm nút "Đồng bộ"), nếu chưa có
+      // thì tra trực tiếp theo Danh sách học sinh (roster) hiện tại — vẫn hiện đúng ngay cả khi
+      // chưa từng bấm đồng bộ lần nào.
+      const gioiTinh = vt.gioiTinh || (hsRoster ? hsRoster.gender : '');
+      const ngaySinh = vt.ngaySinh || (hsRoster ? hsRoster.dob : '');
+      const danToc = vt.danToc || (hsRoster ? hsRoster.ethnic : '');
       const nhanKieu = vt.duongThat ? '<span title="Tính theo đường đi thật">🛣️</span>' : '<span title="Tạm tính đường chim bay">📏</span>';
-      h += `<tr><td>${esc(vt.hoTen||'')}</td><td>${esc(hsRoster?hsRoster.gender:'')||'—'}</td>
-        <td>${esc(hsRoster?hsRoster.dob:'')||'—'}</td><td>${esc(hsRoster?hsRoster.ethnic:'')||'—'}</td>
+      h += `<tr><td>${esc(vt.hoTen||'')}</td><td>${esc(gioiTinh)||'—'}</td>
+        <td>${esc(ngaySinh)||'—'}</td><td>${esc(danToc)||'—'}</td>
         <td class="vt-khoangcach">${nhanKieu} ${vt.khoangCachKm!=null ? vt.khoangCachKm+' km' : '—'}</td>
         <td>${vt.thoiGianPhut!=null ? '~'+vt.thoiGianPhut+' phút' : '—'}</td>
         <td><button class="btn btn-clay btn-sm" data-vt-xemban-do="${uid}">🗺️ Xem bản đồ</button></td>
@@ -5116,6 +5124,31 @@ $('vtLuuToaDoTruongBtn').onclick = async ()=>{
     await caiDatRef.child('toaDoTruong').set({ lat, lng });
     showMsg($('vtAdminMsg'), '✅ Đã lưu tọa độ trường.', 'ok');
   }catch(e){ showMsg($('vtAdminMsg'), baoLoi(e), 'err'); }
+};
+
+/* Đồng bộ Giới tính/Ngày sinh/Dân tộc từ Danh sách học sinh (roster) vào đúng từng bản ghi vị
+   trí, khớp theo tên — lưu cứng lại vào vitri2026 (không chỉ tra trực tiếp lúc hiển thị), để dữ
+   liệu vẫn giữ nguyên đúng ngay cả khi danh sách lớp có thay đổi sau này. Báo rõ tên nào chưa
+   khớp được (thường do gõ tên hơi khác) để Thầy kiểm tra lại. */
+$('vtDongBoBtn').onclick = async ()=>{
+  const btn = $('vtDongBoBtn');
+  btn.disabled = true;
+  showMsg($('vtDongBoMsg'), 'Đang đồng bộ...', 'info');
+  let capNhat = 0;
+  const khongKhop = [];
+  try{
+    for(const [uid, vt] of Object.entries(vitriState)){
+      const hsRoster = roster.find(r=> chuanTen(r.name) === chuanTen(vt.hoTen));
+      if(hsRoster){
+        await vitriRef.child(uid).update({ gioiTinh: hsRoster.gender||'', ngaySinh: hsRoster.dob||'', danToc: hsRoster.ethnic||'' });
+        capNhat++;
+      } else {
+        khongKhop.push(vt.hoTen || '(không tên)');
+      }
+    }
+    showMsg($('vtDongBoMsg'), `✅ Đã đồng bộ ${capNhat} bạn.` + (khongKhop.length ? ` Không khớp được tên với Danh sách học sinh: ${khongKhop.join(', ')}.` : ''), khongKhop.length ? 'info' : 'ok');
+  }catch(e){ showMsg($('vtDongBoMsg'), baoLoi(e), 'err'); }
+  btn.disabled = false;
 };
 
 
