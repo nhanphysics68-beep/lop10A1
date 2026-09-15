@@ -5026,7 +5026,7 @@ function khoiTaoHoacCapNhatBanDoVitri(){
 
   if(!banDoVitri){
     banDoVitri = L.map(host).setView([10, 106], 10);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap', maxZoom: 19
     }).addTo(banDoVitri);
     lopMarkerVitri = L.layerGroup().addTo(banDoVitri);
