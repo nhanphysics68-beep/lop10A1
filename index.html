@@ -1379,7 +1379,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dom-to-image-more/dist/dom-to-image-more.min.js"></script>
 <script>
 /* =========================================================
    LỚP 10A1 — trang gộp: Sơ đồ lớp + Đăng ký lao động + Khai giảng
@@ -5079,7 +5079,7 @@ function khoiTaoHoacCapNhatBanDoVitri(){
     banDoVitri = L.map(host).setView([10, 106], 10);
     // Cho phép tự chọn giữa 2 nguồn bản đồ khác nhau — mỗi nguồn có ưu/nhược riêng (tải nhanh/chậm
     // tùy mạng, nhãn địa danh mới/cũ khác nhau) — bấm biểu tượng lớp ở góc bản đồ để đổi thử.
-    // crossOrigin:true bắt buộc phải có để tính năng "Xuất ảnh" (html2canvas) đọc được ảnh bản đồ.
+    // crossOrigin:true bắt buộc phải có để tính năng "Xuất ảnh" đọc được ảnh bản đồ.
     const nenOSM = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap', maxZoom: 19, crossOrigin: true
     });
@@ -5123,36 +5123,43 @@ function khoiTaoHoacCapNhatBanDoVitri(){
   });
 }
 
-/* Xuất bản đồ hiện tại thành 1 ảnh PNG độ phân giải cao (scale x3 so với hiển thị thật trên màn
-   hình) để in ra giấy — dùng html2canvas, hoàn toàn miễn phí, không cần dịch vụ ngoài nào khác.
+/* Xuất bản đồ hiện tại thành 1 ảnh PNG độ phân giải cao (gấp 3 lần hiển thị thật trên màn hình)
+   để in ra giấy — dùng dom-to-image-more, thư viện chuyên xử lý đúng cách Leaflet định vị các
+   lớp bản đồ (html2canvas thông thường bị lỗi mất/lệch từng mảng do cách Leaflet dùng CSS
+   transform để định vị) — hoàn toàn miễn phí, không cần dịch vụ ngoài nào khác.
    Cần chờ hết ảnh nền (tile) tải xong mới chụp, nếu không ảnh xuất ra sẽ bị thiếu/trắng từng ô. */
 $('vtXuatAnhBtn').onclick = async ()=>{
   const host = $('vtBanDoTatCa');
   if(!banDoVitri || !host){ showMsg($('vtXuatAnhMsg'), 'Bản đồ chưa sẵn sàng, thử lại sau.', 'err'); return; }
-  if(typeof html2canvas === 'undefined'){ showMsg($('vtXuatAnhMsg'), 'Chưa tải được thư viện xuất ảnh, kiểm tra lại kết nối mạng.', 'err'); return; }
+  if(typeof domtoimage === 'undefined'){ showMsg($('vtXuatAnhMsg'), 'Chưa tải được thư viện xuất ảnh, kiểm tra lại kết nối mạng.', 'err'); return; }
   const btn = $('vtXuatAnhBtn');
   btn.disabled = true;
   showMsg($('vtXuatAnhMsg'), 'Đang tạo ảnh độ phân giải cao, vui lòng đợi vài giây...', 'info');
+  const cacNutDieuKhien = host.querySelectorAll('.leaflet-control');
   try{
     // Ẩn tạm nút zoom (+/-) và nút đổi lớp bản đồ trước khi chụp, để ảnh in ra gọn gàng hơn
-    const cacNutDieuKhien = host.querySelectorAll('.leaflet-control');
     cacNutDieuKhien.forEach(n=> n.style.visibility = 'hidden');
     await new Promise(r=> setTimeout(r, 300)); // chờ 1 nhịp cho ảnh nền tải nốt trước khi chụp
 
-    const canvas = await html2canvas(host, { useCORS: true, scale: 3, backgroundColor: '#ffffff' });
+    const TI_LE = 3; // độ phân giải gấp 3 lần hiển thị thật — kỹ thuật chuẩn của dom-to-image để xuất ảnh nét cao
+    const rong = host.clientWidth, cao = host.clientHeight;
+    const blob = await domtoimage.toBlob(host, {
+      width: rong * TI_LE, height: cao * TI_LE,
+      style: { transform: `scale(${TI_LE})`, transformOrigin: 'top left', width: rong+'px', height: cao+'px' },
+      bgcolor: '#ffffff'
+    });
     cacNutDieuKhien.forEach(n=> n.style.visibility = '');
 
-    canvas.toBlob(blob=>{
-      if(!blob){ showMsg($('vtXuatAnhMsg'), 'Không tạo được ảnh, thử lại.', 'err'); btn.disabled = false; return; }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'ban-do-vi-tri-lop-10a1.png';
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      showMsg($('vtXuatAnhMsg'), '✅ Đã tải ảnh về máy.', 'ok');
-      btn.disabled = false;
-    }, 'image/png');
+    if(!blob){ showMsg($('vtXuatAnhMsg'), 'Không tạo được ảnh, thử lại.', 'err'); btn.disabled = false; return; }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'ban-do-vi-tri-lop-10a1.png';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showMsg($('vtXuatAnhMsg'), '✅ Đã tải ảnh về máy.', 'ok');
+    btn.disabled = false;
   }catch(e){
+    cacNutDieuKhien.forEach(n=> n.style.visibility = '');
     showMsg($('vtXuatAnhMsg'), '❌ Lỗi khi xuất ảnh: ' + (e.message||e) + ' — nếu do trình duyệt chặn ảnh bản đồ (bảo mật), thử đổi sang nguồn bản đồ khác (nút 🗂️ trên bản đồ) rồi xuất lại.', 'err');
     btn.disabled = false;
   }
