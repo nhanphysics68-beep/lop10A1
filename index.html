@@ -118,8 +118,8 @@
   .vt-khoangcach{font-weight:800; color:#b45309;}
   .vt-icon-truong, .vt-icon-hs{font-size:22px; text-align:center; line-height:1; filter:drop-shadow(0 1px 2px rgba(0,0,0,.4));}
   .vt-nhan-ten{background:#fff; border:1px solid var(--leaf); color:var(--leaf-dark); font-weight:700; font-size:10.5px;
-    padding:2px 7px; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.2); text-align:center; line-height:1.5;}
-  .vt-nhan-ten b{display:block; font-size:11px;}
+    padding:2px 7px; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.2); text-align:center; line-height:1.2;}
+  .vt-nhan-ten b{display:block; font-size:11px; line-height:1.25;}
   .vt-nhan-ten::before{border-top-color:var(--leaf);}
   .tt-nhanquyen-hang select, .tt-nhanquyen-hang input{padding:9px 12px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13.5px;}
   .tt-nhanquyen-hang input{flex:1; min-width:160px;}
@@ -982,14 +982,24 @@
   <!-- ============ THẺ 6: HỒ SƠ HỌC SINH ĐẦU NĂM ============ -->
   <div class="panel" id="panel-hoso" data-group="thongtin">
     <div class="card">
-      <h2>Hồ sơ học sinh đầu năm 2026–2027</h2>
+      <h2>📝 Nhập hồ sơ học sinh đầu năm 2026–2027</h2>
       <div class="rieng-tu">
         🔒 <b>Mục này là riêng tư</b> — giống mục Nhận hỗ trợ. Chỉ mình em (trên máy này) và thầy chủ nhiệm
         đọc được nội dung em điền. Điền đầy đủ theo giấy khai sinh/CCCD của em và ba mẹ.
         Vào lại đúng máy này bất cứ lúc nào để xem/sửa lại — nếu đổi máy hoặc xoá dữ liệu trình duyệt,
         báo thầy để được hỗ trợ.
       </div>
+    </div>
 
+    <div class="card">
+      <h2>Ảnh thẻ</h2>
+      <div id="chsAnhXemTruoc" class="chs-anh-xemtruoc">Chưa có ảnh thẻ.</div>
+      <input type="file" id="chsAnhInput" accept="image/*" style="display:none;">
+      <button type="button" class="btn btn-blue btn-sm" id="chsChonAnhBtn">📷 Chọn / Đổi ảnh thẻ</button>
+      <div id="chsAnhMsg" class="msg"></div>
+    </div>
+
+    <div class="card">
       <form id="hsForm">
         <div class="field">
           <label for="hs_hoten">Họ và tên học sinh <span class="req">*</span></label>
@@ -1007,6 +1017,12 @@
         </div>
 
         <div id="hsSectionsHost"></div>
+
+        <div class="field" style="margin-top:10px;">
+          <label>Thành tích cá nhân</label>
+          <textarea id="chsThanhTich" maxlength="1000" style="min-height:100px; width:100%; padding:9px 12px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit;"
+            placeholder="VD: Giải Nhì HSG Toán cấp trường năm lớp 9, thành viên đội tuyển bóng đá trường..."></textarea>
+        </div>
 
         <button type="submit" class="btn btn-primary" id="hsSubmit">💾 Lưu / Cập nhật hồ sơ</button>
         <button type="button" class="btn btn-ghost btn-sm" id="hsXoaBtn" style="display:none; margin-left:8px;">Xoá hồ sơ đã nộp</button>
@@ -1038,51 +1054,6 @@
   </div>
 
   <!-- ============ THẺ MỚI: DỮ LIỆU CÁ NHÂN HỌC SINH (thuộc nhóm Thông tin lớp 10A1) ============ -->
-  <div class="panel" id="panel-canhanhs" data-group="thongtin">
-    <div class="card">
-      <h2>👤 Dữ liệu cá nhân học sinh</h2>
-    </div>
-
-    <div class="card">
-      <h2>1. Thông tin cá nhân</h2>
-      <p class="section-note" id="chsTuDongNote" style="display:none;">
-        ✨ Đã tự động lấy từ hồ sơ đầu năm em đã nộp — kiểm tra lại rồi sửa nếu cần.
-      </p>
-      <div class="field"><label>Họ và tên</label><input type="text" id="chsHoTen" maxlength="60"></div>
-      <div class="grid2">
-        <div class="field"><label>Ngày sinh</label><input type="date" id="chsNgaySinh"></div>
-        <div class="field"><label>Giới tính</label>
-          <select id="chsGioiTinh"><option value="Nam">Nam</option><option value="Nữ">Nữ</option></select>
-        </div>
-      </div>
-      <div class="grid2">
-        <div class="field"><label>Dân tộc</label><input type="text" id="chsDanToc" maxlength="60"></div>
-        <div class="field"><label>Số CCCD / Định danh cá nhân</label>
-          <input type="text" id="chsCccd" maxlength="20" inputmode="numeric">
-        </div>
-      </div>
-      <button class="btn btn-primary btn-sm" id="chsLuuBtn">💾 Lưu thông tin</button>
-      <div id="chsMsg" class="msg"></div>
-    </div>
-
-    <div class="card">
-      <h2>2. Ảnh thẻ</h2>
-      <div id="chsAnhXemTruoc" class="chs-anh-xemtruoc">Chưa có ảnh thẻ.</div>
-      <input type="file" id="chsAnhInput" accept="image/*" style="display:none;">
-      <button class="btn btn-blue btn-sm" id="chsChonAnhBtn">📷 Chọn / Đổi ảnh thẻ</button>
-      <div id="chsAnhMsg" class="msg"></div>
-    </div>
-
-    <div class="card">
-      <h2>3. Thành tích cá nhân</h2>
-      <div class="field">
-        <textarea id="chsThanhTich" maxlength="1000" style="min-height:100px;"
-          placeholder="VD: Giải Nhì HSG Toán cấp trường năm lớp 9, thành viên đội tuyển bóng đá trường..."></textarea>
-      </div>
-      <button class="btn btn-primary btn-sm" id="chsThanhTichBtn">💾 Lưu thành tích</button>
-    </div>
-  </div>
-
   <!-- ============ CÁC KHOẢN THU ĐẦU NĂM (thuộc nhóm Thông tin lớp 10A1) ============ -->
   <div class="panel" id="panel-khoanthu" data-group="thongtin">
     <div class="card">
@@ -1803,10 +1774,9 @@ const SUBTAB_DINH_NGHIA = {
   danhsachhs:{icon:'📋', ten:'Danh sách học sinh'},
   vitri:     {icon:'🗺️', ten:'Vị trí'},
   thanhvien: {icon:'🆔', ten:'Thành viên lớp'},
-  hoso:      {icon:'🧾', ten:'Hồ sơ đầu năm'},
+  hoso:      {icon:'📝', ten:'Nhập hồ sơ'},
   bancansu:  {icon:'👥', ten:'Ban cán sự lớp'},
   caulacbo:  {icon:'🎨', ten:'Các câu lạc bộ'},
-  canhanhs:  {icon:'👤', ten:'Dữ liệu cá nhân'},
   khoanthu:  {icon:'💰', ten:'Các khoản thu đầu năm'},
   laodong:   {icon:'🧹', ten:'Đăng ký lao động'},
   phongtrao: {icon:'🚀', ten:'Phong trào'},
@@ -1819,7 +1789,7 @@ const SUBTAB_DINH_NGHIA = {
   tracnghiem:{icon:'❓', ten:'Trắc nghiệm'},
 };
 const NHOM_TAB = {
-  thongtin: ['sodo', 'danhsachhs', 'vitri', 'thanhvien', 'hoso', 'bancansu', 'caulacbo', 'canhanhs', 'khoanthu'],
+  thongtin: ['sodo', 'danhsachhs', 'vitri', 'thanhvien', 'hoso', 'bancansu', 'caulacbo', 'khoanthu'],
   hoatdong: ['laodong', 'phongtrao', 'khaigiang', 'hotro'],
   hoatdongto: ['tongketTuan'],
   games:    ['quayten', 'duoihinh', 'ghepdoi', 'tracnghiem'],
@@ -3585,6 +3555,15 @@ $('hsForm').onsubmit = async e=>{
   try{
     await hosoRef.child(myUid).set(hsRaDangFirebase(data));
     hosoCuaToi = data;
+    // Đồng bộ các trường dùng chung sang "hosocanhan2026" (không đụng anhTheId/thanhTich đã có)
+    // để mục Thành viên lớp + các bảng quản trị khác vẫn hoạt động đúng như trước khi gộp mục.
+    const cuCanhan = (await chsRef.child(myUid).once('value')).val() || {};
+    await chsRef.child(myUid).set(Object.assign({}, cuCanhan, {
+      hoTen: hoten, ngaySinh: data[4]||'', gioiTinh: gioitinh,
+      danToc: data[12]||'', cccd: data[45]||'', thanhTich: $('chsThanhTich').value.trim(),
+      savedAt: new Date().toISOString()
+    }));
+    await dongBoThanhVienCongKhai(Object.assign({}, cuCanhan, {hoTen:hoten, ngaySinh:data[4]||'', gioiTinh:gioitinh}));
     $('hsXoaBtn').style.display = 'inline-block';
     showMsg($('hsMsg'),'✅ Đã lưu hồ sơ. Vào lại đúng máy này bất cứ lúc nào để xem/sửa lại.','ok');
   }catch(err){ showMsg($('hsMsg'), baoLoi(err),'err'); }
@@ -4246,10 +4225,10 @@ async function khoiPhucCLBMacDinh(){
 }
 
 /* ================================================================
-   DỮ LIỆU CÁ NHÂN HỌC SINH — riêng tư (giống hoso2026): chỉ chính chủ (đúng
-   máy) và giáo viên đọc/sửa được. Nếu học sinh đã nộp "Hồ sơ đầu năm", tự
-   động lấy 5 trường cơ bản sang cho khỏi nhập lại (chỉ áp dụng lần đầu, khi
-   học sinh CHƯA có dữ liệu ở mục này).
+   ẢNH THẺ + THÀNH TÍCH CÁ NHÂN — lưu trong hosocanhan2026 (riêng tư, giống hoso2026), giờ hiện
+   chung trong đúng 1 form "Nhập hồ sơ" cùng Hồ sơ đầu năm — chỉ còn giữ lại 2 trường KHÔNG có sẵn
+   bên Hồ sơ đầu năm (ảnh thẻ, thành tích); Họ tên/Ngày sinh/Giới tính/Dân tộc/CCCD đã dùng chung
+   đúng 1 lần nhập ở form chính, không còn hỏi lại lần 2 nữa.
    ================================================================ */
 const TEN_THU_MUC_ANH_THE = 'Anh-the-hoc-sinh-10A1';
 
@@ -4257,29 +4236,10 @@ async function napDuLieuCaNhanCuaToi(){
   if(!myUid) return;
   let data = null;
   try{ data = (await chsRef.child(myUid).once('value')).val(); }catch(e){}
-
-  let tuDongLay = false;
-  if(!data){
-    try{
-      const raw = (await hosoRef.child(myUid).once('value')).val();
-      const hoso = hsTuDangFirebase(raw);
-      if(hoso && (hoso[3] || hoso[4] || hoso[5] || hoso[12])){
-        data = { hoTen: hoso[3]||'', ngaySinh: hoso[4]||'', gioiTinh: hoso[5]||'Nam',
-                 danToc: hoso[12]||'', cccd: hoso[45]||'' };
-        tuDongLay = true;
-      }
-    }catch(e){}
-  }
   dienDuLieuCaNhanHS(data);
-  $('chsTuDongNote').style.display = tuDongLay ? 'block' : 'none';
 }
 
 function dienDuLieuCaNhanHS(data){
-  $('chsHoTen').value = (data && data.hoTen) || '';
-  $('chsNgaySinh').value = hsNgayToIso((data && data.ngaySinh) || '');
-  $('chsGioiTinh').value = (data && data.gioiTinh) || 'Nam';
-  $('chsDanToc').value = (data && data.danToc) || '';
-  $('chsCccd').value = (data && data.cccd) || '';
   $('chsThanhTich').value = (data && data.thanhTich) || '';
   hienThiAnhThe($('chsAnhXemTruoc'), data && data.anhTheId);
 }
@@ -4300,7 +4260,9 @@ function renderThanhVien(){
 
   const ds = Object.values(thanhVienState).filter(x=> x && x.anhTheId);
   trong.style.display = ds.length ? 'none' : 'block';
-  luoi.innerHTML = ds.map(x=> `
+  luoi.innerHTML = ds.map(x=>{
+    const hsRoster = roster.find(r=> chuanTen(r.name) === chuanTen(x.hoTen));
+    return `
     <div class="tv-the">
       <div class="tv-the-dau">
         <img src="1.png" alt="Logo">
@@ -4315,10 +4277,12 @@ function renderThanhVien(){
           <div class="ten">${esc(x.hoTen||'')}</div>
           <div class="dong"><b>Ngày sinh:</b> ${esc(x.ngaySinh||'—')}</div>
           <div class="dong"><b>Giới tính:</b> ${esc(x.gioiTinh||'—')}</div>
+          <div class="dong"><b>Dân tộc:</b> ${esc(hsRoster ? hsRoster.ethnic : '') || '—'}</div>
         </div>
       </div>
       <div class="tv-the-chan">LỚP 10A1 · NĂM HỌC 2026 – 2027</div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 /* Giáo viên bấm để quét lại TOÀN BỘ "Dữ liệu cá nhân" (hosocanhan2026) một lần — đưa những
@@ -4361,7 +4325,9 @@ $('tvXuatInBtn').onclick = ()=>{
   const cacTrang = [];
   for(let i=0;i<ds.length;i+=SO_THE_MOI_TRANG) cacTrang.push(ds.slice(i, i+SO_THE_MOI_TRANG));
 
-  const taoThe = x => `
+  const taoThe = x => {
+    const hsRoster = roster.find(r=> chuanTen(r.name) === chuanTen(x.hoTen));
+    return `
     <div class="in-the">
       <div class="in-the-dau">
         <img src="1.png" alt="Logo">
@@ -4376,10 +4342,12 @@ $('tvXuatInBtn').onclick = ()=>{
           <div class="ten">${esc(x.hoTen||'')}</div>
           <div class="dong"><b>Ngày sinh:</b> ${esc(x.ngaySinh||'—')}</div>
           <div class="dong"><b>Giới tính:</b> ${esc(x.gioiTinh||'—')}</div>
+          <div class="dong"><b>Dân tộc:</b> ${esc(hsRoster ? hsRoster.ethnic : '') || '—'}</div>
         </div>
       </div>
       <div class="in-the-chan">LỚP 10A1 · NĂM HỌC 2026 – 2027</div>
     </div>`;
+  };
 
   const html = `<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8">
 <title>In thẻ học sinh 10A1</title>
@@ -4428,39 +4396,8 @@ ${cacTrang.map(trang=> `<div class="in-trang">${trang.map(taoThe).join('')}</div
   cuaSoIn.onload = ()=> setTimeout(()=> cuaSoIn.print(), 400); // chờ ảnh tải xong rồi mới mở hộp thoại in
 };
 
-$('chsLuuBtn').onclick = async ()=>{
-  if(!myUid){ showMsg($('chsMsg'), 'Đang kết nối, thử lại sau vài giây.', 'info'); return; }
-  const hoTen = $('chsHoTen').value.trim();
-  if(!hoTen){ showMsg($('chsMsg'), 'Vui lòng nhập họ tên.', 'err'); return; }
-  try{
-    const cu = (await chsRef.child(myUid).once('value')).val() || {};
-    const moi = Object.assign({}, cu, {
-      hoTen,
-      ngaySinh: hsIsoToNgay($('chsNgaySinh').value),
-      gioiTinh: $('chsGioiTinh').value,
-      danToc: $('chsDanToc').value.trim(),
-      cccd: $('chsCccd').value.trim(),
-      savedAt: new Date().toISOString()
-    });
-    await chsRef.child(myUid).set(moi);
-    await dongBoThanhVienCongKhai(moi);
-    showMsg($('chsMsg'), '✅ Đã lưu thông tin.', 'ok');
-  }catch(e){ showMsg($('chsMsg'), baoLoi(e),'err'); }
-};
-
-$('chsThanhTichBtn').onclick = async ()=>{
-  if(!myUid){ showMsg($('chsMsg'), 'Đang kết nối, thử lại sau vài giây.', 'info'); return; }
-  try{
-    const cu = (await chsRef.child(myUid).once('value')).val() || {};
-    const moi = Object.assign({}, cu, {
-      hoTen: cu.hoTen || $('chsHoTen').value.trim() || 'Chưa rõ tên',
-      thanhTich: $('chsThanhTich').value.trim(),
-      savedAt: new Date().toISOString()
-    });
-    await chsRef.child(myUid).set(moi);
-    showMsg($('chsMsg'), '✅ Đã lưu thành tích.', 'ok');
-  }catch(e){ showMsg($('chsMsg'), baoLoi(e),'err'); }
-};
+/* "Lưu thông tin" (chsLuuBtn) và "Lưu thành tích" (chsThanhTichBtn) đã được gộp chung vào nút
+   "Lưu / Cập nhật hồ sơ" của form chính (hsForm) — không còn 2 nút lưu riêng lẻ nữa. */
 
 $('chsChonAnhBtn').onclick = ()=> $('chsAnhInput').click();
 $('chsAnhInput').onchange = async e=>{
@@ -4474,7 +4411,7 @@ $('chsAnhInput').onchange = async e=>{
   showMsg($('chsAnhMsg'), 'Đang xử lý và tải ảnh lên...', 'info');
   try{
     const anhNen = await nenAnh(file, 900, 0.85); // ảnh thẻ chân dung, không cần quá lớn
-    const ten = $('chsHoTen').value.trim() || 'HocSinh';
+    const ten = $('hs_hoten').value.trim() || 'HocSinh';
     const kq = await guiAnhLenDrive(anhNen, ten, TEN_THU_MUC_ANH_THE);
     const cu = (await chsRef.child(myUid).once('value')).val() || {};
     const moi = Object.assign({}, cu, {
@@ -5128,7 +5065,7 @@ function khoiTaoHoacCapNhatBanDoVitri(){
         L.marker([vt.lat, vt.lng], {
           icon: L.divIcon({html:'📍', className:'vt-icon-hs', iconSize:[24,24]})
         }).addTo(lopHocSinhVitri)
-          .bindTooltip(`<b>${esc(vt.hoTen||'')}</b><br>${dongKm}`, {permanent:true, direction:'top', offset:[0,-6], className:'vt-nhan-ten'})
+          .bindTooltip(`<b>${esc(vt.hoTen||'')}</b>${dongKm}`, {permanent:true, direction:'top', offset:[0,-6], className:'vt-nhan-ten'})
           .bindPopup(`<b>${esc(vt.hoTen||'')}</b><br>${dongKm}`);
         L.polyline([[toaDoTruong.lat, toaDoTruong.lng],[vt.lat, vt.lng]], {color:'#d97706', weight:1.5, dashArray:'5,6', opacity:0.55}).addTo(lopMarkerVitri);
         cacToaDo.push([vt.lat, vt.lng]);
