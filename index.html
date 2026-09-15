@@ -667,6 +667,7 @@
       </p>
       <div id="vtDaNopTruocDo" class="msg info" style="display:none;"></div>
       <div class="hang-nhap-vitri">
+        <input type="text" id="vtNhapHoTen" placeholder="Họ và tên của em">
         <input type="text" id="vtNhapLink" placeholder="Dán liên kết vị trí từ Zalo vào đây">
         <button class="btn btn-primary btn-sm" id="vtXacNhanBtn">Xác nhận vị trí</button>
       </div>
@@ -4953,8 +4954,10 @@ async function tinhKhoangCachXeMay(diemBatDau, diemKetThuc){
 }
 
 $('vtXacNhanBtn').onclick = async ()=>{
+  const hoTen = $('vtNhapHoTen').value.trim();
   const link = $('vtNhapLink').value.trim();
   $('vtKhongDocDuoc').style.display = 'none';
+  if(!hoTen){ showMsg($('vtMsg'), 'Vui lòng nhập họ và tên.', 'err'); return; }
   if(!link){ showMsg($('vtMsg'), 'Vui lòng dán liên kết vị trí.', 'err'); return; }
   let toaDo = tachToaDoTuLienKet(link);
   if(!toaDo && dungGiaiMaLink()){
@@ -4976,7 +4979,6 @@ $('vtXacNhanBtn').onclick = async ()=>{
     }
     showMsg($('vtMsg'), 'Đang tính khoảng cách...', 'info');
     const kq = await tinhKhoangCachXeMay(toaDo, toaDoTruong);
-    const hoTen = tenCuaToiTheoSeats() || (isAdmin ? 'Giáo viên chủ nhiệm' : 'Không rõ');
     await vitriRef.child(myUid).set({
       hoTen, lat: toaDo.lat, lng: toaDo.lng,
       khoangCachKm: Math.round(kq.khoangCachKm*10)/10,
@@ -5030,7 +5032,7 @@ let banDoVitri = null, lopMarkerVitri = null;
 /* Nếu người đang xem đã từng nộp vị trí rồi, hiện rõ kết quả cũ + đổi nút thành "Cập nhật vị trí"
    (về mặt kỹ thuật, nộp lại chỉ là ghi đè lên đúng bản ghi cũ theo uid, không tạo bản ghi mới). */
 function capNhatTrangThaiDaNop(){
-  const hop = $('vtDaNopTruocDo'), nut = $('vtXacNhanBtn');
+  const hop = $('vtDaNopTruocDo'), nut = $('vtXacNhanBtn'), oTen = $('vtNhapHoTen');
   if(!hop || !nut) return;
   const cuaToi = myUid ? vitriState[myUid] : null;
   if(cuaToi){
@@ -5038,9 +5040,14 @@ function capNhatTrangThaiDaNop(){
     hop.textContent = `Bạn đã nộp vị trí trước đó: khoảng ${cuaToi.khoangCachKm} km (${nhanKieu}). Dán link mới rồi bấm nút bên dưới nếu muốn cập nhật lại.`;
     hop.style.display = 'block';
     nut.textContent = 'Cập nhật vị trí';
+    if(oTen && !oTen.value.trim() && cuaToi.hoTen) oTen.value = cuaToi.hoTen; // gợi ý lại đúng tên đã nộp trước đó, không ghi đè nếu đang gõ dở
   } else {
     hop.style.display = 'none';
     nut.textContent = 'Xác nhận vị trí';
+    if(oTen && !oTen.value.trim()){
+      const tenGoiY = tenCuaToiTheoSeats();
+      if(tenGoiY) oTen.value = tenGoiY; // gợi ý theo chỗ ngồi đã đăng ký, nếu có — vẫn sửa được thoải mái
+    }
   }
 }
 vitriRef.on('value', s=>{ vitriState = s.val() || {}; renderVitriBang(); capNhatTrangThaiDaNop(); if(banDoVitri) khoiTaoHoacCapNhatBanDoVitri(); });
