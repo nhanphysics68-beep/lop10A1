@@ -665,6 +665,7 @@
         <i>Khoảng cách hiển thị được tính theo <b>đường đi thật</b> (không phải đường thẳng) qua dịch vụ bản đồ
         OpenRouteService. 🛣️ = đã tính đường thật, 📏 = tạm tính đường chim bay (khi dịch vụ bận/lỗi).</i>
       </p>
+      <div id="vtDaNopTruocDo" class="msg info" style="display:none;"></div>
       <div class="hang-nhap-vitri">
         <input type="text" id="vtNhapLink" placeholder="Dán liên kết vị trí từ Zalo vào đây">
         <button class="btn btn-primary btn-sm" id="vtXacNhanBtn">Xác nhận vị trí</button>
@@ -1944,6 +1945,8 @@ auth.onAuthStateChanged(async user=>{
   renderAdminMaTo();
   renderDanhSachHS();
   renderVtAdmin();
+  renderVitriBang();
+  capNhatTrangThaiDaNop();
 });
 
 $('adminUnlockBtn').onclick = async ()=>{
@@ -4993,7 +4996,7 @@ function renderVitriBang(){
   const ds = Object.entries(vitriState);
   $('vtRong').style.display = ds.length ? 'none' : 'block';
 
-  let h = `<tr><th>Họ và tên</th><th>Giới tính</th><th>Ngày sinh</th><th>Dân tộc</th><th>Khoảng cách</th><th>Thời gian</th><th></th></tr>`;
+  let h = `<tr><th>Họ và tên</th><th>Giới tính</th><th>Ngày sinh</th><th>Dân tộc</th><th>Khoảng cách</th><th>Thời gian</th><th></th>${isAdmin?'<th></th>':''}</tr>`;
   if(ds.length){
     ds.forEach(([uid,vt])=>{
       const hsRoster = roster.find(r=> chuanTen(r.name) === chuanTen(vt.hoTen));
@@ -5002,10 +5005,18 @@ function renderVitriBang(){
         <td>${esc(hsRoster?hsRoster.dob:'')||'—'}</td><td>${esc(hsRoster?hsRoster.ethnic:'')||'—'}</td>
         <td class="vt-khoangcach">${nhanKieu} ${vt.khoangCachKm!=null ? vt.khoangCachKm+' km' : '—'}</td>
         <td>${vt.thoiGianPhut!=null ? '~'+vt.thoiGianPhut+' phút' : '—'}</td>
-        <td><button class="btn btn-clay btn-sm" data-vt-xemban-do="${uid}">🗺️ Xem bản đồ</button></td></tr>`;
+        <td><button class="btn btn-clay btn-sm" data-vt-xemban-do="${uid}">🗺️ Xem bản đồ</button></td>
+        ${isAdmin ? `<td><button class="btn btn-ghost btn-sm" data-vt-xoa="${uid}">Xóa</button></td>` : ''}</tr>`;
     });
   }
   table.innerHTML = h;
+  table.querySelectorAll('[data-vt-xoa]').forEach(b=> b.onclick = async ()=>{
+    const uid = b.getAttribute('data-vt-xoa');
+    const vt = vitriState[uid];
+    if(!confirm(`Xóa vị trí của "${vt.hoTen||''}"? Bạn đó sẽ cần nộp lại từ đầu.`)) return;
+    try{ await vitriRef.child(uid).remove(); }
+    catch(e){ alert(baoLoi(e)); }
+  });
   table.querySelectorAll('[data-vt-xemban-do]').forEach(b=> b.onclick = async ()=>{
     const uid = b.getAttribute('data-vt-xemban-do');
     const vt = vitriState[uid];
@@ -5016,7 +5027,23 @@ function renderVitriBang(){
   });
 }
 let banDoVitri = null, lopMarkerVitri = null;
-vitriRef.on('value', s=>{ vitriState = s.val() || {}; renderVitriBang(); if(banDoVitri) khoiTaoHoacCapNhatBanDoVitri(); });
+/* Nếu người đang xem đã từng nộp vị trí rồi, hiện rõ kết quả cũ + đổi nút thành "Cập nhật vị trí"
+   (về mặt kỹ thuật, nộp lại chỉ là ghi đè lên đúng bản ghi cũ theo uid, không tạo bản ghi mới). */
+function capNhatTrangThaiDaNop(){
+  const hop = $('vtDaNopTruocDo'), nut = $('vtXacNhanBtn');
+  if(!hop || !nut) return;
+  const cuaToi = myUid ? vitriState[myUid] : null;
+  if(cuaToi){
+    const nhanKieu = cuaToi.duongThat ? 'đường đi thật' : 'tạm tính đường chim bay';
+    hop.textContent = `Bạn đã nộp vị trí trước đó: khoảng ${cuaToi.khoangCachKm} km (${nhanKieu}). Dán link mới rồi bấm nút bên dưới nếu muốn cập nhật lại.`;
+    hop.style.display = 'block';
+    nut.textContent = 'Cập nhật vị trí';
+  } else {
+    hop.style.display = 'none';
+    nut.textContent = 'Xác nhận vị trí';
+  }
+}
+vitriRef.on('value', s=>{ vitriState = s.val() || {}; renderVitriBang(); capNhatTrangThaiDaNop(); if(banDoVitri) khoiTaoHoacCapNhatBanDoVitri(); });
 
 /* Bản đồ hiện ĐỒNG THỜI vị trí + khoảng cách của tất cả học sinh, dùng Leaflet + OpenStreetMap —
    thư viện bản đồ mã nguồn mở, hoàn toàn miễn phí, không cần API Key hay đăng ký gì cả. */
