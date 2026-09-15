@@ -4924,7 +4924,7 @@ const ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6Ijc0MTU
 
 /* Giải mã link rút gọn (VD https://maps.app.goo.gl/xxxx) qua Apps Script chạy phía máy chủ —
    trình duyệt không cho phép JS trên trang tự "mở" link chéo tên miền khác vì lý do bảo mật. */
-const GIAI_MA_LINK_URL = 'https://script.google.com/macros/s/AKfycbwMdN6M8MtdhwcEykqDwrdkIYvr0cvCa1dyXckJcL5WqQg8RzwcN4jmYw6OrxTYrF99/exec';
+const GIAI_MA_LINK_URL = 'https://script.google.com/macros/s/AKfycbyWzKOcX8qJjZf8sDgnQpkEXPWd-6yLq4BrNQONhPYOkhU6Udh8aWAVvvaJDa5bExzs/exec';
 function dungGiaiMaLink(){ return GIAI_MA_LINK_URL && !GIAI_MA_LINK_URL.includes('DIEN_'); }
 async function thuGiaiMaLinkRutGon(link){
   if(!dungGiaiMaLink()) return null;
