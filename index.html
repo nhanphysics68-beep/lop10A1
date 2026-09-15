@@ -118,6 +118,9 @@
   .vt-nhan-ten{background:#fff; border:1px solid var(--leaf); color:var(--leaf-dark); font-weight:700; font-size:11.5px;
     padding:1px 7px; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.2);}
   .vt-nhan-ten::before{border-top-color:var(--leaf);}
+  .vt-nhan-khoangcach{background:#fff8ec; border:1px solid #d97706; color:#b45309; font-weight:800; font-size:11px;
+    padding:1px 6px; border-radius:5px; box-shadow:0 1px 3px rgba(0,0,0,.2);}
+  .vt-nhan-khoangcach::before{display:none;}
   .tt-nhanquyen-hang select, .tt-nhanquyen-hang input{padding:9px 12px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13.5px;}
   .tt-nhanquyen-hang input{flex:1; min-width:160px;}
   .tt-admin-ma-luoi{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px;}
@@ -5101,7 +5104,13 @@ function khoiTaoHoacCapNhatBanDoVitri(){
         }).addTo(lopMarkerVitri)
           .bindTooltip(esc(vt.hoTen||''), {permanent:true, direction:'top', offset:[0,-6], className:'vt-nhan-ten'})
           .bindPopup(`<b>${esc(vt.hoTen||'')}</b><br>${vt.khoangCachKm!=null ? vt.khoangCachKm+' km' : 'Chưa rõ khoảng cách'}${vt.duongThat===false ? ' (tạm tính)' : ''}`);
-        L.polyline([[toaDoTruong.lat, toaDoTruong.lng],[vt.lat, vt.lng]], {color:'#d97706', weight:2, dashArray:'5,6', opacity:0.7}).addTo(lopMarkerVitri);
+        const duongNoi = L.polyline([[toaDoTruong.lat, toaDoTruong.lng],[vt.lat, vt.lng]], {color:'#d97706', weight:2, dashArray:'5,6', opacity:0.7}).addTo(lopMarkerVitri);
+        if(vt.khoangCachKm != null){
+          const diemGiua = [(toaDoTruong.lat+vt.lat)/2, (toaDoTruong.lng+vt.lng)/2];
+          L.marker(diemGiua, { icon: L.divIcon({html:'', className:'vt-diem-vo-hinh', iconSize:[1,1]}) })
+            .addTo(lopMarkerVitri)
+            .bindTooltip(`${vt.khoangCachKm} km`, {permanent:true, direction:'center', className:'vt-nhan-khoangcach'});
+        }
         cacToaDo.push([vt.lat, vt.lng]);
       });
     }
