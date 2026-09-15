@@ -702,6 +702,8 @@
       <h2>🗺️ Bản đồ vị trí tất cả học sinh</h2>
       <p class="section-note">Chấm đỏ 🏫 là trường, mỗi chấm xanh là 1 bạn — bấm vào từng chấm để xem tên và khoảng cách. Đường nối chỉ mang tính minh họa (đường thẳng), không phải đường đi thật. Bấm biểu tượng lớp 🗂️ ở góc trên bên phải bản đồ để đổi thử giữa 2 nguồn bản đồ khác nhau nếu 1 nguồn hiển thị không đúng/không tải được.</p>
       <div id="vtBanDoTatCa" style="height:420px; border-radius:12px; overflow:hidden; border:1px solid var(--line);"></div>
+      <button class="btn btn-clay btn-sm" id="vtXuatAnhBtn" style="margin-top:12px;">🖨️ Xuất ảnh độ phân giải cao (để in)</button>
+      <div id="vtXuatAnhMsg" class="msg"></div>
     </div>
 
     <div class="card">
@@ -1377,6 +1379,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
 /* =========================================================
    LỚP 10A1 — trang gộp: Sơ đồ lớp + Đăng ký lao động + Khai giảng
@@ -5076,11 +5079,12 @@ function khoiTaoHoacCapNhatBanDoVitri(){
     banDoVitri = L.map(host).setView([10, 106], 10);
     // Cho phép tự chọn giữa 2 nguồn bản đồ khác nhau — mỗi nguồn có ưu/nhược riêng (tải nhanh/chậm
     // tùy mạng, nhãn địa danh mới/cũ khác nhau) — bấm biểu tượng lớp ở góc bản đồ để đổi thử.
+    // crossOrigin:true bắt buộc phải có để tính năng "Xuất ảnh" (html2canvas) đọc được ảnh bản đồ.
     const nenOSM = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap', maxZoom: 19
+      attribution: '&copy; OpenStreetMap', maxZoom: 19, crossOrigin: true
     });
     const nenEsri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles &copy; Esri', maxZoom: 19
+      attribution: 'Tiles &copy; Esri', maxZoom: 19, crossOrigin: true
     });
     nenOSM.addTo(banDoVitri);
     L.control.layers({ 'OpenStreetMap': nenOSM, 'Esri': nenEsri }).addTo(banDoVitri);
@@ -5118,6 +5122,41 @@ function khoiTaoHoacCapNhatBanDoVitri(){
     setTimeout(()=> banDoVitri.invalidateSize(), 100); // đảm bảo bản đồ vẽ đúng kích thước khung, tránh bị xám 1 phần
   });
 }
+
+/* Xuất bản đồ hiện tại thành 1 ảnh PNG độ phân giải cao (scale x3 so với hiển thị thật trên màn
+   hình) để in ra giấy — dùng html2canvas, hoàn toàn miễn phí, không cần dịch vụ ngoài nào khác.
+   Cần chờ hết ảnh nền (tile) tải xong mới chụp, nếu không ảnh xuất ra sẽ bị thiếu/trắng từng ô. */
+$('vtXuatAnhBtn').onclick = async ()=>{
+  const host = $('vtBanDoTatCa');
+  if(!banDoVitri || !host){ showMsg($('vtXuatAnhMsg'), 'Bản đồ chưa sẵn sàng, thử lại sau.', 'err'); return; }
+  if(typeof html2canvas === 'undefined'){ showMsg($('vtXuatAnhMsg'), 'Chưa tải được thư viện xuất ảnh, kiểm tra lại kết nối mạng.', 'err'); return; }
+  const btn = $('vtXuatAnhBtn');
+  btn.disabled = true;
+  showMsg($('vtXuatAnhMsg'), 'Đang tạo ảnh độ phân giải cao, vui lòng đợi vài giây...', 'info');
+  try{
+    // Ẩn tạm nút zoom (+/-) và nút đổi lớp bản đồ trước khi chụp, để ảnh in ra gọn gàng hơn
+    const cacNutDieuKhien = host.querySelectorAll('.leaflet-control');
+    cacNutDieuKhien.forEach(n=> n.style.visibility = 'hidden');
+    await new Promise(r=> setTimeout(r, 300)); // chờ 1 nhịp cho ảnh nền tải nốt trước khi chụp
+
+    const canvas = await html2canvas(host, { useCORS: true, scale: 3, backgroundColor: '#ffffff' });
+    cacNutDieuKhien.forEach(n=> n.style.visibility = '');
+
+    canvas.toBlob(blob=>{
+      if(!blob){ showMsg($('vtXuatAnhMsg'), 'Không tạo được ảnh, thử lại.', 'err'); btn.disabled = false; return; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'ban-do-vi-tri-lop-10a1.png';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showMsg($('vtXuatAnhMsg'), '✅ Đã tải ảnh về máy.', 'ok');
+      btn.disabled = false;
+    }, 'image/png');
+  }catch(e){
+    showMsg($('vtXuatAnhMsg'), '❌ Lỗi khi xuất ảnh: ' + (e.message||e) + ' — nếu do trình duyệt chặn ảnh bản đồ (bảo mật), thử đổi sang nguồn bản đồ khác (nút 🗂️ trên bản đồ) rồi xuất lại.', 'err');
+    btn.disabled = false;
+  }
+};
 
 /* -------------------- ADMIN: cài đặt tọa độ trường -------------------- */
 function renderVtAdmin(){
