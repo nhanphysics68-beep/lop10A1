@@ -696,6 +696,8 @@
       <div id="vtAdminMsg" class="msg"></div>
       <button class="btn btn-clay btn-sm" id="vtDongBoBtn" style="margin-top:12px;">🔄 Đồng bộ Giới tính/Ngày sinh/Dân tộc theo Danh sách học sinh</button>
       <div id="vtDongBoMsg" class="msg"></div>
+      <button class="btn btn-clay btn-sm" id="vtTinhLaiBtn" style="margin-top:8px;">🛣️ Tính lại đường thật cho các bạn đang tạm tính (📏)</button>
+      <div id="vtTinhLaiMsg" class="msg"></div>
     </div>
 
     <div class="card">
@@ -5220,6 +5222,34 @@ $('vtDongBoBtn').onclick = async ()=>{
     }
     showMsg($('vtDongBoMsg'), `✅ Đã đồng bộ ${capNhat} bạn.` + (khongKhop.length ? ` Không khớp được tên với Danh sách học sinh: ${khongKhop.join(', ')}.` : ''), khongKhop.length ? 'info' : 'ok');
   }catch(e){ showMsg($('vtDongBoMsg'), baoLoi(e), 'err'); }
+  btn.disabled = false;
+};
+
+/* Thử tính lại đường đi thật (qua OpenRouteService) cho đúng những bạn hiện đang ở trạng thái
+   "tạm tính đường chim bay" (duongThat === false) — không cần bạn đó tự vào nộp lại. Chỉ thật sự
+   ghi đè khi lần tính lại này THÀNH CÔNG (duongThat trả về true); nếu dịch vụ vẫn đang bận/lỗi,
+   giữ nguyên dữ liệu cũ và tính vào số "vẫn chưa được" để Thầy biết còn lại bao nhiêu. */
+$('vtTinhLaiBtn').onclick = async ()=>{
+  const btn = $('vtTinhLaiBtn');
+  const dsCanTinhLai = Object.entries(vitriState).filter(([,vt])=> vt.duongThat === false && vt.lat!=null && vt.lng!=null);
+  if(!dsCanTinhLai.length){ showMsg($('vtTinhLaiMsg'), 'Không có bạn nào đang tạm tính đường chim bay — không cần tính lại.', 'info'); return; }
+  btn.disabled = true;
+  let thanhCong = 0, vanChuaDuoc = 0;
+  try{
+    const toaDoTruong = (await caiDatRef.child('toaDoTruong').once('value')).val();
+    if(!toaDoTruong || toaDoTruong.lat == null){ showMsg($('vtTinhLaiMsg'), 'Chưa cài đặt tọa độ trường.', 'err'); btn.disabled = false; return; }
+    for(const [uid, vt] of dsCanTinhLai){
+      showMsg($('vtTinhLaiMsg'), `Đang tính lại (${thanhCong+vanChuaDuoc+1}/${dsCanTinhLai.length})...`, 'info');
+      const kq = await tinhKhoangCachXeMay({lat:vt.lat, lng:vt.lng}, toaDoTruong);
+      if(kq.duongThat){
+        await vitriRef.child(uid).update({ khoangCachKm: Math.round(kq.khoangCachKm*10)/10, thoiGianPhut: kq.thoiGianPhut, duongThat: true });
+        thanhCong++;
+      } else {
+        vanChuaDuoc++;
+      }
+    }
+    showMsg($('vtTinhLaiMsg'), `✅ Đã tính lại thành công cho ${thanhCong}/${dsCanTinhLai.length} bạn.` + (vanChuaDuoc ? ` Còn ${vanChuaDuoc} bạn dịch vụ vẫn đang bận/lỗi — thử lại sau.` : ''), vanChuaDuoc ? 'info' : 'ok');
+  }catch(e){ showMsg($('vtTinhLaiMsg'), baoLoi(e), 'err'); }
   btn.disabled = false;
 };
 
