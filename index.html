@@ -691,7 +691,7 @@
 
     <div class="card">
       <h2>🗺️ Bản đồ vị trí tất cả học sinh</h2>
-      <p class="section-note">Chấm đỏ 🏫 là trường, mỗi chấm xanh là 1 bạn — bấm vào từng chấm để xem tên và khoảng cách. Đường nối chỉ mang tính minh họa (đường thẳng), không phải đường đi thật.</p>
+      <p class="section-note">Chấm đỏ 🏫 là trường, mỗi chấm xanh là 1 bạn — bấm vào từng chấm để xem tên và khoảng cách. Đường nối chỉ mang tính minh họa (đường thẳng), không phải đường đi thật. Bấm biểu tượng lớp 🗂️ ở góc trên bên phải bản đồ để đổi thử giữa 2 nguồn bản đồ khác nhau nếu 1 nguồn hiển thị không đúng/không tải được.</p>
       <div id="vtBanDoTatCa" style="height:420px; border-radius:12px; overflow:hidden; border:1px solid var(--line);"></div>
     </div>
 
@@ -5053,9 +5053,16 @@ function khoiTaoHoacCapNhatBanDoVitri(){
 
   if(!banDoVitri){
     banDoVitri = L.map(host).setView([10, 106], 10);
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+    // Cho phép tự chọn giữa 2 nguồn bản đồ khác nhau — mỗi nguồn có ưu/nhược riêng (tải nhanh/chậm
+    // tùy mạng, nhãn địa danh mới/cũ khác nhau) — bấm biểu tượng lớp ở góc bản đồ để đổi thử.
+    const nenOSM = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap', maxZoom: 19
+    });
+    const nenEsri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
       attribution: 'Tiles &copy; Esri', maxZoom: 19
-    }).addTo(banDoVitri);
+    });
+    nenOSM.addTo(banDoVitri);
+    L.control.layers({ 'OpenStreetMap': nenOSM, 'Esri': nenEsri }).addTo(banDoVitri);
     lopMarkerVitri = L.layerGroup().addTo(banDoVitri);
   }
   lopMarkerVitri.clearLayers();
