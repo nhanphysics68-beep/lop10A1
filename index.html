@@ -710,7 +710,10 @@
 
     <div class="card">
       <h2>📋 Danh sách vị trí học sinh</h2>
-      <button class="btn btn-blue btn-sm" id="vtSapXepBtn" style="margin-bottom:10px;">🔽 Khoảng cách: Gần → Xa</button>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+        <button class="btn btn-blue btn-sm" id="vtSapXepBtn">🔽 Khoảng cách: Gần → Xa</button>
+        <button class="btn btn-ghost btn-sm" id="vtChuaNhapBtn" style="display:none;">📊 Thống kê chưa nhập</button>
+      </div>
       <div class="scroll-x"><table id="vtBang"></table></div>
       <div id="vtRong" class="empty" style="display:none;">Chưa có bạn nào nộp vị trí.</div>
     </div>
@@ -4960,6 +4963,12 @@ function renderVitriBang(){
   $('vtRong').style.display = ds.length ? 'none' : 'block';
   const nutSapXep = $('vtSapXepBtn');
   if(nutSapXep) nutSapXep.textContent = vtSapXepTang ? '🔽 Khoảng cách: Gần → Xa' : '🔼 Khoảng cách: Xa → Gần';
+  const nutChuaNhap = $('vtChuaNhapBtn');
+  if(nutChuaNhap){
+    nutChuaNhap.style.display = isAdmin ? 'inline-block' : 'none';
+    const soChuaNop = roster.filter(hs=> !Object.values(vitriState).some(vt=> chuanTen(vt.hoTen)===chuanTen(hs.name))).length;
+    nutChuaNhap.textContent = `📊 Thống kê chưa nhập (${soChuaNop})`;
+  }
 
   let h = `<tr><th>STT</th><th>Họ và tên</th><th>Giới tính</th><th>Ngày sinh</th><th>Dân tộc</th><th>Khoảng cách</th><th>Thời gian</th><th></th>${isAdmin?'<th></th>':''}</tr>`;
   if(ds.length){
@@ -5021,6 +5030,17 @@ function capNhatTrangThaiDaNop(){
 }
 vitriRef.on('value', s=>{ vitriState = s.val() || {}; renderVitriBang(); capNhatTrangThaiDaNop(); if(banDoVitri) khoiTaoHoacCapNhatBanDoVitri(); });
 $('vtSapXepBtn').onclick = ()=>{ vtSapXepTang = !vtSapXepTang; renderVitriBang(); };
+$('vtChuaNhapBtn').onclick = ()=>{
+  const dsChuaNop = roster.filter(hs=> !Object.values(vitriState).some(vt=> chuanTen(vt.hoTen)===chuanTen(hs.name)))
+    .sort((a,b)=> a.name.localeCompare(b.name,'vi'));
+  openModal(`<h3>📊 Học sinh chưa nhập vị trí (${dsChuaNop.length}/${roster.length})</h3>
+    ${dsChuaNop.length ? `<div style="max-height:360px; overflow-y:auto; border:1px solid var(--line); border-radius:8px;">
+      <table><tr><th>STT</th><th>Họ và tên</th></tr>
+        ${dsChuaNop.map((hs,i)=> `<tr><td>${i+1}</td><td>${esc(hs.name)}</td></tr>`).join('')}
+      </table>
+    </div>` : `<p class="section-note" style="color:var(--leaf-dark); font-weight:700;">🎉 Tất cả học sinh đã nộp vị trí!</p>`}
+    <div class="modal-btns" style="margin-top:14px;"><button class="btn btn-ghost btn-sm" onclick="closeModal()">Đóng</button></div>`, 'gen');
+};
 
 /* Bản đồ hiện ĐỒNG THỜI vị trí + khoảng cách của tất cả học sinh, dùng Leaflet + OpenStreetMap —
    thư viện bản đồ mã nguồn mở, hoàn toàn miễn phí, không cần API Key hay đăng ký gì cả. */
@@ -5076,11 +5096,13 @@ function khoiTaoHoacCapNhatBanDoVitri(){
   });
 }
 
-/* Xuất bản đồ hiện tại thành 1 ảnh PNG độ phân giải cao (gấp 3 lần hiển thị thật trên màn hình)
-   để in ra giấy — dùng dom-to-image-more, thư viện chuyên xử lý đúng cách Leaflet định vị các
-   lớp bản đồ (html2canvas thông thường bị lỗi mất/lệch từng mảng do cách Leaflet dùng CSS
+/* Xuất bản đồ + DANH SÁCH ĐẦY ĐỦ CẢ LỚP (kể cả bạn chưa nộp vị trí) thành 1 ảnh PNG độ phân
+   giải cao để in ra giấy — dùng dom-to-image-more, thư viện chuyên xử lý đúng cách Leaflet định
+   vị các lớp bản đồ (html2canvas thông thường bị lỗi mất/lệch từng mảng do cách Leaflet dùng CSS
    transform để định vị) — hoàn toàn miễn phí, không cần dịch vụ ngoài nào khác.
-   Cần chờ hết ảnh nền (tile) tải xong mới chụp, nếu không ảnh xuất ra sẽ bị thiếu/trắng từng ô. */
+   Làm 2 bước: (1) chụp riêng bản đồ ở độ phân giải bình thường, (2) ghép ảnh đó cùng bảng danh
+   sách đầy đủ vào 1 khung tạm rồi chụp LẠI khung đó ở độ phân giải cao (chỉ nhân độ phân giải
+   đúng 1 lần ở bước cuối, tránh phóng đại chồng chéo 2 lần). */
 $('vtXuatAnhBtn').onclick = async ()=>{
   const host = $('vtBanDoTatCa');
   if(!banDoVitri || !host){ showMsg($('vtXuatAnhMsg'), 'Bản đồ chưa sẵn sàng, thử lại sau.', 'err'); return; }
@@ -5089,19 +5111,47 @@ $('vtXuatAnhBtn').onclick = async ()=>{
   btn.disabled = true;
   showMsg($('vtXuatAnhMsg'), 'Đang tạo ảnh độ phân giải cao, vui lòng đợi vài giây...', 'info');
   const cacNutDieuKhien = host.querySelectorAll('.leaflet-control');
+  let khungGop = null;
   try{
     // Ẩn tạm nút zoom (+/-) và nút đổi lớp bản đồ trước khi chụp, để ảnh in ra gọn gàng hơn
     cacNutDieuKhien.forEach(n=> n.style.visibility = 'hidden');
     await new Promise(r=> setTimeout(r, 300)); // chờ 1 nhịp cho ảnh nền tải nốt trước khi chụp
 
+    const rong = host.clientWidth;
+    const anhBanDoUrl = await domtoimage.toPng(host, { bgcolor: '#ffffff' });
+    cacNutDieuKhien.forEach(n=> n.style.visibility = '');
+
+    // Ghép ảnh bản đồ vừa chụp + danh sách ĐẦY ĐỦ mọi thành viên lớp (kể cả chưa nộp vị trí)
+    // vào 1 khung tạm (đặt ngoài màn hình, không ai nhìn thấy) để chụp gộp lại thành 1 ảnh.
+    const dsDayDu = roster.slice().sort((a,b)=> a.name.localeCompare(b.name, 'vi'));
+    khungGop = document.createElement('div');
+    khungGop.style.cssText = `position:fixed; left:-99999px; top:0; width:${rong}px; background:#fff; font-family:'Trebuchet MS',sans-serif;`;
+    khungGop.innerHTML = `
+      <img src="${anhBanDoUrl}" style="width:100%; display:block;">
+      <div style="padding:16px 20px 22px;">
+        <div style="font-weight:800; color:#14532d; font-size:16px; margin-bottom:10px;">📋 Danh sách đầy đủ lớp 10A1 (${dsDayDu.length} bạn)</div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:6px 18px; font-size:12.5px; color:#1c2b22;">
+          ${dsDayDu.map(hs=>{
+            const vt = Object.values(vitriState).find(v=> chuanTen(v.hoTen)===chuanTen(hs.name));
+            const daNop = vt && vt.khoangCachKm != null;
+            const nhan = daNop ? `${vt.khoangCachKm} km` : 'Chưa nộp vị trí';
+            const mau = daNop ? '#b45309' : '#94a3b8';
+            return `<div>${esc(hs.name)} <span style="color:${mau}; font-weight:700;">(${nhan})</span></div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    document.body.appendChild(khungGop);
+    await new Promise(r=> setTimeout(r, 250)); // chờ ảnh bản đồ vừa chụp tải xong vào khung tạm
+
     const TI_LE = 3; // độ phân giải gấp 3 lần hiển thị thật — kỹ thuật chuẩn của dom-to-image để xuất ảnh nét cao
-    const rong = host.clientWidth, cao = host.clientHeight;
-    const blob = await domtoimage.toBlob(host, {
-      width: rong * TI_LE, height: cao * TI_LE,
-      style: { transform: `scale(${TI_LE})`, transformOrigin: 'top left', width: rong+'px', height: cao+'px' },
+    const caoKhung = khungGop.scrollHeight;
+    const blob = await domtoimage.toBlob(khungGop, {
+      width: rong * TI_LE, height: caoKhung * TI_LE,
+      style: { transform: `scale(${TI_LE})`, transformOrigin: 'top left', width: rong+'px', height: caoKhung+'px' },
       bgcolor: '#ffffff'
     });
-    cacNutDieuKhien.forEach(n=> n.style.visibility = '');
+    document.body.removeChild(khungGop);
+    khungGop = null;
 
     if(!blob){ showMsg($('vtXuatAnhMsg'), 'Không tạo được ảnh, thử lại.', 'err'); btn.disabled = false; return; }
     const url = URL.createObjectURL(blob);
@@ -5112,6 +5162,7 @@ $('vtXuatAnhBtn').onclick = async ()=>{
     showMsg($('vtXuatAnhMsg'), '✅ Đã tải ảnh về máy.', 'ok');
     btn.disabled = false;
   }catch(e){
+    if(khungGop && khungGop.parentNode) document.body.removeChild(khungGop);
     cacNutDieuKhien.forEach(n=> n.style.visibility = '');
     showMsg($('vtXuatAnhMsg'), '❌ Lỗi khi xuất ảnh: ' + (e.message||e) + ' — nếu do trình duyệt chặn ảnh bản đồ (bảo mật), thử đổi sang nguồn bản đồ khác (nút 🗂️ trên bản đồ) rồi xuất lại.', 'err');
     btn.disabled = false;
