@@ -234,7 +234,8 @@
   /* ---------- Thành viên lớp (thẻ học sinh) ---------- */
   .tv-luoi{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px;}
   .tv-the{background:#fffefb; border-radius:12px; overflow:hidden; box-shadow:0 4px 14px rgba(20,83,45,.14);
-    border:1px solid var(--line); display:flex; flex-direction:column;}
+    border:1px solid var(--line); display:flex; flex-direction:column; position:relative;}
+  .tv-the-xoa{position:absolute; top:8px; right:8px; z-index:2; padding:3px 9px; font-size:11px;}
   .tv-the-dau{background:linear-gradient(120deg, var(--leaf-dark), var(--leaf)); color:#fff;
     display:flex; align-items:center; gap:8px; padding:8px 12px;}
   .tv-the-dau img{width:28px; height:28px; flex:none; filter:drop-shadow(0 1px 2px rgba(0,0,0,.3));}
@@ -4261,12 +4262,13 @@ function renderThanhVien(){
   if(nutLay) nutLay.style.display = isAdmin ? 'inline-block' : 'none';
   if(nutIn) nutIn.style.display = isAdmin ? 'inline-block' : 'none';
 
-  const ds = Object.values(thanhVienState).filter(x=> x && x.anhTheId);
+  const ds = Object.entries(thanhVienState).filter(([uid,x])=> x && x.anhTheId);
   trong.style.display = ds.length ? 'none' : 'block';
-  luoi.innerHTML = ds.map(x=>{
+  luoi.innerHTML = ds.map(([uid,x])=>{
     const hsRoster = roster.find(r=> chuanTen(r.name) === chuanTen(x.hoTen));
     return `
     <div class="tv-the">
+      ${isAdmin ? `<button class="btn btn-ghost btn-sm tv-the-xoa" data-tv-xoa="${uid}">Xóa</button>` : ''}
       <div class="tv-the-dau">
         <img src="1.png" alt="Logo">
         <div class="tv-the-truong">
@@ -4286,6 +4288,14 @@ function renderThanhVien(){
       <div class="tv-the-chan">LỚP 10A1 · NĂM HỌC 2026 – 2027</div>
     </div>`;
   }).join('');
+
+  luoi.querySelectorAll('[data-tv-xoa]').forEach(b=> b.onclick = async ()=>{
+    const uid = b.getAttribute('data-tv-xoa');
+    const x = thanhVienState[uid];
+    if(!confirm(`Xóa thẻ thành viên của "${x.hoTen||''}" khỏi mục này? (Không xóa dữ liệu gốc ở "Dữ liệu cá nhân", chỉ ẩn khỏi mục Thành viên lớp — bạn đó tải lại ảnh thẻ là thẻ sẽ hiện lại.)`)) return;
+    try{ await thanhVienRef.child(uid).remove(); }
+    catch(e){ alert(baoLoi(e)); }
+  });
 }
 
 /* Giáo viên bấm để quét lại TOÀN BỘ "Dữ liệu cá nhân" (hosocanhan2026) một lần — đưa những
