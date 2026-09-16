@@ -4807,9 +4807,9 @@ async function renderDanhSachKhoanThu(){
     const dsNop = Object.keys(v).map(uid=> Object.assign({uid}, v[uid]));
     const theoTen = new Map(dsNop.map(x=> [chuanTen(x.hoTen), x]));
 
-    let h = `<tr><th>STT</th><th>Họ và tên</th><th>Ngày sinh</th><th>Giới tính</th><th>Dân tộc</th><th>Các khoản đã đóng</th><th>Tổng tiền</th><th></th><th></th></tr>`;
+    let h = `<tr><th>STT</th><th>Họ và tên</th><th>Ngày sinh</th><th>Giới tính</th><th>Dân tộc</th><th>Các khoản đã đóng</th><th>Tổng tiền</th><th></th><th></th><th></th></tr>`;
     if(!roster.length){
-      h += `<tr><td colspan="9" style="text-align:center;color:var(--ink-soft);">Cần nạp danh sách lớp (lop10a1/roster) để đối chiếu.</td></tr>`;
+      h += `<tr><td colspan="10" style="text-align:center;color:var(--ink-soft);">Cần nạp danh sách lớp (lop10a1/roster) để đối chiếu.</td></tr>`;
     } else {
       roster.forEach((hs,i)=>{
         const dn = theoTen.get(chuanTen(hs.name));
@@ -4819,7 +4819,8 @@ async function renderDanhSachKhoanThu(){
           <td class="${dsKhoan.length?'kt-da-nop':'kt-chua-nop'}">${dsKhoan.length ? dsKhoan.map(k=>k.ten).join(', ') : '❌ Chưa đóng khoản nào'}</td>
           <td>${dsKhoan.length ? dinhDangTien(tong) : '—'}</td>
           <td>${dn && dn.minhChungId ? `<button class="btn btn-blue btn-sm" data-xem-anh="${dn.uid}">Xem ảnh chuyển khoản</button>` : ''}</td>
-          <td>${dn && dn.theBaoHiemId ? `<button class="btn btn-clay btn-sm" data-xem-the="${dn.uid}">🆔 Xem thẻ bảo hiểm</button>` : ''}</td></tr>`;
+          <td>${dn && dn.theBaoHiemId ? `<button class="btn btn-clay btn-sm" data-xem-the="${dn.uid}">🆔 Xem thẻ bảo hiểm</button>` : ''}</td>
+          <td><button class="btn btn-blue btn-sm" data-admin-sua-kt="${esc(hs.name)}">✏️ Nhập/Sửa</button></td></tr>`;
       });
     }
     $('ktDanhSachTable').innerHTML = h;
@@ -4827,7 +4828,69 @@ async function renderDanhSachKhoanThu(){
       btn.onclick = ()=> moXemAnhChuyenKhoan(btn.getAttribute('data-xem-the'), 'the'));
     $('ktDanhSachTable').querySelectorAll('[data-xem-anh]').forEach(btn=>
       btn.onclick = ()=> moXemAnhChuyenKhoan(btn.getAttribute('data-xem-anh'), 'minhchung'));
+    $('ktDanhSachTable').querySelectorAll('[data-admin-sua-kt]').forEach(btn=>
+      btn.onclick = ()=> moModalAdminSuaKhoanThu(btn.getAttribute('data-admin-sua-kt')));
   }catch(e){ $('ktDanhSachTable').innerHTML = `<tr><td>${baoLoi(e)}</td></tr>`; }
+}
+
+/* Cho phép giáo viên chủ nhiệm tự nhập/sửa khoản thu THAY học sinh (VD học sinh nộp tiền mặt
+   trực tiếp, không tự thao tác trên máy) — khớp theo tên với bản ghi đã có (nếu có) để SỬA ĐÚNG
+   bản ghi đó, tránh tạo bản ghi trùng lặp cho cùng 1 em; nếu em đó chưa từng nộp gì, tạo mới. */
+function moModalAdminSuaKhoanThu(hoTen){
+  const chuanTenTarget = chuanTen(hoTen);
+  const banGhiCu = Object.entries(ktDuLieuAdmin).find(([uid,d])=> chuanTen(d.hoTen)===chuanTenTarget);
+  const uidDung = banGhiCu ? banGhiCu[0] : null;
+  const duLieuCu = banGhiCu ? banGhiCu[1] : null;
+  const hsRoster = roster.find(r=> chuanTen(r.name)===chuanTenTarget);
+
+  openModal(`<h3>Nhập / Sửa khoản thu</h3>
+    <p class="section-note">Học sinh: <b>${esc(hoTen)}</b>${hsRoster ? ` — ${esc(hsRoster.gender||'')}, ${esc(hsRoster.dob||'')}, ${esc(hsRoster.ethnic||'')}` : ''}</p>
+    <div class="section-title">Chọn các khoản đã đóng</div>
+    <div>
+      ${KHOAN_THU_DINH_NGHIA.map(k=> `<label style="display:flex; align-items:center; gap:8px; padding:5px 0; font-weight:400;">
+        <input type="checkbox" class="admin-kt-khoan" value="${k.id}" ${duLieuCu && duLieuCu.cacKhoanDong && duLieuCu.cacKhoanDong[k.id] ? 'checked':''}>
+        ${esc(k.ten)} — ${dinhDangTien(k.tien)}
+      </label>`).join('')}
+    </div>
+    <div id="adminKtTongTien" style="font-weight:800; color:var(--leaf-dark); margin:10px 0;"></div>
+    <p class="section-note">${duLieuCu ? (duLieuCu.minhChungId||duLieuCu.theBaoHiemId ? '📎 Ảnh minh chứng/thẻ BHYT do em tự đính kèm vẫn được giữ nguyên.' : '') : 'Chưa có bản ghi nào — lưu sẽ tạo mới cho em này.'}</p>
+    <div id="adminKtErr" class="msg err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary btn-sm" id="adminKtLuuBtn">Lưu</button>
+    </div>`, 'gen');
+
+  function capNhatTongAdmin(){
+    const daChon = [...document.querySelectorAll('.admin-kt-khoan:checked')].map(c=>c.value);
+    const tong = KHOAN_THU_DINH_NGHIA.filter(k=> daChon.includes(k.id)).reduce((s,k)=>s+k.tien,0);
+    $('adminKtTongTien').textContent = 'Tổng cộng: ' + dinhDangTien(tong);
+  }
+  document.querySelectorAll('.admin-kt-khoan').forEach(c=> c.onchange = capNhatTongAdmin);
+  capNhatTongAdmin();
+
+  $('adminKtLuuBtn').onclick = async ()=>{
+    const daChon = [...document.querySelectorAll('.admin-kt-khoan:checked')].map(c=>c.value);
+    const cacKhoanDong = {};
+    daChon.forEach(id=> cacKhoanDong[id] = true);
+    const data = {
+      hoTen,
+      ngaySinh: (hsRoster && hsRoster.dob) || (duLieuCu && duLieuCu.ngaySinh) || '',
+      gioiTinh: (hsRoster && hsRoster.gender) || (duLieuCu && duLieuCu.gioiTinh) || '',
+      danToc: (hsRoster && hsRoster.ethnic) || (duLieuCu && duLieuCu.danToc) || '',
+      cacKhoanDong,
+      luc: new Date().toISOString()
+    };
+    if(duLieuCu){
+      if(duLieuCu.minhChungId) data.minhChungId = duLieuCu.minhChungId;
+      if(duLieuCu.theBaoHiemId) data.theBaoHiemId = duLieuCu.theBaoHiemId;
+    }
+    try{
+      const key = uidDung || khoanThuRef.push().key;
+      await khoanThuRef.child(key).set(data);
+      closeModal();
+      renderDanhSachKhoanThu();
+    }catch(e){ showMsg($('adminKtErr'), baoLoi(e), 'err'); }
+  };
 }
 
 function moXemAnhChuyenKhoan(uid, loai){
