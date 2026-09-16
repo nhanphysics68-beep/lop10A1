@@ -121,6 +121,8 @@
     padding:2px 7px; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.2); text-align:center; line-height:1.2;}
   .vt-nhan-ten b{display:block; font-size:11px; line-height:1.25;}
   .vt-nhan-ten::before{border-top-color:var(--leaf);}
+  #vtBanDoTatCa:fullscreen{height:100vh !important;}
+  #vtBanDoTatCa:-webkit-full-screen{height:100vh !important;}
   .tt-nhanquyen-hang select, .tt-nhanquyen-hang input{padding:9px 12px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13.5px;}
   .tt-nhanquyen-hang input{flex:1; min-width:160px;}
   .tt-admin-ma-luoi{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px;}
@@ -705,7 +707,10 @@
       <h2>🗺️ Bản đồ vị trí tất cả học sinh</h2>
       <p class="section-note">Chấm đỏ 🏫 là trường, mỗi chấm xanh là 1 bạn (tên + khoảng cách gộp chung 1 nhãn) — khi nhiều bạn ở gần nhau, bản đồ tự gộp thành 1 chấm số đếm, phóng to bản đồ hoặc bấm vào chấm đó để tách ra xem từng bạn rõ hơn. Đường nối chỉ mang tính minh họa (đường thẳng), không phải đường đi thật. Bấm biểu tượng lớp 🗂️ ở góc trên bên phải bản đồ để đổi thử giữa 2 nguồn bản đồ khác nhau nếu 1 nguồn hiển thị không đúng/không tải được.</p>
       <div id="vtBanDoTatCa" style="height:420px; border-radius:12px; overflow:hidden; border:1px solid var(--line);"></div>
-      <button class="btn btn-clay btn-sm" id="vtXuatAnhBtn" style="margin-top:12px;">🖨️ Xuất ảnh độ phân giải cao (để in)</button>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+        <button class="btn btn-blue btn-sm" id="vtToanManHinhBtn">⛶ Toàn màn hình</button>
+        <button class="btn btn-clay btn-sm" id="vtXuatAnhBtn">🖨️ Xuất ảnh độ phân giải cao (để in)</button>
+      </div>
       <div id="vtXuatAnhMsg" class="msg"></div>
     </div>
 
@@ -4811,7 +4816,8 @@ async function renderDanhSachKhoanThu(){
     if(!roster.length){
       h += `<tr><td colspan="10" style="text-align:center;color:var(--ink-soft);">Cần nạp danh sách lớp (lop10a1/roster) để đối chiếu.</td></tr>`;
     } else {
-      roster.forEach((hs,i)=>{
+      const dsXepAZ = roster.slice().sort(soSanhTenVN); // A-Z theo Tên trước (chuẩn Việt Nam), không đổi thứ tự gốc của roster
+      dsXepAZ.forEach((hs,i)=>{
         const dn = theoTen.get(chuanTen(hs.name));
         const dsKhoan = dn ? KHOAN_THU_DINH_NGHIA.filter(k=> dn.cacKhoanDong && dn.cacKhoanDong[k.id]) : [];
         const tong = dsKhoan.reduce((s,k)=> s+k.tien, 0);
@@ -5251,6 +5257,22 @@ function khoiTaoHoacCapNhatBanDoVitri(){
    Làm 2 bước: (1) chụp riêng bản đồ ở độ phân giải bình thường, (2) ghép ảnh đó cùng bảng danh
    sách đầy đủ vào 1 khung tạm ĐÚNG CHIỀU NGANG A3 rồi chụp LẠI khung đó ở độ phân giải cao (chỉ
    nhân độ phân giải đúng 1 lần ở bước cuối, tránh phóng đại chồng chéo 2 lần). */
+/* Bật/tắt toàn màn hình cho khung bản đồ — dùng API chuẩn của trình duyệt, tự vẽ lại đúng kích
+   thước bản đồ (invalidateSize) ngay khi vào/ra toàn màn hình, tránh bị lệch/xám 1 phần. */
+$('vtToanManHinhBtn').onclick = ()=>{
+  const host = $('vtBanDoTatCa');
+  if(!document.fullscreenElement){
+    (host.requestFullscreen || host.webkitRequestFullscreen || host.msRequestFullscreen)?.call(host);
+  } else {
+    (document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen)?.call(document);
+  }
+};
+document.addEventListener('fullscreenchange', ()=>{
+  const dangToanManHinh = !!document.fullscreenElement;
+  $('vtToanManHinhBtn').textContent = dangToanManHinh ? '↙️ Thoát toàn màn hình' : '⛶ Toàn màn hình';
+  setTimeout(()=>{ if(banDoVitri) banDoVitri.invalidateSize(); }, 100);
+});
+
 $('vtXuatAnhBtn').onclick = async ()=>{
   const host = $('vtBanDoTatCa');
   if(!banDoVitri || !host){ showMsg($('vtXuatAnhMsg'), 'Bản đồ chưa sẵn sàng, thử lại sau.', 'err'); return; }
