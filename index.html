@@ -4839,9 +4839,11 @@ async function renderDanhSachKhoanThu(){
 function moModalAdminSuaKhoanThu(hoTen){
   const chuanTenTarget = chuanTen(hoTen);
   const banGhiCu = Object.entries(ktDuLieuAdmin).find(([uid,d])=> chuanTen(d.hoTen)===chuanTenTarget);
-  const uidDung = banGhiCu ? banGhiCu[0] : null;
+  let uidDung = banGhiCu ? banGhiCu[0] : null; // "let" vì có thể được gán lần đầu ngay khi upload ảnh, trước cả khi bấm Lưu
   const duLieuCu = banGhiCu ? banGhiCu[1] : null;
   const hsRoster = roster.find(r=> chuanTen(r.name)===chuanTenTarget);
+  let anhMinhChungIdMoi = duLieuCu ? duLieuCu.minhChungId : null;
+  let anhTheBhIdMoi = duLieuCu ? duLieuCu.theBaoHiemId : null;
 
   openModal(`<h3>Nhập / Sửa khoản thu</h3>
     <p class="section-note">Học sinh: <b>${esc(hoTen)}</b>${hsRoster ? ` — ${esc(hsRoster.gender||'')}, ${esc(hsRoster.dob||'')}, ${esc(hsRoster.ethnic||'')}` : ''}</p>
@@ -4853,12 +4855,26 @@ function moModalAdminSuaKhoanThu(hoTen){
       </label>`).join('')}
     </div>
     <div id="adminKtTongTien" style="font-weight:800; color:var(--leaf-dark); margin:10px 0;"></div>
-    <p class="section-note">${duLieuCu ? (duLieuCu.minhChungId||duLieuCu.theBaoHiemId ? '📎 Ảnh minh chứng/thẻ BHYT do em tự đính kèm vẫn được giữ nguyên.' : '') : 'Chưa có bản ghi nào — lưu sẽ tạo mới cho em này.'}</p>
-    <div id="adminKtErr" class="msg err"></div>
+
+    <label style="font-size:12.5px;font-weight:700;display:block;margin-top:6px;">📎 Ảnh minh chứng chuyển khoản</label>
+    <div id="adminKtAnhMcXem" class="chs-anh-xemtruoc" style="margin-bottom:6px;"></div>
+    <input type="file" id="adminKtAnhMcInput" accept="image/*" style="display:none;">
+    <button type="button" class="btn btn-blue btn-sm" id="adminKtAnhMcBtn">Chọn / Đổi ảnh minh chứng</button>
+
+    <label style="font-size:12.5px;font-weight:700;display:block;margin-top:14px;">🆔 Ảnh thẻ bảo hiểm y tế</label>
+    <div id="adminKtAnhTheXem" class="chs-anh-xemtruoc" style="margin-bottom:6px;"></div>
+    <input type="file" id="adminKtAnhTheInput" accept="image/*" style="display:none;">
+    <button type="button" class="btn btn-clay btn-sm" id="adminKtAnhTheBtn">Chọn / Đổi ảnh thẻ bảo hiểm</button>
+
+    <div id="adminKtErr" class="msg err" style="margin-top:10px;"></div>
     <div class="modal-btns">
-      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Hủy</button>
-      <button class="btn btn-primary btn-sm" id="adminKtLuuBtn">Lưu</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Đóng</button>
+      <button class="btn btn-primary btn-sm" id="adminKtLuuBtn">💾 Lưu — nhập tiếp em khác</button>
     </div>`, 'gen');
+
+  const veLaiAnhMc = ()=> { $('adminKtAnhMcXem').innerHTML = anhMinhChungIdMoi ? `<img src="${anhDriveNho(anhMinhChungIdMoi)}" style="max-width:180px;max-height:220px;border-radius:8px;border:2px solid var(--line);">` : 'Chưa đính kèm ảnh.'; };
+  const veLaiAnhThe = ()=> { $('adminKtAnhTheXem').innerHTML = anhTheBhIdMoi ? `<img src="${anhDriveNho(anhTheBhIdMoi)}" style="max-width:180px;max-height:220px;border-radius:8px;border:2px solid var(--line);">` : 'Chưa đính kèm ảnh.'; };
+  veLaiAnhMc(); veLaiAnhThe();
 
   function capNhatTongAdmin(){
     const daChon = [...document.querySelectorAll('.admin-kt-khoan:checked')].map(c=>c.value);
@@ -4867,6 +4883,52 @@ function moModalAdminSuaKhoanThu(hoTen){
   }
   document.querySelectorAll('.admin-kt-khoan').forEach(c=> c.onchange = capNhatTongAdmin);
   capNhatTongAdmin();
+
+  /* Ghi tạm ngay khi vừa chọn xong ảnh (không cần chờ bấm Lưu) — nếu là học sinh chưa có bản ghi
+     nào, tự lấy đúng 1 key mới NGAY LẦN ĐẦU rồi DÙNG LẠI đúng key đó cho các thao tác sau trong
+     cùng lượt mở khung này (tránh mỗi lần chọn ảnh lại tạo thêm 1 bản ghi mới khác nhau). */
+  async function luuTamNgayLucChonAnh(truong, giaTri){
+    if(!uidDung) uidDung = khoanThuRef.push().key;
+    const cu = (await khoanThuRef.child(uidDung).once('value')).val() || {};
+    await khoanThuRef.child(uidDung).set(Object.assign({}, cu, {
+      hoTen,
+      ngaySinh: cu.ngaySinh || (hsRoster && hsRoster.dob) || '',
+      gioiTinh: cu.gioiTinh || (hsRoster && hsRoster.gender) || '',
+      danToc: cu.danToc || (hsRoster && hsRoster.ethnic) || '',
+      [truong]: giaTri
+    }));
+  }
+
+  $('adminKtAnhMcBtn').onclick = ()=> $('adminKtAnhMcInput').click();
+  $('adminKtAnhMcInput').onchange = async e=>{
+    const file = e.target.files[0]; e.target.value = '';
+    if(!file) return;
+    if(!dungDrive()){ showMsg($('adminKtErr'), 'Chưa cấu hình nơi lưu ảnh (Drive).', 'err'); return; }
+    showMsg($('adminKtErr'), 'Đang tải ảnh lên...', 'info');
+    try{
+      const nen = await nenAnh(file, 1000, 0.85);
+      const kq = await guiAnhLenDrive(nen, hoTen, TEN_THU_MUC_MINH_CHUNG);
+      anhMinhChungIdMoi = kq.id;
+      await luuTamNgayLucChonAnh('minhChungId', kq.id);
+      veLaiAnhMc();
+      $('adminKtErr').classList.remove('show');
+    }catch(err){ showMsg($('adminKtErr'), baoLoi(err), 'err'); }
+  };
+  $('adminKtAnhTheBtn').onclick = ()=> $('adminKtAnhTheInput').click();
+  $('adminKtAnhTheInput').onchange = async e=>{
+    const file = e.target.files[0]; e.target.value = '';
+    if(!file) return;
+    if(!dungDrive()){ showMsg($('adminKtErr'), 'Chưa cấu hình nơi lưu ảnh (Drive).', 'err'); return; }
+    showMsg($('adminKtErr'), 'Đang tải ảnh lên...', 'info');
+    try{
+      const nen = await nenAnh(file, 1000, 0.85);
+      const kq = await guiAnhLenDrive(nen, hoTen, TEN_THU_MUC_THE_BH);
+      anhTheBhIdMoi = kq.id;
+      await luuTamNgayLucChonAnh('theBaoHiemId', kq.id);
+      veLaiAnhThe();
+      $('adminKtErr').classList.remove('show');
+    }catch(err){ showMsg($('adminKtErr'), baoLoi(err), 'err'); }
+  };
 
   $('adminKtLuuBtn').onclick = async ()=>{
     const daChon = [...document.querySelectorAll('.admin-kt-khoan:checked')].map(c=>c.value);
@@ -4880,14 +4942,12 @@ function moModalAdminSuaKhoanThu(hoTen){
       cacKhoanDong,
       luc: new Date().toISOString()
     };
-    if(duLieuCu){
-      if(duLieuCu.minhChungId) data.minhChungId = duLieuCu.minhChungId;
-      if(duLieuCu.theBaoHiemId) data.theBaoHiemId = duLieuCu.theBaoHiemId;
-    }
+    if(anhMinhChungIdMoi) data.minhChungId = anhMinhChungIdMoi;
+    if(anhTheBhIdMoi) data.theBaoHiemId = anhTheBhIdMoi;
     try{
       const key = uidDung || khoanThuRef.push().key;
       await khoanThuRef.child(key).set(data);
-      closeModal();
+      closeModal(); // đóng lại ngay — Thầy bấm tiếp "Nhập/Sửa" ở dòng học sinh khác để tiếp tục
       renderDanhSachKhoanThu();
     }catch(e){ showMsg($('adminKtErr'), baoLoi(e), 'err'); }
   };
