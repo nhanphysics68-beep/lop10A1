@@ -4456,7 +4456,8 @@ async function napChsAdmin(){
 function renderChsAdmin(){
   const host = $('chsAdminList');
   if(!host) return;
-  const ds = Object.keys(chsAdminData).map(uid=> Object.assign({uid}, chsAdminData[uid]));
+  const ds = Object.keys(chsAdminData).map(uid=> Object.assign({uid}, chsAdminData[uid]))
+    .sort((a,b)=> (a.hoTen||'').localeCompare(b.hoTen||'', 'vi'));
   $('chsCountBadge').textContent = ds.length;
   if(!ds.length){ host.innerHTML = `<p class="section-note">Chưa có học sinh nào nộp dữ liệu.</p>`; return; }
   host.innerHTML = ds.map(x=> `
@@ -4467,7 +4468,19 @@ function renderChsAdmin(){
         ${!x.cccd ? '<span class="chs-admin-thieu"> · thiếu CCCD</span>' : ''}
         ${!x.anhTheId ? '<span class="chs-admin-thieu"> · thiếu ảnh thẻ</span>' : ''}
       </div>
+      <button class="btn btn-ghost btn-sm" data-chs-xoa="${x.uid}">Xóa</button>
     </div>`).join('');
+
+  host.querySelectorAll('[data-chs-xoa]').forEach(b=> b.onclick = async ()=>{
+    const uid = b.getAttribute('data-chs-xoa');
+    const x = chsAdminData[uid];
+    if(!confirm(`Xóa hẳn dữ liệu cá nhân (ảnh thẻ, thành tích, CCCD...) của "${x.hoTen||'(chưa có tên)'}"? Không thể hoàn tác.`)) return;
+    try{
+      await chsRef.child(uid).remove();
+      delete chsAdminData[uid];
+      renderChsAdmin();
+    }catch(e){ alert(baoLoi(e)); }
+  });
 }
 
 /* Kiểu ô dùng chung khi xuất Excel (cần thư viện có hỗ trợ style: xlsx-js-style) */
