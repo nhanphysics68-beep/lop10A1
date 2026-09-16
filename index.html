@@ -5096,20 +5096,22 @@ function khoiTaoHoacCapNhatBanDoVitri(){
   });
 }
 
-/* Xuất bản đồ + DANH SÁCH ĐẦY ĐỦ CẢ LỚP (kể cả bạn chưa nộp vị trí) thành 1 ảnh PNG độ phân
-   giải cao để in ra giấy — dùng dom-to-image-more, thư viện chuyên xử lý đúng cách Leaflet định
-   vị các lớp bản đồ (html2canvas thông thường bị lỗi mất/lệch từng mảng do cách Leaflet dùng CSS
-   transform để định vị) — hoàn toàn miễn phí, không cần dịch vụ ngoài nào khác.
+/* Xuất bản đồ + DANH SÁCH ĐẦY ĐỦ CẢ LỚP (kể cả bạn chưa nộp vị trí) thành 1 ảnh PNG, đúng tỉ lệ
+   khổ giấy A3 (297mm chiều ngang), độ phân giải ~300 DPI (đủ nét để in) — dùng dom-to-image-more,
+   thư viện chuyên xử lý đúng cách Leaflet định vị các lớp bản đồ (html2canvas thông thường bị
+   lỗi mất/lệch từng mảng do cách Leaflet dùng CSS transform để định vị) — hoàn toàn miễn phí.
+   Chiều cao được để TỰ DO theo đúng số học sinh thực tế (không cắt bớt danh sách) — chỉ cố định
+   đúng chiều ngang theo khổ A3, đảm bảo luôn đủ chỗ hiện hết toàn bộ học sinh dù danh sách dài.
    Làm 2 bước: (1) chụp riêng bản đồ ở độ phân giải bình thường, (2) ghép ảnh đó cùng bảng danh
-   sách đầy đủ vào 1 khung tạm rồi chụp LẠI khung đó ở độ phân giải cao (chỉ nhân độ phân giải
-   đúng 1 lần ở bước cuối, tránh phóng đại chồng chéo 2 lần). */
+   sách đầy đủ vào 1 khung tạm ĐÚNG CHIỀU NGANG A3 rồi chụp LẠI khung đó ở độ phân giải cao (chỉ
+   nhân độ phân giải đúng 1 lần ở bước cuối, tránh phóng đại chồng chéo 2 lần). */
 $('vtXuatAnhBtn').onclick = async ()=>{
   const host = $('vtBanDoTatCa');
   if(!banDoVitri || !host){ showMsg($('vtXuatAnhMsg'), 'Bản đồ chưa sẵn sàng, thử lại sau.', 'err'); return; }
   if(typeof domtoimage === 'undefined'){ showMsg($('vtXuatAnhMsg'), 'Chưa tải được thư viện xuất ảnh, kiểm tra lại kết nối mạng.', 'err'); return; }
   const btn = $('vtXuatAnhBtn');
   btn.disabled = true;
-  showMsg($('vtXuatAnhMsg'), 'Đang tạo ảnh độ phân giải cao, vui lòng đợi vài giây...', 'info');
+  showMsg($('vtXuatAnhMsg'), 'Đang tạo ảnh khổ A3, vui lòng đợi vài giây...', 'info');
   const cacNutDieuKhien = host.querySelectorAll('.leaflet-control');
   let khungGop = null;
   try{
@@ -5117,20 +5119,27 @@ $('vtXuatAnhBtn').onclick = async ()=>{
     cacNutDieuKhien.forEach(n=> n.style.visibility = 'hidden');
     await new Promise(r=> setTimeout(r, 300)); // chờ 1 nhịp cho ảnh nền tải nốt trước khi chụp
 
-    const rong = host.clientWidth;
     const anhBanDoUrl = await domtoimage.toPng(host, { bgcolor: '#ffffff' });
     cacNutDieuKhien.forEach(n=> n.style.visibility = '');
 
     // Ghép ảnh bản đồ vừa chụp + danh sách ĐẦY ĐỦ mọi thành viên lớp (kể cả chưa nộp vị trí)
-    // vào 1 khung tạm (đặt ngoài màn hình, không ai nhìn thấy) để chụp gộp lại thành 1 ảnh.
+    // vào 1 khung tạm (đặt ngoài màn hình, không ai nhìn thấy) — chiều ngang khung tạm CỐ ĐỊNH
+    // đúng tỉ lệ khổ A3 (297mm ở ~100 DPI làm việc, sẽ nhân lên ~300 DPI thật ở bước chụp cuối).
+    const RONG_A3_MM = 297, DPI_LAM_VIEC = 100, MM_TREN_INCH = 25.4;
+    const rongKhung = Math.round(RONG_A3_MM / MM_TREN_INCH * DPI_LAM_VIEC); // ≈ 1169px
+
     const dsDayDu = roster.slice().sort((a,b)=> a.name.localeCompare(b.name, 'vi'));
     khungGop = document.createElement('div');
-    khungGop.style.cssText = `position:fixed; left:-99999px; top:0; width:${rong}px; background:#fff; font-family:'Trebuchet MS',sans-serif;`;
+    khungGop.style.cssText = `position:fixed; left:-99999px; top:0; width:${rongKhung}px; background:#fff; font-family:'Trebuchet MS',sans-serif;`;
     khungGop.innerHTML = `
-      <img src="${anhBanDoUrl}" style="width:100%; display:block;">
-      <div style="padding:16px 20px 22px;">
-        <div style="font-weight:800; color:#14532d; font-size:16px; margin-bottom:10px;">📋 Danh sách đầy đủ lớp 10A1 (${dsDayDu.length} bạn)</div>
-        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:6px 18px; font-size:12.5px; color:#1c2b22;">
+      <div style="padding:20px 24px 6px; text-align:center;">
+        <div style="font-weight:800; color:#14532d; font-size:20px;">BẢN ĐỒ VỊ TRÍ HỌC SINH LỚP 10A1</div>
+        <div style="color:#5b6b60; font-size:13px; margin-top:2px;">Trường THCS &amp; THPT Hòa Thuận · Năm học 2026 – 2027</div>
+      </div>
+      <img src="${anhBanDoUrl}" style="width:100%; display:block; margin-top:4px;">
+      <div style="padding:18px 24px 26px;">
+        <div style="font-weight:800; color:#14532d; font-size:17px; margin-bottom:12px;">📋 Danh sách đầy đủ lớp 10A1 (${dsDayDu.length} bạn)</div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:7px 20px; font-size:13.5px; color:#1c2b22;">
           ${dsDayDu.map(hs=>{
             const vt = Object.values(vitriState).find(v=> chuanTen(v.hoTen)===chuanTen(hs.name));
             const daNop = vt && vt.khoangCachKm != null;
@@ -5143,11 +5152,12 @@ $('vtXuatAnhBtn').onclick = async ()=>{
     document.body.appendChild(khungGop);
     await new Promise(r=> setTimeout(r, 250)); // chờ ảnh bản đồ vừa chụp tải xong vào khung tạm
 
-    const TI_LE = 3; // độ phân giải gấp 3 lần hiển thị thật — kỹ thuật chuẩn của dom-to-image để xuất ảnh nét cao
+    // Nhân độ phân giải để chiều ngang cuối cùng đạt ~300 DPI thật cho khổ A3 (rongKhung × 3 ≈ 3508px)
+    const TI_LE = 3;
     const caoKhung = khungGop.scrollHeight;
     const blob = await domtoimage.toBlob(khungGop, {
-      width: rong * TI_LE, height: caoKhung * TI_LE,
-      style: { transform: `scale(${TI_LE})`, transformOrigin: 'top left', width: rong+'px', height: caoKhung+'px' },
+      width: rongKhung * TI_LE, height: caoKhung * TI_LE,
+      style: { transform: `scale(${TI_LE})`, transformOrigin: 'top left', width: rongKhung+'px', height: caoKhung+'px' },
       bgcolor: '#ffffff'
     });
     document.body.removeChild(khungGop);
@@ -5156,7 +5166,7 @@ $('vtXuatAnhBtn').onclick = async ()=>{
     if(!blob){ showMsg($('vtXuatAnhMsg'), 'Không tạo được ảnh, thử lại.', 'err'); btn.disabled = false; return; }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = 'ban-do-vi-tri-lop-10a1.png';
+    a.href = url; a.download = 'ban-do-vi-tri-lop-10a1-A3.png';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
     showMsg($('vtXuatAnhMsg'), '✅ Đã tải ảnh về máy.', 'ok');
