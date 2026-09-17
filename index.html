@@ -54,11 +54,20 @@
   .tab .ico{font-size:17px; display:block; margin-bottom:2px;}
   .panel{display:none;} .panel.active{display:block;}
 
-  /* Nổi bật riêng mục "Nhiệm vụ học tập" trên thanh menu chính — nền cam, chữ to hơn */
+  /* Nổi bật riêng mục "Nhiệm vụ học tập" trên thanh menu chính — nền cam, chữ to hơn (màu MẶC ĐỊNH,
+     áp dụng khi giáo viên CHƯA tự chọn màu riêng cho mục này ở "⚙️ Sắp xếp menu điều hướng") */
   .tab[data-tab="nhiemvu"]{background:#fff3e0; border-color:var(--clay); color:#9a5b00; font-size:16px;}
   .tab[data-tab="nhiemvu"] .ico{font-size:21px;}
   .tab[data-tab="nhiemvu"]:hover{background:#ffe6c2; border-color:var(--clay); color:#7a4700;}
   .tab[data-tab="nhiemvu"].active{background:var(--clay); border-color:var(--clay); color:#fff; box-shadow:var(--shadow);}
+
+  /* Màu TỰ CHỌN do giáo viên đặt trực tiếp trên web (mục "⚙️ Sắp xếp menu điều hướng") — mỗi nút
+     mang theo biến CSS --mau qua thuộc tính style, đặt SAU các quy tắc mặc định ở trên nên sẽ ưu
+     tiên áp dụng hơn (kể cả cho mục "Nhiệm vụ học tập" nếu giáo viên đổi màu riêng cho mục đó). */
+  .tab[data-mau]{background:color-mix(in srgb, var(--mau) 14%, #fff); border-color:var(--mau); color:color-mix(in srgb, var(--mau) 68%, #12210f); font-size:14px;}
+  .tab[data-mau] .ico{font-size:17px;}
+  .tab[data-mau]:hover{background:color-mix(in srgb, var(--mau) 26%, #fff);}
+  .tab[data-mau].active{background:var(--mau); border-color:var(--mau); color:#fff; box-shadow:var(--shadow);}
 
   /* ---------- Thẻ con (subtabs) trong 1 nhóm ---------- */
   .subtabs{display:none; gap:6px; flex-wrap:wrap; margin:-6px 0 16px; padding:10px;
@@ -70,6 +79,11 @@
   .subtab .ico{font-size:14px;}
   .subtab:hover{border-color:var(--leaf); color:var(--leaf-dark);}
   .subtab.active{background:var(--leaf-dark); border-color:var(--leaf-dark); color:#fff;}
+
+  /* Màu tự chọn cho subtab — cùng cơ chế như .tab[data-mau] ở trên */
+  .subtab[data-mau]{background:color-mix(in srgb, var(--mau) 12%, #fff); border-color:var(--mau); color:color-mix(in srgb, var(--mau) 62%, #12210f);}
+  .subtab[data-mau]:hover{background:color-mix(in srgb, var(--mau) 22%, #fff);}
+  .subtab[data-mau].active{background:var(--mau); border-color:var(--mau); color:#fff;}
 
   /* ---------- Ban cán sự lớp ---------- */
   #bcsList{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px;}
@@ -148,6 +162,11 @@
     font-size:12px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0;}
   .btn-len-xuong:hover{border-color:var(--leaf); background:#eaf5ee;}
   .btn-len-xuong:disabled{opacity:.3; cursor:default;}
+  .sap-xep-mau-input{flex:none; width:28px; height:28px; padding:0; border:1.5px solid var(--line);
+    border-radius:6px; cursor:pointer; background:none;}
+  .btn-xoa-mau{flex:none; background:#fff; border:1.5px solid var(--line); border-radius:6px; width:26px; height:26px;
+    font-size:13px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; color:var(--ink-soft);}
+  .btn-xoa-mau:hover{border-color:var(--clay); color:var(--clay); background:#fff7ea;}
 
   /* ---------- Trò chơi: Quay chọn tên (đua chó / vòng quay) ---------- */
   .qt-dieukhien{display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; margin-bottom:18px;}
@@ -557,6 +576,19 @@
   #qlBangChi td.ql-tien{text-align:right; white-space:nowrap; font-weight:700; color:var(--clay);}
   #qlBangChi tfoot td{font-weight:800; color:var(--leaf-dark); background:#eaf5ee;}
   #qlBangChi td.ql-xoa{text-align:center; white-space:nowrap;}
+
+  .capTk-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:12px;}
+  @media (max-width:760px){ .capTk-grid{grid-template-columns:1fr;} }
+  .capTk-o{background:#f7fbf8; border:1.5px solid var(--line); border-radius:12px; padding:14px;}
+  .capTk-o select, .capTk-o input[type="password"]{
+    width:100%; box-sizing:border-box; padding:8px 10px; border:1px solid var(--line);
+    border-radius:8px; font-size:13.5px; margin-bottom:8px; font-family:inherit;}
+  #capTkBangDS{width:100%; border-collapse:collapse; font-size:13px;}
+  #capTkBangDS th, #capTkBangDS td{border:1px solid var(--line); padding:7px 10px; text-align:left;}
+  #capTkBangDS thead th{background:var(--leaf); color:#fff; font-size:12.5px; white-space:nowrap;}
+  #capTkBangDS tbody tr:nth-child(odd){background:#fbfdfb;}
+  #capTkBangDS td.capTk-stt{text-align:center; white-space:nowrap;}
+  #capTkBangDS td.capTk-email{font-family:monospace; font-size:12.5px; color:var(--ink-soft);}
 </style>
 </head>
 <body>
@@ -1280,7 +1312,7 @@
         <div class="field">
           <label>Cách chọn</label>
           <select id="qtCheDo">
-            <option value="to">🐕 Đua chó trong 1 Tổ</option>
+            <option value="to">🐕 Đua</option>
             <option value="ca_lop">🎡 Vòng quay cả lớp</option>
           </select>
         </div>
@@ -1422,6 +1454,37 @@
       <div id="cfAiLogList"></div>
       <button class="btn btn-blue btn-sm" id="cfLamMoiLogBtn" style="margin-bottom:10px;">🔄 Làm mới nhật ký</button>
 
+      <div class="section-title">🔑 Cấp tài khoản đăng nhập cho học sinh <span class="count-badge" id="capTkCountBadge">0</span></div>
+      <p class="section-note" style="margin:0 0 10px;">
+        Tạo tài khoản đăng nhập (email nội bộ + mật khẩu) cho học sinh, thay vì để các em dùng chung
+        thiết bị theo kiểu ẩn danh. <b>Lưu ý quan trọng:</b> vì lý do bảo mật, hệ thống
+        <b>không lưu lại mật khẩu</b> ở bất kỳ đâu sau khi tạo — nên nếu học sinh quên mật khẩu, trang
+        này <b>không thể tự đặt lại</b> giúp được (đây là giới hạn của việc chỉ chạy trên GitHub Pages,
+        không có máy chủ riêng). Khi đó Thầy cần vào Firebase Console → Authentication, xóa tài khoản
+        cũ của em đó rồi tạo lại tại đây. Vì vậy nên đặt mật khẩu dễ nhớ, thống nhất cho cả lớp/đợt và
+        thông báo trực tiếp cho học sinh ngay khi cấp.
+      </p>
+
+      <div class="capTk-grid">
+        <div class="capTk-o">
+          <div style="font-weight:700; margin-bottom:8px;">① Cấp thủ công — từng học sinh</div>
+          <select id="capTkChonHS"></select>
+          <input type="password" id="capTkMatKhauDon" placeholder="Đặt mật khẩu cho học sinh này (tối thiểu 6 ký tự)">
+          <button class="btn btn-blue btn-sm" id="capTkTaoDonBtn">➕ Tạo tài khoản</button>
+        </div>
+        <div class="capTk-o">
+          <div style="font-weight:700; margin-bottom:8px;">② Cấp hàng loạt — từ file Excel</div>
+          <p class="section-note" style="margin:0 0 8px;">File cần có cột tiêu đề "Họ tên" (giống file dùng để nhập danh sách lớp).</p>
+          <input type="file" id="capTkExcelInput" accept=".xlsx,.xls" style="display:none;">
+          <button class="btn btn-clay btn-sm" id="capTkChonExcelBtn" style="margin-bottom:8px;">📂 Chọn file Excel</button>
+          <input type="password" id="capTkMatKhauHangLoat" placeholder="Đặt 1 mật khẩu chung cho cả đợt cấp này (tối thiểu 6 ký tự)">
+          <button class="btn btn-blue btn-sm" id="capTkTaoHangLoatBtn">📦 Tạo tài khoản hàng loạt</button>
+        </div>
+      </div>
+      <div id="capTkTienDo" class="section-note" style="margin:0 0 6px; display:none;"></div>
+      <div id="capTkMsg" class="msg"></div>
+      <div class="scroll-x"><table id="capTkBangDS"></table></div>
+
       <div class="section-title">Công cụ</div>
       <div style="display:flex; gap:10px; flex-wrap:wrap;">
         <button class="btn btn-clay btn-sm" id="exportWordBtn">📄 Xuất sơ đồ ra Word</button>
@@ -1557,6 +1620,7 @@ const nhapMaToTuanRef = db.ref('nhapMaToTuan2026'); // nhánh tạm để Rules 
 const khoanThuRef = db.ref('khoanthu2026'); // các khoản thu đầu năm — công khai đọc, mỗi người tự ghi phần của mình
 const quyLopRef = db.ref('quylop2026'); // quỹ lớp theo từng đợt thu — công khai đọc (minh bạch với PH/HS), CHỈ giáo viên ghi được
 const baiTapVatLy10Ref = db.ref('baitap2026/vatly10'); // nộp bài tập chuyên đề Vật lý 10 — công khai đọc (để đối chiếu đã nộp/chưa nộp), mỗi học sinh tự ghi đúng phần của mình (khóa theo uid), riêng việc SỬA tên do giáo viên (admin) thực hiện
+const taiKhoanHocSinhRef = db.ref('taiKhoanHocSinh2026'); // sổ ghi lại tài khoản đăng nhập đã cấp cho học sinh (email nội bộ, KHÔNG chứa mật khẩu) — chỉ giáo viên (admin) đọc/ghi được
 const phongTraoRef = db.ref('phongtrao2026'); // phong trào của lớp — công khai đọc/ghi, giống Bảng tin/Đăng ký lao động
 const hosoRef   = db.ref('hoso2026/hoso');         // riêng tư: khóa theo uid, giống hotro2026
 
@@ -1723,6 +1787,7 @@ const CAM_XUC = [
 let hosoCuaToi=null, hosoTatCa=[];
 let denAnhHienTai=null;
 let myUid=null, isAdmin=false, isThuQuy=false;
+let taiKhoanHocSinhDaCap = {}; // {slugEmail: {ten, email, uid, ngayTao, taoBoi}} — nạp từ taiKhoanHocSinh2026, chỉ admin thấy được
 
 /* -------------------- TIỆN ÍCH -------------------- */
 const $ = id => document.getElementById(id);
@@ -1738,12 +1803,14 @@ $('bcsThemMoiBtn').onclick = ()=> moModalThemSuaBCS(null);
 function doiChoTrongMang(mang, i, j){ const t = mang[i]; mang[i] = mang[j]; mang[j] = t; }
 
 let tenTuyChinhState = {}; // { id_tab_hoac_subtab: "Tên đã đổi", ... } — id không trùng nhau giữa tab chính và mục con
+let mauTuyChinhState = {}; // { id_tab_hoac_subtab: "#rrggbb", ... } — màu nền riêng do giáo viên tự chọn cho từng mục menu
 function tenHienThi(id, dinhNghiaMacDinh){ return tenTuyChinhState[id] || dinhNghiaMacDinh[id].ten; }
 
 async function luuThuTuMenu(){
   try{
-    // Luôn kèm theo tenTuyChinh hiện có — vì set() ghi đè cả node, không kèm theo sẽ làm mất tên đã đổi.
-    await dieuHuongRef.set({ nhomChinh: thuTuChinh, nhomCon: thuTuCon, tenTuyChinh: tenTuyChinhState });
+    // Luôn kèm theo tenTuyChinh/mauTuyChinh hiện có — vì set() ghi đè cả node, không kèm theo
+    // sẽ làm mất tên/màu đã đổi trước đó.
+    await dieuHuongRef.set({ nhomChinh: thuTuChinh, nhomCon: thuTuCon, tenTuyChinh: tenTuyChinhState, mauTuyChinh: mauTuyChinhState });
   }catch(e){ showMsg($('adminMsg'), baoLoi(e), 'err'); }
 }
 async function luuTenTuyChinh(id, tenMoi){
@@ -1751,11 +1818,26 @@ async function luuTenTuyChinh(id, tenMoi){
   try{ await dieuHuongRef.child('tenTuyChinh').child(id).set(tenMoi); }
   catch(e){ showMsg($('adminMsg'), baoLoi(e), 'err'); }
 }
+/* Đổi màu nền riêng cho 1 mục menu (tab chính hoặc mục con) — áp dụng ngay cho cả lớp. */
+async function luuMauTuyChinh(id, mauMoi){
+  mauTuyChinhState[id] = mauMoi;
+  try{ await dieuHuongRef.child('mauTuyChinh').child(id).set(mauMoi); }
+  catch(e){ showMsg($('adminMsg'), baoLoi(e), 'err'); }
+}
+/* Bỏ màu tự chọn, quay lại đúng màu mặc định ban đầu của mục đó. */
+async function xoaMauTuyChinh(id){
+  delete mauTuyChinhState[id];
+  try{ await dieuHuongRef.child('mauTuyChinh').child(id).remove(); }
+  catch(e){ showMsg($('adminMsg'), baoLoi(e), 'err'); }
+}
 
 function taoDongSapXep(id, icon, i, tongSo, dinhNghiaMacDinh){
+  const mauHienTai = mauTuyChinhState[id] || '';
   return `<div class="sap-xep-item">
     <span class="sap-xep-icon">${icon}</span>
     <input type="text" class="sap-xep-ten-input" data-doiten="${id}" value="${esc(tenHienThi(id, dinhNghiaMacDinh))}">
+    <input type="color" class="sap-xep-mau-input" data-doimau="${id}" value="${mauHienTai || '#66788e'}" title="Đổi màu nền cho mục này">
+    ${mauHienTai ? `<button type="button" class="btn-xoa-mau" data-xoamau="${id}" title="Bỏ màu tự chọn, về màu mặc định">↺</button>` : ''}
     <button type="button" class="btn-len-xuong" data-len="${i}" ${i===0?'disabled':''} title="Lên">▲</button>
     <button type="button" class="btn-len-xuong" data-xuong="${i}" ${i===tongSo-1?'disabled':''} title="Xuống">▼</button>
   </div>`;
@@ -1789,6 +1871,20 @@ function renderSapXepMenu(){
     };
     input.onblur = luuNeuCoDoi;
     input.onkeydown = e=>{ if(e.key === 'Enter') input.blur(); };
+  });
+
+  host.querySelectorAll('[data-doimau]').forEach(input=>{
+    input.onchange = async ()=>{
+      const id = input.getAttribute('data-doimau');
+      await luuMauTuyChinh(id, input.value);
+      renderSapXepMenu(); // vẽ lại để hiện thêm nút ↺ "về màu mặc định"
+    };
+  });
+  host.querySelectorAll('[data-xoamau]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      await xoaMauTuyChinh(btn.getAttribute('data-xoamau'));
+      renderSapXepMenu();
+    };
   });
 
   // Nhóm chính
@@ -1943,7 +2039,9 @@ function renderTabsChinh(){
   if(!host) return;
   host.innerHTML = thuTuChinh.map(id=>{
     const d = TAB_DINH_NGHIA[id];
-    return `<button class="tab" data-tab="${id}"><span class="ico">${d.icon}</span>${esc(tenHienThi(id, TAB_DINH_NGHIA))}</button>`;
+    const mau = mauTuyChinhState[id];
+    const thuocTinhMau = mau ? ` data-mau="1" style="--mau:${esc(mau)}"` : '';
+    return `<button class="tab" data-tab="${id}"${thuocTinhMau}><span class="ico">${d.icon}</span>${esc(tenHienThi(id, TAB_DINH_NGHIA))}</button>`;
   }).join('');
   host.querySelectorAll('.tab').forEach(t=> t.onclick = ()=> moTab(t.dataset.tab));
 }
@@ -1953,7 +2051,9 @@ function renderSubtabsNhom(groupId){
   const ds = thuTuCon[groupId] || NHOM_TAB[groupId];
   host.innerHTML = ds.map(id=>{
     const d = SUBTAB_DINH_NGHIA[id];
-    return `<button class="subtab" data-subtab="${id}"><span class="ico">${d.icon}</span>${esc(tenHienThi(id, SUBTAB_DINH_NGHIA))}</button>`;
+    const mau = mauTuyChinhState[id];
+    const thuocTinhMau = mau ? ` data-mau="1" style="--mau:${esc(mau)}"` : '';
+    return `<button class="subtab" data-subtab="${id}"${thuocTinhMau}><span class="ico">${d.icon}</span>${esc(tenHienThi(id, SUBTAB_DINH_NGHIA))}</button>`;
   }).join('');
   host.querySelectorAll('.subtab').forEach(st=> st.onclick = ()=> moTab(groupId, st.dataset.subtab));
 }
@@ -2051,6 +2151,7 @@ auth.onAuthStateChanged(async user=>{
     await napAiLog();
     await napChsAdmin();
     await napBaiTapVatLy10TatCa();
+    await napCapTaiKhoanTatCa();
     renderAdmin();
   } else if(isThuQuy){
     showMsg($('pageMsg'), '💰 Đã đăng nhập với quyền Thủ quỹ — có thể quản lý mục "Quỹ lớp".', 'ok');
@@ -2096,7 +2197,7 @@ async function loadRoster(){
       renderDanhSachHS();
       renderVitriBang();
       if(laLanDau){ laLanDau = false; resolve(); }
-      else { if(isAdmin) renderAdmin(); renderDanhSachKhoanThu(); renderQuyLop(); } // các lần sau (có người vừa thêm/sửa danh sách lớp) tự vẽ lại ngay
+      else { if(isAdmin){ renderAdmin(); renderCapTkChonHS(); } renderDanhSachKhoanThu(); renderQuyLop(); } // các lần sau (có người vừa thêm/sửa danh sách lớp) tự vẽ lại ngay
     });
   });
 }
@@ -6437,6 +6538,7 @@ dieuHuongRef.on('value', s=>{
     thuTuCon[groupId] = ghepMucMoiVaoCuoi(daLuu, NHOM_TAB[groupId]);
   });
   tenTuyChinhState = v.tenTuyChinh || {};
+  mauTuyChinhState = v.mauTuyChinh || {};
   renderToanBoDieuHuong();
   if(tabDangMo) moTab(tabDangMo, subDangMo); else moTab(thuTuChinh[0]);
   if(isAdmin) renderSapXepMenu();
@@ -6838,6 +6940,181 @@ async function napBaiTapVatLy10TatCa(){
   catch(e){ baiTapVatLy10TatCa = {}; }
   renderBtvlAdmin();
 }
+
+/* ================================================================
+   CẤP TÀI KHOẢN ĐĂNG NHẬP CHO HỌC SINH
+   Vì trang chỉ chạy tĩnh trên GitHub Pages (không có máy chủ riêng/Admin SDK), việc tạo
+   tài khoản dùng đúng kỹ thuật "ứng dụng Firebase phụ" (secondary app): tạo tài khoản trên
+   MỘT thực thể Auth riêng, tách biệt hoàn toàn với phiên đăng nhập hiện tại của giáo viên
+   trên trang — nhờ vậy tạo xong không bị văng khỏi tài khoản giáo viên đang dùng.
+   GIỚI HẠN CỐ HỮU (không có cách khắc phục nếu chỉ chạy phía trình duyệt, không có máy chủ):
+   - KHÔNG thể tự đặt lại mật khẩu cho tài khoản học sinh đã tạo từ trang này.
+   - KHÔNG thể tự xóa tài khoản học sinh đã tạo từ trang này.
+   Cả hai việc trên chỉ làm được thủ công trong Firebase Console → Authentication.
+   Vì vậy hệ thống KHÔNG lưu lại mật khẩu ở bất kỳ đâu — chỉ lưu tên + email nội bộ để
+   giáo viên biết đã cấp cho ai, tránh cấp trùng.
+   ================================================================ */
+let appPhuDaTao = null;
+function layAuthPhu(){
+  if(!appPhuDaTao){
+    try{ appPhuDaTao = firebase.app('AppPhu'); }
+    catch(e){ appPhuDaTao = firebase.initializeApp(firebaseConfig, 'AppPhu'); }
+  }
+  return appPhuDaTao.auth();
+}
+
+/* Sinh "tên đăng nhập" (phần trước @) không dấu, không khoảng trắng, từ họ tên. */
+function slugTenDangNhap(ten){
+  return boDauTiengViet(ten).toLowerCase().replace(/\s+/g,'').replace(/[^a-z0-9]/g,'');
+}
+/* Ghép thành email nội bộ (không phải email thật) dùng để đăng nhập Firebase.
+   Nếu trong danh sách lớp có 2 học sinh trùng tên, tự thêm số thứ tự (2, 3...)
+   phía sau để không trùng email, dựa theo thứ tự xuất hiện trong danh sách lớp. */
+function sinhEmailChoHocSinh(ten){
+  const slugGoc = slugTenDangNhap(ten);
+  const trungTen = roster.filter(hs=> slugTenDangNhap(hs.name) === slugGoc);
+  let slug = slugGoc;
+  if(trungTen.length > 1){
+    const viTri = trungTen.findIndex(hs=> hs.name === ten);
+    if(viTri > 0) slug = slugGoc + (viTri + 1);
+  }
+  return slug + '@lop10a1.hocsinh';
+}
+
+/* Tạo 1 tài khoản cho học sinh và ghi lại vào sổ taiKhoanHocSinh2026 (không có mật khẩu). */
+async function taoTaiKhoanChoHocSinh(ten, matKhau, taoBoi){
+  const email = sinhEmailChoHocSinh(ten);
+  const authPhu = layAuthPhu();
+  try{
+    const cred = await authPhu.createUserWithEmailAndPassword(email, matKhau);
+    const uid = cred.user.uid;
+    await authPhu.signOut(); // đăng xuất khỏi app phụ ngay, không ảnh hưởng phiên giáo viên đang dùng
+    const khoaSo = slugTenDangNhap(ten) + '_' + uid.slice(0,6);
+    await taiKhoanHocSinhRef.child(khoaSo).set({
+      ten, email, uid, ngayTao: Date.now(), taoBoi: taoBoi || 'thu-cong'
+    });
+    return {ok:true, email};
+  }catch(e){
+    try{ await authPhu.signOut(); }catch(e2){}
+    let loi = 'Không tạo được tài khoản.';
+    if(e && e.code === 'auth/email-already-in-use') loi = 'Học sinh này có vẻ đã có tài khoản (' + email + ').';
+    else if(e && e.code === 'auth/weak-password') loi = 'Mật khẩu quá ngắn (tối thiểu 6 ký tự).';
+    else if(e) loi = baoLoi(e);
+    return {ok:false, loi, email};
+  }
+}
+
+function renderCapTkChonHS(){
+  const sel = $('capTkChonHS');
+  if(!sel) return;
+  const dsSapXep = roster.slice().sort(soSanhTenVN);
+  sel.innerHTML = '<option value="">— Chọn học sinh —</option>' +
+    dsSapXep.map(hs=> `<option value="${esc(hs.name)}">${esc(hs.name)}</option>`).join('');
+}
+
+function renderCapTkBangDS(){
+  const table = $('capTkBangDS');
+  if(!table) return;
+  const ds = Object.values(taiKhoanHocSinhDaCap).sort((a,b)=> (b.ngayTao||0) - (a.ngayTao||0));
+  if($('capTkCountBadge')) $('capTkCountBadge').textContent = ds.length;
+  if(!ds.length){
+    table.innerHTML = '<tr><td style="text-align:center;color:var(--ink-soft);padding:14px;">Chưa cấp tài khoản nào.</td></tr>';
+    return;
+  }
+  let h = '<tr><th>STT</th><th>Họ và tên</th><th>Tên đăng nhập (email nội bộ)</th><th>Ngày cấp</th><th>Cách cấp</th></tr>';
+  ds.forEach((tk,i)=>{
+    const ngay = tk.ngayTao ? new Date(tk.ngayTao).toLocaleDateString('vi-VN') : '';
+    h += `<tr><td class="capTk-stt">${i+1}</td><td>${esc(tk.ten)}</td><td class="capTk-email">${esc(tk.email)}</td><td>${ngay}</td><td>${tk.taoBoi==='hang-loat'?'Hàng loạt':'Thủ công'}</td></tr>`;
+  });
+  table.innerHTML = h;
+}
+
+async function napCapTaiKhoanTatCa(){
+  if(!isAdmin){ taiKhoanHocSinhDaCap = {}; return; }
+  try{ taiKhoanHocSinhDaCap = (await taiKhoanHocSinhRef.once('value')).val() || {}; }
+  catch(e){ taiKhoanHocSinhDaCap = {}; }
+  renderCapTkChonHS();
+  renderCapTkBangDS();
+}
+
+/* ① Cấp thủ công — từng học sinh */
+$('capTkTaoDonBtn').onclick = async ()=>{
+  const ten = $('capTkChonHS').value;
+  const matKhau = $('capTkMatKhauDon').value;
+  if(!ten){ showMsg($('capTkMsg'), '❌ Chưa chọn học sinh.', 'err'); return; }
+  if(!matKhau || matKhau.length < 6){ showMsg($('capTkMsg'), '❌ Mật khẩu cần tối thiểu 6 ký tự.', 'err'); return; }
+  $('capTkTaoDonBtn').disabled = true;
+  showMsg($('capTkMsg'), '⏳ Đang tạo tài khoản cho ' + ten + '...', 'info');
+  const kq = await taoTaiKhoanChoHocSinh(ten, matKhau, 'thu-cong');
+  $('capTkTaoDonBtn').disabled = false;
+  if(kq.ok){
+    $('capTkMatKhauDon').value = '';
+    showMsg($('capTkMsg'), `✅ Đã tạo tài khoản cho ${ten} — tên đăng nhập: ${kq.email}. Hãy thông báo trực tiếp mật khẩu cho học sinh/phụ huynh.`, 'ok');
+    await napCapTaiKhoanTatCa();
+  } else {
+    showMsg($('capTkMsg'), '❌ ' + kq.loi, 'err');
+  }
+};
+
+/* ② Cấp hàng loạt từ Excel — dùng lại đúng cách dò cột "Họ tên" như mục Nhập danh sách lớp,
+   mật khẩu dùng CHUNG cho cả đợt là mật khẩu Thầy gõ trực tiếp trên trang, KHÔNG đọc từ file. */
+$('capTkChonExcelBtn').onclick = ()=> $('capTkExcelInput').click();
+$('capTkExcelInput').onchange = async e=>{
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  const matKhau = $('capTkMatKhauHangLoat').value;
+  if(!matKhau || matKhau.length < 6){ showMsg($('capTkMsg'), '❌ Nhập mật khẩu chung (tối thiểu 6 ký tự) trước khi chọn file.', 'err'); return; }
+
+  let dsTen = [];
+  try{
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, {type:'array'});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+    let dongTieuDe = -1, colHoTen = -1;
+    for(let r=0; r<Math.min(rows.length,10); r++){
+      const idx = rows[r].findIndex(o=> String(o||'').trim()==='Họ tên');
+      if(idx !== -1){ dongTieuDe = r; colHoTen = idx; break; }
+    }
+    if(dongTieuDe === -1){
+      showMsg($('capTkMsg'), '❌ Không tìm thấy cột "Họ tên" trong file — kiểm tra lại đúng file xuất từ nhà trường.', 'err');
+      return;
+    }
+    for(let r=dongTieuDe+1; r<rows.length; r++){
+      const tenTho = rows[r][colHoTen];
+      if(!tenTho || !String(tenTho).trim()) continue;
+      dsTen.push(chuanHoaHoaTen(tenTho));
+    }
+  }catch(e){
+    showMsg($('capTkMsg'), '❌ Đọc file lỗi: ' + baoLoi(e), 'err');
+    return;
+  }
+  if(!dsTen.length){
+    showMsg($('capTkMsg'), '❌ Không đọc được học sinh nào từ file.', 'err');
+    return;
+  }
+  if(!confirm(`Sẽ tạo ${dsTen.length} tài khoản, dùng chung 1 mật khẩu vừa nhập. Tiếp tục?`)) return;
+
+  $('capTkTaoHangLoatBtn').disabled = true;
+  $('capTkTienDo').style.display = 'block';
+  let thanhCong = 0, thatBai = [];
+  for(let i=0; i<dsTen.length; i++){
+    const ten = dsTen[i];
+    $('capTkTienDo').textContent = `⏳ Đang tạo ${i+1}/${dsTen.length}: ${ten}...`;
+    const kq = await taoTaiKhoanChoHocSinh(ten, matKhau, 'hang-loat');
+    if(kq.ok) thanhCong++; else thatBai.push(ten + ' (' + kq.loi + ')');
+  }
+  $('capTkTaoHangLoatBtn').disabled = false;
+  $('capTkTienDo').style.display = 'none';
+  $('capTkMatKhauHangLoat').value = '';
+  await napCapTaiKhoanTatCa();
+  if(thatBai.length){
+    showMsg($('capTkMsg'), `✅ Đã tạo ${thanhCong}/${dsTen.length} tài khoản. ❌ Lỗi ${thatBai.length}: ${thatBai.join('; ')}`, thanhCong ? 'ok' : 'err');
+  } else {
+    showMsg($('capTkMsg'), `✅ Đã tạo thành công ${thanhCong}/${dsTen.length} tài khoản. Hãy thông báo mật khẩu chung cho học sinh/phụ huynh.`, 'ok');
+  }
+};
 
 /* Danh sách hỗ trợ không dùng lắng nghe liên tục vì là dữ liệu riêng tư —
    chỉ nạp đúng lúc cần: khi mở trang và khi giáo viên đăng nhập. */
