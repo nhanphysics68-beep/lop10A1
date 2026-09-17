@@ -204,6 +204,11 @@
   @media (max-width:900px){ .do-on-so{font-size:120px;} .do-on-nhan{font-size:28px;} .do-on-man-hinh{padding:40px 24px;} }
   @media (max-width:480px){ .do-on-so{font-size:80px;} .do-on-nhan{font-size:22px;} .do-on-donvi{font-size:16px;} .do-on-dinh{font-size:18px;} .do-on-dinh b{font-size:22px;} .do-on-man-hinh{padding:28px 16px; border-radius:20px;} }
 
+  /* ---------- Camera nhận diện học sinh (AI) ---------- */
+  .ndkm-video-wrap{position:relative; max-width:760px; margin:0 auto; background:#000; border-radius:14px; overflow:hidden;}
+  .ndkm-video-wrap video{display:block; width:100%; height:auto;}
+  .ndkm-video-wrap canvas{position:absolute; top:0; left:0; width:100%; height:100%;}
+
   .bcs-admin-item{display:flex; align-items:center; justify-content:space-between; gap:10px;
     background:#fff; border:1px solid var(--line); border-radius:8px; padding:8px 12px; margin-bottom:6px; font-size:13px;}
 
@@ -1468,6 +1473,56 @@
     </div>
   </div>
 
+  <!-- ============ CÔNG CỤ: CAMERA NHẬN DIỆN HỌC SINH (AI, CHỈ GIÁO VIÊN) ============ -->
+  <div class="panel" id="panel-ndkm" data-group="games">
+    <div class="card">
+      <h2>📷 Camera nhận diện học sinh (AI)</h2>
+
+      <div id="ndkmChuaDangNhap">
+        <p class="msg info show">
+          🔒 Tính năng này xử lý dữ liệu khuôn mặt học sinh nên chỉ giáo viên chủ nhiệm đã đăng nhập
+          ở mục "🔒 Khu vực giáo viên / quản trị" phía dưới mới bật được. Vui lòng đăng nhập trước.
+        </p>
+      </div>
+
+      <div id="ndkmCard" style="display:none;">
+        <p class="msg err show" style="line-height:1.6;">
+          ⚠️ <b>Lưu ý bắt buộc trước khi dùng thật trong lớp:</b> đây là tính năng <b>nhận diện khuôn mặt</b>
+          (xử lý dữ liệu sinh trắc học của học sinh vị thành niên). Toàn bộ việc phân tích chạy
+          <b>ngay trên trình duyệt của thầy</b> — ảnh/video KHÔNG được gửi lên bất kỳ máy chủ nào,
+          KHÔNG lưu vào Firebase hay bất kỳ đâu, và "mã đặc trưng khuôn mặt" chỉ tồn tại tạm trong
+          bộ nhớ trình duyệt lúc đang dùng, tắt camera là mất. Dù vậy, theo Nghị định 13/2023/NĐ-CP về
+          bảo vệ dữ liệu cá nhân, dữ liệu sinh trắc học là dữ liệu nhạy cảm — <b>thầy cần được nhà
+          trường phê duyệt và có sự đồng ý của phụ huynh/học sinh trước khi triển khai chính thức</b>,
+          chỉ nên dùng thử nghiệm nội bộ trước đó. Độ chính xác cũng phụ thuộc ánh sáng, góc camera,
+          chất lượng ảnh thẻ — chỉ mang tính hỗ trợ tham khảo (vd. hỗ trợ điểm danh nhanh), không
+          dùng làm bằng chứng duy nhất cho việc gì.
+        </p>
+
+        <div class="section-title" style="margin-top:6px;">Bước 1 — Nạp dữ liệu khuôn mặt học sinh</div>
+        <p class="section-note">
+          Lấy ảnh thẻ học sinh đã có sẵn ở mục "Thành viên lớp" để AI học đặc điểm khuôn mặt từng bạn
+          (chỉ những bạn đã có ảnh thẻ mới nhận diện được).
+        </p>
+        <button class="btn btn-primary btn-sm" id="ndkmNapDuLieuBtn">🧠 Nạp dữ liệu khuôn mặt</button>
+        <div id="ndkmNapMsg" class="msg"></div>
+
+        <div class="section-title">Bước 2 — Bật camera nhận diện</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
+          <button class="btn btn-primary btn-sm" id="ndkmBatCameraBtn" disabled>🎥 Bật camera</button>
+          <button class="btn btn-ghost btn-sm" id="ndkmDoiCameraBtn" style="display:none;">🔄 Đổi camera trước/sau</button>
+          <button class="btn btn-ghost btn-sm" id="ndkmDungCameraBtn" style="display:none;">⏹ Tắt camera</button>
+        </div>
+        <div id="ndkmErr" class="msg err"></div>
+
+        <div class="ndkm-video-wrap" id="ndkmVideoWrap" style="display:none;">
+          <video id="ndkmVideo" autoplay playsinline muted></video>
+          <canvas id="ndkmCanvas"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ KHU VỰC GIÁO VIÊN ============ -->
   <details class="admin" id="adminDetails">
     <summary>🔒 Khu vực giáo viên / quản trị</summary>
@@ -1627,6 +1682,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dom-to-image-more/dist/dom-to-image-more.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js" defer></script>
 <script>
 /* =========================================================
    LỚP 10A1 — trang gộp: Sơ đồ lớp + Đăng ký lao động + Khai giảng
@@ -2138,13 +2194,14 @@ const SUBTAB_DINH_NGHIA = {
   baitapvatly10: {icon:'📸', ten:'Nộp bài tập chuyên đề Vật lý 10'},
   quayten:   {icon:'🐕', ten:'Quay chọn tên'},
   dodoon:    {icon:'🔊', ten:'Đo độ ồn'},
+  ndkm:      {icon:'📷', ten:'Camera nhận diện học sinh'},
 };
 const NHOM_TAB = {
   thongtin: ['sodo', 'danhsachhs', 'vitri', 'thanhvien', 'hoso', 'bancansu', 'caulacbo', 'khoanthu'],
   hoatdong: ['laodong', 'phongtrao', 'khaigiang', 'hotro'],
   hoatdongto: ['tongketTuan'],
   nhiemvu:  ['baitapvatly10'],
-  games:    ['quayten', 'dodoon'],
+  games:    ['quayten', 'dodoon', 'ndkm'],
 };
 /* Map link cũ (trước khi gộp nhóm) -> đúng nhóm mới, để link/bookmark cũ vẫn mở đúng chỗ */
 const TAB_CU_SANG_NHOM = {};
@@ -2190,6 +2247,8 @@ let tabDangMo = null, subDangMo = null;
 function moTab(tabId, subId){
   // Rời khỏi mục "Đo độ ồn" thì tắt luôn micro, tránh chạy ngầm tốn pin/quyền riêng tư.
   if(subDangMo === 'dodoon' && typeof dungDoOn === 'function'){ try{ dungDoOn(); }catch(e){} }
+  // Rời khỏi mục "Camera nhận diện học sinh" thì tắt luôn camera — không để chạy ngầm.
+  if(subDangMo === 'ndkm' && typeof dungNdkmCamera === 'function'){ try{ dungNdkmCamera(); }catch(e){} }
   document.querySelectorAll('.tab').forEach(x=> x.classList.remove('active'));
   document.querySelectorAll('.subtabs').forEach(x=> x.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(x=> x.classList.remove('active'));
@@ -2266,6 +2325,12 @@ auth.onAuthStateChanged(async user=>{
   // đủ (dữ liệu riêng tư khác của học sinh) — chỉ mục Quỹ lớp mở khóa cho họ (xem renderQuyLop).
   $('adminLocked').style.display = (isAdmin || isThuQuy) ? 'none' : 'block';
   $('adminPanel').style.display  = isAdmin ? 'block' : 'none';
+  if(!isAdmin){
+    // Đăng xuất hoặc không phải giáo viên: đóng ngay camera nhận diện nếu đang bật, và ẩn tool đi.
+    if(typeof dungNdkmCamera === 'function') dungNdkmCamera();
+    if($('ndkmCard')) $('ndkmCard').style.display = 'none';
+    if($('ndkmChuaDangNhap')) $('ndkmChuaDangNhap').style.display = 'block';
+  }
   capNhatNutTkbAdmin();
   renderThoiKhoaBieu();
 
@@ -2281,6 +2346,8 @@ auth.onAuthStateChanged(async user=>{
     if($('chamAiCard')) $('chamAiCard').style.display = 'block';
     await napChamAiChoDuyet();
     await napChamAiDaDuyet();
+    if($('ndkmChuaDangNhap')) $('ndkmChuaDangNhap').style.display = 'none';
+    if($('ndkmCard')) $('ndkmCard').style.display = 'block';
     renderAdmin();
   } else if(isThuQuy){
     showMsg($('pageMsg'), '💰 Đã đăng nhập với quyền Thủ quỹ — có thể quản lý mục "Quỹ lớp".', 'ok');
@@ -7786,6 +7853,192 @@ $('doOnHieuChinhLaiBtn').onclick = async ()=>{
   $('doOnDangDo').style.display = 'block';
 };
 window.addEventListener('beforeunload', dungDoOn); // đảm bảo tắt micro khi rời trang, dù quên bấm Dừng đo
+
+/* ================================================================
+   CAMERA NHẬN DIỆN HỌC SINH (AI) — chỉ giáo viên (isAdmin) dùng được.
+   Dùng face-api.js (chạy bằng TensorFlow.js NGAY TRONG trình duyệt) để:
+   1) Học đặc điểm khuôn mặt của từng học sinh từ ảnh thẻ đã có sẵn (thanhvien2026).
+   2) Nhận diện khuôn mặt trực tiếp từ camera, vẽ khung + tên lên trên từng khuôn mặt.
+   TOÀN BỘ xử lý (bước 1 và 2) chạy cục bộ trên máy giáo viên — không có ảnh/video/mã đặc
+   trưng khuôn mặt nào được gửi đi hay lưu lại ở Firebase hay bất kỳ đâu; mọi thứ mất hết khi
+   tắt camera hoặc tải lại trang. Đây là dữ liệu sinh trắc học nhạy cảm của học sinh vị thành
+   niên — xem lưu ý bắt buộc ngay trên giao diện trước khi dùng thật trong lớp.
+   ================================================================ */
+let ndkmModelsDaTai = false;
+let ndkmLabeledDescriptors = [];   // [faceapi.LabeledFaceDescriptors] — label = uid (không dùng tên để tránh trùng)
+let ndkmFaceMatcher = null;
+let ndkmStream = null, ndkmDangChay = false, ndkmHenGioNhanDien = null;
+let ndkmFacingMode = 'environment';
+const NDKM_NGUONG_KHOP = 0.5; // càng nhỏ càng khắt khe khi so khớp khuôn mặt (mặc định face-api.js gợi ý 0.5-0.6)
+
+async function ndkmTaiModelNeuChua(){
+  if(ndkmModelsDaTai) return;
+  const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+  await Promise.all([
+    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+    faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+  ]);
+  ndkmModelsDaTai = true;
+}
+
+/* Google Drive không phải lúc nào cũng cho phép đọc pixel ảnh qua CORS (cần thiết để AI phân
+   tích khuôn mặt) — thử link "lh3.googleusercontent" trước (thường cho phép), nếu lỗi thì thử
+   tiếp link "thumbnail" — ảnh nào lỗi cả 2 sẽ bị bỏ qua và báo cho giáo viên biết. */
+function ndkmTaiAnh(url){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = ()=> resolve(img);
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+async function ndkmLayAnhChoAI(anhId){
+  try{ return await ndkmTaiAnh(anhDriveLon(anhId)); }
+  catch(e){ return await ndkmTaiAnh(anhDriveNho(anhId)); }
+}
+
+$('ndkmNapDuLieuBtn').onclick = async ()=>{
+  const btn = $('ndkmNapDuLieuBtn');
+  btn.disabled = true;
+  showMsg($('ndkmNapMsg'), '⏳ Đang tải mô hình AI (chỉ cần 1 lần mỗi phiên, có thể mất chút thời gian)...', 'info');
+  try{ await ndkmTaiModelNeuChua(); }
+  catch(e){
+    showMsg($('ndkmNapMsg'), '❌ Không tải được mô hình AI — kiểm tra kết nối mạng rồi thử lại.', 'err');
+    btn.disabled = false;
+    return;
+  }
+
+  const dsHocSinh = Object.entries(thanhVienState).filter(([uid,x])=> x && x.anhTheId);
+  if(!dsHocSinh.length){
+    showMsg($('ndkmNapMsg'), '❌ Chưa có học sinh nào có ảnh thẻ ở mục "Thành viên lớp" để nạp.', 'err');
+    btn.disabled = false;
+    return;
+  }
+
+  ndkmLabeledDescriptors = [];
+  const dsLoi = [];
+  for(let i=0; i<dsHocSinh.length; i++){
+    const [uid, x] = dsHocSinh[i];
+    showMsg($('ndkmNapMsg'), `⏳ Đang nạp ${i+1}/${dsHocSinh.length}: ${x.hoTen || uid}...`, 'info');
+    try{
+      const img = await ndkmLayAnhChoAI(x.anhTheId);
+      const ketQua = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+        .withFaceLandmarks().withFaceDescriptor();
+      if(!ketQua){ dsLoi.push((x.hoTen||uid) + ' (không thấy khuôn mặt rõ trong ảnh thẻ)'); continue; }
+      ndkmLabeledDescriptors.push(new faceapi.LabeledFaceDescriptors(uid, [ketQua.descriptor]));
+    }catch(e){
+      dsLoi.push((x.hoTen||uid) + ' (không đọc được ảnh — có thể do giới hạn CORS của Google Drive)');
+    }
+  }
+
+  if(!ndkmLabeledDescriptors.length){
+    showMsg($('ndkmNapMsg'), '❌ Không nạp được học sinh nào — kiểm tra lại ảnh thẻ.', 'err');
+    $('ndkmBatCameraBtn').disabled = true;
+    btn.disabled = false;
+    return;
+  }
+
+  ndkmFaceMatcher = new faceapi.FaceMatcher(ndkmLabeledDescriptors, NDKM_NGUONG_KHOP);
+  $('ndkmBatCameraBtn').disabled = false;
+  btn.disabled = false;
+  const ketQuaChu = `✅ Đã nạp xong ${ndkmLabeledDescriptors.length}/${dsHocSinh.length} học sinh.` +
+    (dsLoi.length ? ` ⚠️ Bỏ qua ${dsLoi.length}: ${dsLoi.join('; ')}` : '');
+  showMsg($('ndkmNapMsg'), ketQuaChu, dsLoi.length ? 'info' : 'ok');
+};
+
+$('ndkmBatCameraBtn').onclick = ()=> ndkmBatCamera();
+$('ndkmDoiCameraBtn').onclick = ()=>{
+  ndkmFacingMode = (ndkmFacingMode === 'environment') ? 'user' : 'environment';
+  ndkmBatCamera();
+};
+$('ndkmDungCameraBtn').onclick = dungNdkmCamera;
+
+async function ndkmBatCamera(){
+  showMsg($('ndkmErr'), '', '');
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    showMsg($('ndkmErr'), 'Trình duyệt này không hỗ trợ truy cập camera.', 'err');
+    return;
+  }
+  dungNdkmCamera(); // tắt camera cũ (nếu có) trước khi mở camera mới — dùng khi bấm "Đổi camera"
+  try{
+    ndkmStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: ndkmFacingMode } });
+  }catch(e){
+    showMsg($('ndkmErr'), 'Không lấy được quyền dùng camera — hãy cho phép trình duyệt truy cập camera rồi thử lại.', 'err');
+    return;
+  }
+  const video = $('ndkmVideo');
+  video.srcObject = ndkmStream;
+  await new Promise(r=> video.onloadedmetadata = r);
+  await video.play();
+
+  const canvas = $('ndkmCanvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  $('ndkmVideoWrap').style.display = 'block';
+  $('ndkmBatCameraBtn').style.display = 'none';
+  $('ndkmDoiCameraBtn').style.display = 'inline-block';
+  $('ndkmDungCameraBtn').style.display = 'inline-block';
+  ndkmDangChay = true;
+  ndkmVongLapNhanDien();
+}
+
+/* Chạy nhận diện mỗi ~350ms (không chạy mỗi khung hình) — đủ mượt để theo dõi mà không làm
+   nặng máy, vì mô hình AI nhận diện khuôn mặt tốn nhiều tài nguyên hơn nhiều so với các phép
+   tính khác trên trang. */
+async function ndkmVongLapNhanDien(){
+  if(!ndkmDangChay) return;
+  const video = $('ndkmVideo'), canvas = $('ndkmCanvas');
+  try{
+    const cacKetQua = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({inputSize:320}))
+      .withFaceLandmarks().withFaceDescriptors();
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    cacKetQua.forEach(kq=>{
+      const hop = kq.detection.box;
+      let ten = 'Chưa rõ', maMau = '#94a3b8';
+      if(ndkmFaceMatcher){
+        const khop = ndkmFaceMatcher.findBestMatch(kq.descriptor);
+        if(khop.label !== 'unknown'){
+          ten = (thanhVienState[khop.label] && thanhVienState[khop.label].hoTen) || khop.label;
+          maMau = '#22c55e';
+        }
+      }
+      ctx.strokeStyle = maMau;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(hop.x, hop.y, hop.width, hop.height);
+
+      ctx.font = 'bold 18px "Trebuchet MS", Arial, sans-serif';
+      const rongChu = ctx.measureText(ten).width + 16;
+      const caoNhan = 28;
+      const yNhan = Math.max(0, hop.y - caoNhan);
+      ctx.fillStyle = maMau;
+      ctx.fillRect(hop.x, yNhan, Math.max(rongChu, hop.width), caoNhan);
+      ctx.fillStyle = '#fff';
+      ctx.fillText(ten, hop.x + 8, yNhan + 20);
+    });
+  }catch(e){ /* bỏ qua lỗi 1 khung hình lẻ (vd camera vừa tắt), vòng lặp sau sẽ tự thử lại */ }
+
+  ndkmHenGioNhanDien = setTimeout(ndkmVongLapNhanDien, 350);
+}
+
+function dungNdkmCamera(){
+  ndkmDangChay = false;
+  if(ndkmHenGioNhanDien){ clearTimeout(ndkmHenGioNhanDien); ndkmHenGioNhanDien = null; }
+  if(ndkmStream){ ndkmStream.getTracks().forEach(t=> t.stop()); ndkmStream = null; }
+  const video = $('ndkmVideo');
+  if(video){ video.srcObject = null; }
+  const canvas = $('ndkmCanvas');
+  if(canvas){ const ctx = canvas.getContext('2d'); ctx && ctx.clearRect(0,0,canvas.width,canvas.height); }
+  if($('ndkmVideoWrap')) $('ndkmVideoWrap').style.display = 'none';
+  if($('ndkmBatCameraBtn')) $('ndkmBatCameraBtn').style.display = 'inline-block';
+  if($('ndkmDoiCameraBtn')) $('ndkmDoiCameraBtn').style.display = 'none';
+  if($('ndkmDungCameraBtn')) $('ndkmDungCameraBtn').style.display = 'none';
+}
+window.addEventListener('beforeunload', dungNdkmCamera); // đảm bảo tắt camera khi rời trang, dù quên bấm Tắt camera
 </script>
 </body>
 </html>
