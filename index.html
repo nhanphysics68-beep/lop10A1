@@ -547,6 +547,34 @@
   .modal-btns{display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;}
 
   footer{text-align:center; font-size:12px; color:var(--ink-soft); margin-top:10px;}
+
+  /* ---------- Quỹ lớp ---------- */
+  .ql-dots{display:flex; gap:8px; flex-wrap:wrap; margin-top:14px;}
+  .ql-dot-pill{background:#fff; border:1.5px solid var(--line); border-radius:20px;
+    padding:8px 16px; cursor:pointer; font-weight:700; font-size:13px; color:var(--ink-soft);
+    font-family:inherit; transition:.15s; display:inline-flex; align-items:center; gap:6px;}
+  .ql-dot-pill:hover{border-color:var(--leaf); color:var(--leaf-dark);}
+  .ql-dot-pill.active{background:var(--leaf); border-color:var(--leaf); color:#fff; box-shadow:var(--shadow);}
+  .ql-dot-pill .khoa-ico{font-size:11px;}
+  .ql-badge{display:inline-block; font-size:12px; font-weight:800; padding:4px 12px; border-radius:20px; margin:2px 0 8px;}
+  .ql-badge.mo{background:#eaf7ee; color:var(--leaf-dark); border:1px solid #bfe3c9;}
+  .ql-badge.khoa{background:#fdecea; color:var(--red); border:1px solid #f4b8b0;}
+  .ql-thongke{display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin:16px 0 4px;}
+  @media (max-width:900px){ .ql-thongke{grid-template-columns:repeat(2,1fr);} }
+  .ql-o{background:#f7fbf8; border:1.5px solid var(--line); border-radius:12px; padding:12px 10px; text-align:center;}
+  .ql-o-conlai{background:#fff8ec; border-color:var(--clay);}
+  .ql-so{font-size:17px; font-weight:800; color:var(--leaf-dark);}
+  .ql-o-conlai .ql-so{color:var(--clay);}
+  .ql-nhan{font-size:11.5px; color:var(--ink-soft); margin-top:3px; line-height:1.3;}
+  #qlBangHS{width:100%; border-collapse:collapse; font-size:13px;}
+  #qlBangHS th, #qlBangHS td{border:1px solid var(--line); padding:7px 10px; text-align:left;}
+  #qlBangHS thead th{background:var(--leaf); color:#fff; font-size:12.5px; white-space:nowrap;}
+  #qlBangHS tbody tr:nth-child(odd){background:#fbfdfb;}
+  #qlBangHS td.ql-stt, #qlBangHS td.ql-chk{text-align:center; white-space:nowrap;}
+  #qlBangHS input[type="checkbox"]{width:19px; height:19px; cursor:pointer;}
+  #qlBangHS tr.ql-daxong td{background:#eaf5ee;}
+  .ql-tick-ok{color:var(--leaf-dark); font-weight:800;}
+  .ql-tick-no{color:var(--ink-soft);}
 </style>
 </head>
 <body>
@@ -1117,6 +1145,74 @@
     </div>
   </div>
 
+  <!-- ============ THẺ MỚI: QUỸ LỚP (theo từng đợt thu, giáo viên khóa đợt khi thu xong) ============ -->
+  <div class="panel" id="panel-quylop">
+    <div class="card">
+      <h2>🐷 Quỹ lớp</h2>
+      <p class="section-note">Theo dõi quỹ lớp theo từng <b>đợt thu</b>. Cả lớp và phụ huynh có thể xem tình hình đóng quỹ bất cứ lúc nào mà không cần hỏi trực tiếp giáo viên.
+        Khi thu xong một đợt, giáo viên bấm <b>Khóa đợt này</b> để chốt số liệu và mở đợt thu tiếp theo.</p>
+      <div id="qlDotChon" class="ql-dots"></div>
+    </div>
+
+    <div class="card">
+      <h2 id="qlTenDot">📊 Tổng quan — Đợt 1</h2>
+      <span id="qlTrangThai" class="ql-badge"></span>
+
+      <div id="qlAdminCauHinh" style="display:none; margin-top:14px;">
+        <div class="grid2">
+          <div class="field">
+            <label>Mức đóng mỗi học sinh (đ)</label>
+            <input type="text" inputmode="numeric" id="qlMucDongInput" placeholder="VD: 100000">
+          </div>
+          <div class="field">
+            <label>Tổng chi trong đợt (đ)</label>
+            <input type="text" inputmode="numeric" id="qlTongChiInput" placeholder="VD: 500000">
+          </div>
+        </div>
+        <div class="field">
+          <label>Ghi chú khoản chi (không bắt buộc)</label>
+          <input type="text" id="qlGhiChuChiInput" maxlength="200" placeholder="VD: Mua hoa + phần thưởng thi đua">
+        </div>
+        <button class="btn btn-primary btn-sm" id="qlLuuCauHinhBtn">💾 Lưu mức đóng &amp; chi tiêu</button>
+      </div>
+
+      <div class="ql-thongke">
+        <div class="ql-o">
+          <div class="ql-so" id="qlSoDaDong">0/0</div>
+          <div class="ql-nhan">Học sinh đã đóng</div>
+        </div>
+        <div class="ql-o">
+          <div class="ql-so" id="qlMucDongXem">0 đ</div>
+          <div class="ql-nhan">Mức đóng / học sinh</div>
+        </div>
+        <div class="ql-o">
+          <div class="ql-so" id="qlThanhTien">0 đ</div>
+          <div class="ql-nhan">Thành tiền (đã thu)</div>
+        </div>
+        <div class="ql-o">
+          <div class="ql-so" id="qlTongChiXem">0 đ</div>
+          <div class="ql-nhan">Tổng chi</div>
+        </div>
+        <div class="ql-o ql-o-conlai">
+          <div class="ql-so" id="qlConLai">0 đ</div>
+          <div class="ql-nhan">Còn lại</div>
+        </div>
+      </div>
+
+      <div id="qlAdminKhoaVung" style="display:none; margin-top:14px;">
+        <button class="btn btn-clay btn-sm" id="qlKhoaBtn">🔒 Khóa đợt này &amp; mở đợt tiếp theo</button>
+        <button class="btn btn-ghost btn-sm" id="qlMoKhoaBtn" style="display:none;">🔓 Mở lại đợt này để sửa</button>
+      </div>
+      <div id="qlMsg" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <h2>📋 Danh sách đóng quỹ</h2>
+      <p class="section-note" id="qlGhiChuChiXem"></p>
+      <div class="scroll-x"><table id="qlBangHS"></table></div>
+    </div>
+  </div>
+
   <!-- ============ THẺ 7: 10A1 CONFESSION (ẨN DANH, CÓ KIỂM DUYỆT) ============ -->
   <div class="panel" id="panel-confession">
     <div class="card">
@@ -1435,6 +1531,7 @@ const quyenToTuanRef = db.ref('quyenToTuan2026'); // ai đã được cấp quy�
 const quyenToTuanTenRef = db.ref('quyenToTuanTen2026'); // tên đã xác nhận của người giữ quyền, để hiện đúng "Tuần N — Tên" thay vì "Không rõ"
 const nhapMaToTuanRef = db.ref('nhapMaToTuan2026'); // nhánh tạm để Rules so khớp mã, không cần đọc lại
 const khoanThuRef = db.ref('khoanthu2026'); // các khoản thu đầu năm — công khai đọc, mỗi người tự ghi phần của mình
+const quyLopRef = db.ref('quylop2026'); // quỹ lớp theo từng đợt thu — công khai đọc (minh bạch với PH/HS), CHỈ giáo viên ghi được
 const phongTraoRef = db.ref('phongtrao2026'); // phong trào của lớp — công khai đọc/ghi, giống Bảng tin/Đăng ký lao động
 const hosoRef   = db.ref('hoso2026/hoso');         // riêng tư: khóa theo uid, giống hotro2026
 
@@ -1770,13 +1867,14 @@ function myRegId(){ const r = regs.find(x=> x.uid===myUid); return r? r.id : nul
    có thể tùy chỉnh (lưu trên Firebase, xem dieuHuong2026 phía dưới). */
 const TAB_DINH_NGHIA = {
   thongtin:   {icon:'🏫', ten:'Thông tin lớp 10A1'},
+  quylop:     {icon:'🐷', ten:'Quỹ lớp'},
   hoatdong:   {icon:'🙋', ten:'Các hoạt động của lớp'},
   hoatdongto: {icon:'🚩', ten:'Các hoạt động của tổ'},
   bangtin:    {icon:'📰', ten:'Bảng tin lớp'},
   confession: {icon:'🎭', ten:'Confession'},
   games:      {icon:'🎮', ten:'Trò chơi học tập'},
 };
-const THU_TU_CHINH_MAC_DINH = ['thongtin', 'hoatdong', 'hoatdongto', 'bangtin', 'confession', 'games'];
+const THU_TU_CHINH_MAC_DINH = ['thongtin', 'quylop', 'hoatdong', 'hoatdongto', 'bangtin', 'confession', 'games'];
 
 const SUBTAB_DINH_NGHIA = {
   sodo:      {icon:'📍', ten:'Sơ đồ lớp'},
@@ -1934,6 +2032,7 @@ auth.onAuthStateChanged(async user=>{
   await napKhoanThuCuaToi();
   renderSeats(); renderRegs(); renderTv(); renderBaiViet(); renderConfessionFeed(); renderCauLacBo(); renderBanCanSu();
   renderDanhSachKhoanThu();
+  renderQuyLop();
   renderThanhVien();
   renderTongKetTuan();
   renderQuyenCuaToi();
@@ -1964,7 +2063,7 @@ async function loadRoster(){
       renderDanhSachHS();
       renderVitriBang();
       if(laLanDau){ laLanDau = false; resolve(); }
-      else { if(isAdmin) renderAdmin(); renderDanhSachKhoanThu(); } // các lần sau (có người vừa thêm/sửa danh sách lớp) tự vẽ lại ngay
+      else { if(isAdmin) renderAdmin(); renderDanhSachKhoanThu(); renderQuyLop(); } // các lần sau (có người vừa thêm/sửa danh sách lớp) tự vẽ lại ngay
     });
   });
 }
@@ -6483,6 +6582,145 @@ clbRef.on('value', s=>{
 clbDiemRef.on('value', s=>{
   clbDiemState = s.val() || {};
   renderCauLacBo();
+});
+
+/* ================================================================
+   QUỸ LỚP — theo dõi quỹ lớp theo từng ĐỢT thu. Công khai đọc (để phụ huynh/học sinh tự
+   tra cứu, đúng tiêu chí "tự tra cứu mà không cần hỏi trực tiếp giáo viên"), CHỈ giáo viên
+   (isAdmin) mới được tick "đã đóng", đặt mức đóng/tổng chi, và khóa/mở khóa từng đợt.
+   Dùng chung danh sách lớp (biến roster) — không lưu tên học sinh riêng ở đây, tránh
+   2 nguồn dữ liệu lệch nhau khi giáo viên sửa danh sách lớp.
+   Cấu trúc Firebase: quylop2026 = { soDotHienTai: 1, dots: { dot1: {mucDong, tongChi,
+   ghiChuChi, khoa, daDong:{ <khóaHocSinh>: true }}, dot2: {...}, ... } }
+   ================================================================ */
+let quyLop = { soDotHienTai: 1, dots: {} };
+let dotDangXem = 1;
+
+// Khóa nhận diện học sinh ổn định theo tên (bỏ dấu, thường hóa) — nhất quán với cách các
+// mục khác (Các khoản thu đầu năm...) đối chiếu học sinh bằng họ tên, vì roster chưa có UID riêng.
+function qlKhoaHS(ten){ return boDauTiengViet(ten||'').toLowerCase().replace(/\s+/g,'_'); }
+function qlLayDot(n){ return (quyLop.dots && quyLop.dots['dot'+n]) || {}; }
+function qlSoTuChuoi(s){ return Number(String(s||'').replace(/[^\d]/g,'')) || 0; }
+
+function renderQlDots(){
+  const host = $('qlDotChon');
+  if(!host) return;
+  const soDot = quyLop.soDotHienTai || 1;
+  let h = '';
+  for(let n=1; n<=soDot; n++){
+    const d = qlLayDot(n);
+    h += `<button class="ql-dot-pill${n===dotDangXem?' active':''}" data-dot="${n}">
+      ${d.khoa ? '<span class="khoa-ico">🔒</span>' : ''}Đợt ${n}</button>`;
+  }
+  host.innerHTML = h;
+  host.querySelectorAll('[data-dot]').forEach(b=> b.onclick = ()=>{
+    dotDangXem = +b.getAttribute('data-dot');
+    renderQuyLop();
+  });
+}
+
+function renderQuyLop(){
+  if(!$('qlBangHS')) return; // panel chưa có trong DOM (không nên xảy ra, phòng lỗi)
+  renderQlDots();
+
+  const d = qlLayDot(dotDangXem);
+  const mucDong = d.mucDong || 0;
+  const tongChi = d.tongChi || 0;
+  const daDong = d.daDong || {};
+  const daKhoa = !!d.khoa;
+
+  $('qlTenDot').textContent = `📊 Tổng quan — Đợt ${dotDangXem}`;
+  const badge = $('qlTrangThai');
+  badge.textContent = daKhoa ? '🔒 Đã khóa' : '🟢 Đang mở thu';
+  badge.className = 'ql-badge ' + (daKhoa ? 'khoa' : 'mo');
+
+  const soDaDong = roster.filter(hs=> daDong[qlKhoaHS(hs.name)]).length;
+  const thanhTien = soDaDong * mucDong;
+  $('qlSoDaDong').textContent = `${soDaDong}/${roster.length}`;
+  $('qlMucDongXem').textContent = dinhDangTien(mucDong);
+  $('qlThanhTien').textContent = dinhDangTien(thanhTien);
+  $('qlTongChiXem').textContent = dinhDangTien(tongChi);
+  $('qlConLai').textContent = dinhDangTien(thanhTien - tongChi);
+  $('qlGhiChuChiXem').textContent = d.ghiChuChi ? ('Ghi chú chi: ' + d.ghiChuChi) : '';
+
+  const khuAdminCauHinh = $('qlAdminCauHinh'), khuAdminKhoa = $('qlAdminKhoaVung');
+  khuAdminCauHinh.style.display = isAdmin ? 'block' : 'none';
+  khuAdminKhoa.style.display = isAdmin ? 'block' : 'none';
+  if(isAdmin){
+    // Không ghi đè ô đang gõ dở nếu người dùng đang focus vào input
+    if(document.activeElement !== $('qlMucDongInput')) $('qlMucDongInput').value = mucDong || '';
+    if(document.activeElement !== $('qlTongChiInput')) $('qlTongChiInput').value = tongChi || '';
+    if(document.activeElement !== $('qlGhiChuChiInput')) $('qlGhiChuChiInput').value = d.ghiChuChi || '';
+    $('qlMucDongInput').disabled = daKhoa;
+    $('qlTongChiInput').disabled = daKhoa;
+    $('qlGhiChuChiInput').disabled = daKhoa;
+    $('qlLuuCauHinhBtn').style.display = daKhoa ? 'none' : 'inline-block';
+    $('qlKhoaBtn').style.display = daKhoa ? 'none' : 'inline-block';
+    $('qlMoKhoaBtn').style.display = daKhoa ? 'inline-block' : 'none';
+  }
+
+  const dsSapXep = roster.slice().sort((a,b)=> (a.name||'').localeCompare(b.name||'', 'vi'));
+  let h = `<tr><th>STT</th><th>Họ và tên</th><th>Đã đóng quỹ</th></tr>`;
+  if(!dsSapXep.length){
+    h += `<tr><td colspan="3" style="text-align:center;color:var(--ink-soft);">Chưa có danh sách lớp — vào mục "Danh sách học sinh" để nhập trước.</td></tr>`;
+  } else {
+    dsSapXep.forEach((hs,i)=>{
+      const key = qlKhoaHS(hs.name);
+      const daTick = !!daDong[key];
+      h += `<tr class="${daTick?'ql-daxong':''}">
+        <td class="ql-stt">${i+1}</td>
+        <td>${esc(hs.name||'')}</td>
+        <td class="ql-chk">${isAdmin
+          ? `<input type="checkbox" data-key="${key}" ${daTick?'checked':''} ${daKhoa?'disabled':''}>`
+          : `<span class="${daTick?'ql-tick-ok':'ql-tick-no'}">${daTick?'✔️ Đã đóng':'— Chưa đóng'}</span>`}</td>
+      </tr>`;
+    });
+  }
+  $('qlBangHS').innerHTML = h;
+
+  if(isAdmin){
+    $('qlBangHS').querySelectorAll('[data-key]').forEach(cb=> cb.onchange = async ()=>{
+      try{
+        await quyLopRef.child(`dots/dot${dotDangXem}/daDong/${cb.dataset.key}`).set(cb.checked);
+      }catch(e){ showMsg($('qlMsg'), baoLoi(e), 'err'); cb.checked = !cb.checked; }
+    });
+  }
+}
+
+$('qlLuuCauHinhBtn').onclick = async ()=>{
+  const mucDong = qlSoTuChuoi($('qlMucDongInput').value);
+  const tongChi = qlSoTuChuoi($('qlTongChiInput').value);
+  const ghiChuChi = $('qlGhiChuChiInput').value.trim();
+  try{
+    await quyLopRef.child(`dots/dot${dotDangXem}`).update({ mucDong, tongChi, ghiChuChi });
+    showMsg($('qlMsg'), 'Đã lưu mức đóng và chi tiêu.', 'ok');
+  }catch(e){ showMsg($('qlMsg'), baoLoi(e), 'err'); }
+};
+
+$('qlKhoaBtn').onclick = async ()=>{
+  if(!confirm(`Khóa Đợt ${dotDangXem}? Sau khi khóa, không ai tick "đã đóng" được nữa cho đến khi mở lại — và Đợt ${dotDangXem+1} sẽ được mở để thu tiếp.`)) return;
+  try{
+    const capNhat = {};
+    capNhat[`dots/dot${dotDangXem}/khoa`] = true;
+    if(dotDangXem >= (quyLop.soDotHienTai || 1)) capNhat['soDotHienTai'] = dotDangXem + 1;
+    await quyLopRef.update(capNhat);
+    showMsg($('qlMsg'), `Đã khóa Đợt ${dotDangXem}.`, 'ok');
+  }catch(e){ showMsg($('qlMsg'), baoLoi(e), 'err'); }
+};
+
+$('qlMoKhoaBtn').onclick = async ()=>{
+  if(!confirm(`Mở lại Đợt ${dotDangXem} để sửa? Việc tick "đã đóng" sẽ khả dụng trở lại.`)) return;
+  try{
+    await quyLopRef.child(`dots/dot${dotDangXem}/khoa`).set(false);
+    showMsg($('qlMsg'), `Đã mở lại Đợt ${dotDangXem}.`, 'ok');
+  }catch(e){ showMsg($('qlMsg'), baoLoi(e), 'err'); }
+};
+
+quyLopRef.on('value', s=>{
+  quyLop = s.val() || { soDotHienTai: 1, dots: {} };
+  if(!quyLop.soDotHienTai) quyLop.soDotHienTai = 1;
+  if(!quyLop.dots) quyLop.dots = {};
+  renderQuyLop();
 });
 
 /* Danh sách hỗ trợ không dùng lắng nghe liên tục vì là dữ liệu riêng tư —
