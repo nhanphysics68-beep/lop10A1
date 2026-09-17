@@ -1013,11 +1013,40 @@
       </div>
       <p class="section-note" style="margin-top:8px;">Chọn ảnh xong là hệ thống nộp bài ngay — không cần bấm thêm nút nào khác. Chọn ảnh khác bất cứ lúc nào để nộp lại (bài mới sẽ thay cho bài cũ).</p>
       <div id="btvlMsg" class="msg"></div>
+      <div id="chamAiKetQuaCuaToi" style="display:none; margin-top:10px;"></div>
     </div>
 
     <div class="card" id="btvlDanhSachCard" style="display:none;">
       <h2>📋 Danh sách đã nộp (chỉ giáo viên xem)</h2>
       <div class="scroll-x"><table id="btvlDanhSachTable"></table></div>
+    </div>
+
+    <!-- ============ CHẤM BÀI BẰNG AI (GEMINI) — chỉ giáo viên thấy ============ -->
+    <div class="card" id="chamAiCard" style="display:none;">
+      <h2>🤖 Chấm bài bằng AI (Gemini)</h2>
+      <p class="section-note">AI tự đánh giá mức độ hoàn thành/trình bày bài làm trên thang điểm 10 —
+        KHÔNG so với đáp án mẫu. Điểm AI chấm chỉ hiển thị cho học sinh sau khi Thầy duyệt (có thể sửa
+        lại điểm/nhận xét) ở mục "Chờ duyệt" bên dưới.</p>
+
+      <div class="section-title">1) Chấm bài đã nộp qua web</div>
+      <p class="section-note">Gửi các bài ở mục "Nộp bài tập" phía trên mà chưa được công bố điểm vào
+        hàng chờ để AI chấm — vì đã nộp qua web nên tên học sinh đã được gắn sẵn, không cần đối chiếu.</p>
+      <button class="btn btn-blue btn-sm" id="chamAiNopWebBtn">🤖 Chấm AI các bài chưa chấm</button>
+      <span id="chamAiNopWebMsg" class="msg"></span>
+
+      <div class="section-title" style="margin-top:18px;">2) Chấm ảnh chọn từ Google Photos</div>
+      <p class="section-note">Chọn ảnh bài làm từ thư viện Google Photos của Thầy. Vì ảnh trong Google
+        Photos không gắn sẵn tên học sinh, AI sẽ cố đọc tên viết trên bài và gợi ý đối chiếu với danh
+        sách lớp — Thầy xác nhận/sửa lại tên ở bước duyệt bên dưới trước khi công bố.</p>
+      <button class="btn btn-blue btn-sm" id="chamAiPhotosBtn">📸 Chọn ảnh từ Google Photos</button>
+      <span id="chamAiPhotosMsg" class="msg"></span>
+
+      <div class="section-title" style="margin-top:18px;">3) Chờ duyệt (<span id="chamAiChoDuyetDem">0</span>)</div>
+      <button class="btn btn-clay btn-sm" id="chamAiLamMoiBtn">🔄 Làm mới danh sách chờ duyệt</button>
+      <div id="chamAiChoDuyetList" style="margin-top:10px;"></div>
+
+      <div class="section-title" style="margin-top:18px;">4) Đã công bố cho học sinh</div>
+      <div class="scroll-x"><table id="chamAiDaDuyetTable"></table></div>
     </div>
   </div>
 
@@ -1516,6 +1545,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
@@ -1581,6 +1611,22 @@ async function guiAnhBaiTapLenDrive(duLieuAnh, tenHocSinh){
   if(!kq.ok) throw new Error(kq.loi || 'Không tải được ảnh bài làm lên Drive.');
   return { id: kq.id, link: kq.link || anhDriveLon(kq.id), thuMucId: kq.thuMucId || null };
 }
+
+/* ---------------------------------------------------------------
+   CHẤM BÀI BẰNG AI (Gemini) — TỪ GOOGLE PHOTOS
+   Client KHÔNG BAO GIỜ gọi Gemini trực tiếp (sẽ lộ khóa API cho ai xem mã nguồn trang).
+   Trang chỉ: (1) cho giáo viên chọn ảnh từ Google Photos bằng Photos Picker API (OAuth
+   của chính giáo viên, không phải khóa bí mật), (2) tải ảnh đã chọn lên Drive dùng lại
+   đúng Apps Script upload ở trên, rồi (3) ghi 1 "hàng chờ" vào chamBaiAI2026/hangCho.
+   Một Apps Script RIÊNG (mã mẫu bàn giao kèm: cham-bai-ai-gemini.gs), chạy theo thời gian
+   (time-driven trigger), sẽ đọc hàng chờ này, tự gọi Gemini để chấm điểm + (nếu là ảnh từ
+   Google Photos) đọc tên học sinh viết trên bài, rồi ghi kết quả vào chamBaiAI2026/choDuyet
+   để giáo viên duyệt ở đây. Quy trình giống hệt cơ chế Confession có kiểm duyệt AI ở trên.
+   CLIENT ID lấy từ Google Cloud Console → Google Auth Platform → Clients (dự án "lop10a1"). */
+const GOOGLE_PHOTOS_CLIENT_ID = '270508713985-jtlgtbqooq7i0h0bbq7ouig0vtd1kucr.apps.googleusercontent.com';
+const GOOGLE_PHOTOS_SCOPE = 'https://www.googleapis.com/auth/photospicker.mediaitems.readonly';
+const chamBaiAIRef = db.ref('chamBaiAI2026');
+let chamAiAccessToken = null; // token OAuth tạm của phiên đang chấm (chỉ tồn tại trong bộ nhớ, không lưu lại)
 
 /* Giữ nguyên đường dẫn cũ để không mất dữ liệu đã có */
 const seatsRef  = db.ref('lop10a1/seats');
@@ -2152,6 +2198,9 @@ auth.onAuthStateChanged(async user=>{
     await napChsAdmin();
     await napBaiTapVatLy10TatCa();
     await napCapTaiKhoanTatCa();
+    if($('chamAiCard')) $('chamAiCard').style.display = 'block';
+    await napChamAiChoDuyet();
+    await napChamAiDaDuyet();
     renderAdmin();
   } else if(isThuQuy){
     showMsg($('pageMsg'), '💰 Đã đăng nhập với quyền Thủ quỹ — có thể quản lý mục "Quỹ lớp".', 'ok');
@@ -6803,6 +6852,31 @@ function btvlTimTrongRoster(ten){
   return roster.find(hs=> boDauTiengViet(hs.name||'').trim().toLowerCase() === target) || null;
 }
 
+/* Đối chiếu GẦN ĐÚNG với danh sách lớp — dùng cho tên do AI đọc được trên ảnh (Google Photos),
+   vì AI có thể đọc thiếu dấu, thiếu chữ lót, hoặc lẫn vài ký tự rác xung quanh. Trả về học sinh
+   khớp nhất kèm mức tin cậy ('cao' nếu khớp chính xác/gần như chính xác, 'thap' nếu chỉ đoán),
+   hoặc null nếu không tìm được gì gần giống để tránh gán nhầm. */
+function timGanDungTrongRoster(tenDoc){
+  const target = boDauTiengViet(tenDoc||'').trim().toLowerCase().replace(/[^a-z\s]/g,' ').replace(/\s+/g,' ').trim();
+  if(!target) return null;
+  const khopChinhXac = btvlTimTrongRoster(tenDoc);
+  if(khopChinhXac) return { hs: khopChinhXac, doTinCay: 'cao' };
+  const tuTarget = target.split(' ').filter(Boolean);
+  if(!tuTarget.length) return null;
+  let ungVienTot = null, diemTot = 0;
+  roster.forEach(hs=>{
+    const tenChuan = boDauTiengViet(hs.name||'').trim().toLowerCase();
+    if(!tenChuan) return;
+    const tuChuan = tenChuan.split(' ').filter(Boolean);
+    // đếm số từ trùng nhau (không quan tâm thứ tự) — đủ để bắt các trường hợp AI đọc thiếu/thừa chữ lót
+    const soTuTrung = tuTarget.filter(t=> tuChuan.includes(t)).length;
+    const diem = soTuTrung / Math.max(tuChuan.length, tuTarget.length);
+    if(diem > diemTot){ diemTot = diem; ungVienTot = hs; }
+  });
+  if(ungVienTot && diemTot >= 0.5) return { hs: ungVienTot, doTinCay: diemTot >= 0.85 ? 'cao' : 'thap' };
+  return null;
+}
+
 // Đồng bộ Ngày sinh/Giới tính/Dân tộc NGAY khi học sinh gõ họ tên (không cần rời khỏi ô nhập)
 function btvlDongBoTuRoster(){
   if(!$('btvlHoTen')) return;
@@ -6940,6 +7014,284 @@ async function napBaiTapVatLy10TatCa(){
   catch(e){ baiTapVatLy10TatCa = {}; }
   renderBtvlAdmin();
 }
+
+/* ================================================================
+   CHẤM BÀI BẰNG AI (GEMINI) — hàng chờ + duyệt + công bố
+   Xem chú thích kiến trúc ở khối khai báo GOOGLE_PHOTOS_CLIENT_ID phía trên. Khóa lưu kết quả
+   công bố (daDuyet) là "chamAiKhoaTen(hoTen)" — một chuỗi rút gọn từ họ tên, KHÔNG phải uid,
+   vì ảnh lấy từ Google Photos không gắn với phiên đăng nhập ẩn danh của học sinh đó trên máy
+   nào cả. Nhờ vậy bảng điểm hiển thị thống nhất cho cả 2 nguồn (nộp web + Google Photos) và
+   công khai để học sinh/phụ huynh tự tra cứu (giống các bảng công khai khác của trang).
+   ================================================================ */
+let chamAiChoDuyet = {};   // cache đang hiển thị ở bước duyệt
+let chamAiDaDuyet  = {};   // cache bảng đã công bố
+
+function chamAiKhoaTen(ten){
+  const slugGoc = slugTenDangNhap(ten);
+  const trungTen = roster.filter(hs=> slugTenDangNhap(hs.name) === slugGoc);
+  let slug = slugGoc;
+  if(trungTen.length > 1){
+    const viTri = trungTen.findIndex(hs=> hs.name === ten);
+    if(viTri > 0) slug = slugGoc + (viTri + 1);
+  }
+  return slug || ('hs_' + Date.now());
+}
+
+/* ---- 1) Đưa bài đã nộp qua web vào hàng chờ AI chấm ---- */
+$('chamAiNopWebBtn') && ($('chamAiNopWebBtn').onclick = async ()=>{
+  if(!isAdmin) return;
+  const nut = $('chamAiNopWebBtn'); nut.disabled = true;
+  try{
+    const ds = Object.keys(baiTapVatLy10TatCa).map(uid=> Object.assign({uid}, baiTapVatLy10TatCa[uid])).filter(b=> b.anhId);
+    let soLuong = 0;
+    for(const b of ds){
+      const khoa = chamAiKhoaTen(b.hoTen);
+      if(chamAiDaDuyet[khoa]) continue; // đã có điểm công bố rồi thì bỏ qua, tránh chấm lại tốn phí API
+      await chamBaiAIRef.child('hangCho').push({
+        nguon: 'nopweb', hoTenGoi: b.hoTen, khoa, anhId: b.anhId, anhLink: b.anhLink || '',
+        luc: Date.now(), trangThai: 'cho_xu_ly'
+      });
+      soLuong++;
+    }
+    showMsg($('chamAiNopWebMsg'), soLuong ? `✅ Đã đưa ${soLuong} bài vào hàng chờ — AI sẽ chấm trong ít phút, bấm "Làm mới danh sách chờ duyệt" bên dưới để xem kết quả.` : 'Không có bài mới nào cần chấm (đã công bố điểm hết rồi).', 'ok');
+  }catch(e){ showMsg($('chamAiNopWebMsg'), baoLoi(e), 'err'); }
+  nut.disabled = false;
+});
+
+/* ---- 2) Chọn ảnh từ Google Photos (Photos Picker API) rồi đưa vào hàng chờ ---- */
+function chamAiLayAccessToken(){
+  return new Promise((resolve, reject)=>{
+    if(!window.google || !google.accounts || !google.accounts.oauth2){
+      reject(new Error('Chưa tải được thư viện đăng nhập Google, thử lại sau vài giây.')); return;
+    }
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_PHOTOS_CLIENT_ID,
+      scope: GOOGLE_PHOTOS_SCOPE,
+      callback: (resp)=>{
+        if(resp && resp.access_token) resolve(resp.access_token);
+        else reject(new Error('Không lấy được quyền truy cập Google Photos.'));
+      }
+    });
+    client.requestAccessToken();
+  });
+}
+
+async function chamAiChoNguoiDungChonAnh(token){
+  const res = await fetch('https://photospicker.googleapis.com/v1/sessions', {
+    method: 'POST', headers: { 'Authorization': 'Bearer ' + token }
+  });
+  if(!res.ok) throw new Error('Không tạo được phiên chọn ảnh Google Photos.');
+  const phien = await res.json();
+  return phien; // { id, pickerUri, pollingConfig }
+}
+
+function chamAiChoDenKhiChonXong(sessionId, token, capNhatThongBao){
+  return new Promise((resolve, reject)=>{
+    let lanDem = 0;
+    const hen = setInterval(async ()=>{
+      lanDem++;
+      if(lanDem > 150){ clearInterval(hen); reject(new Error('Hết thời gian chờ chọn ảnh (5 phút).')); return; }
+      try{
+        const res = await fetch('https://photospicker.googleapis.com/v1/sessions/' + sessionId, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const phien = await res.json();
+        if(phien.mediaItemsSet){ clearInterval(hen); resolve(); }
+        else if(capNhatThongBao) capNhatThongBao(lanDem);
+      }catch(e){ /* bỏ qua lỗi tạm thời của 1 lần poll, thử lại lần sau */ }
+    }, 2000);
+  });
+}
+
+$('chamAiPhotosBtn') && ($('chamAiPhotosBtn').onclick = async ()=>{
+  if(!isAdmin) return;
+  const nut = $('chamAiPhotosBtn'); nut.disabled = true;
+  const cuaSoTam = window.open('', '_blank'); // mở sẵn cửa sổ trắng để tránh trình duyệt chặn popup (mở sau await sẽ bị chặn)
+  try{
+    showMsg($('chamAiPhotosMsg'), 'Đang xin quyền truy cập Google Photos...', 'info');
+    const token = await chamAiLayAccessToken();
+    chamAiAccessToken = token;
+    showMsg($('chamAiPhotosMsg'), 'Đang mở Google Photos để Thầy chọn ảnh...', 'info');
+    const phien = await chamAiChoNguoiDungChonAnh(token);
+    if(cuaSoTam) cuaSoTam.location = phien.pickerUri; else window.open(phien.pickerUri, '_blank');
+    showMsg($('chamAiPhotosMsg'), 'Đang chờ Thầy chọn ảnh ở cửa sổ Google Photos vừa mở...', 'info');
+    await chamAiChoDenKhiChonXong(phien.id, token, (lan)=> showMsg($('chamAiPhotosMsg'), `Đang chờ Thầy chọn ảnh... (${lan*2}s)`, 'info'));
+
+    showMsg($('chamAiPhotosMsg'), 'Đã chọn xong, đang tải ảnh lên...', 'info');
+    const resDs = await fetch('https://photospicker.googleapis.com/v1/mediaItems?sessionId=' + phien.id, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const dsKq = await resDs.json();
+    const items = dsKq.mediaItems || [];
+    if(!items.length){ showMsg($('chamAiPhotosMsg'), 'Thầy chưa chọn ảnh nào.', 'info'); nut.disabled = false; return; }
+
+    let daXong = 0;
+    for(const mi of items){
+      try{
+        const urlAnh = (mi.mediaFile && mi.mediaFile.baseUrl ? mi.mediaFile.baseUrl : '') + '=d';
+        const resAnh = await fetch(urlAnh, { headers: { 'Authorization': 'Bearer ' + token } });
+        const blob = await resAnh.blob();
+        const anhNen = await nenAnh(blob, 1400, 0.85);
+        const kqDrive = await guiAnhBaiTapLenDrive(anhNen, 'cham-ai-google-photos');
+        await chamBaiAIRef.child('hangCho').push({
+          nguon: 'googlephotos', hoTenGoi: '', anhId: kqDrive.id, anhLink: kqDrive.link || '',
+          luc: Date.now(), trangThai: 'cho_xu_ly'
+        });
+        daXong++;
+        showMsg($('chamAiPhotosMsg'), `Đang tải ảnh lên Drive... ${daXong}/${items.length}`, 'info');
+      }catch(eAnh){ console.error('Lỗi xử lý 1 ảnh:', eAnh); }
+    }
+    // Xoá phiên chọn ảnh trên Google (dọn dẹp, không bắt buộc nhưng nên làm)
+    fetch('https://photospicker.googleapis.com/v1/sessions/' + phien.id, { method:'DELETE', headers:{'Authorization':'Bearer '+token} }).catch(()=>{});
+    showMsg($('chamAiPhotosMsg'), `✅ Đã đưa ${daXong}/${items.length} ảnh vào hàng chờ AI chấm — bấm "Làm mới danh sách chờ duyệt" sau ít phút để xem kết quả.`, 'ok');
+  }catch(e){
+    if(cuaSoTam) cuaSoTam.close();
+    showMsg($('chamAiPhotosMsg'), baoLoi(e), 'err');
+  }
+  nut.disabled = false;
+});
+
+/* ---- 3) Danh sách chờ duyệt — do Apps Script (Gemini) ghi vào chamBaiAI2026/choDuyet ---- */
+async function napChamAiChoDuyet(){
+  if(!isAdmin) return;
+  try{ chamAiChoDuyet = (await chamBaiAIRef.child('choDuyet').once('value')).val() || {}; }
+  catch(e){ chamAiChoDuyet = {}; }
+  renderChamAiChoDuyet();
+}
+$('chamAiLamMoiBtn') && ($('chamAiLamMoiBtn').onclick = async ()=>{ await napChamAiChoDuyet(); await napChamAiDaDuyet(); });
+
+function renderChamAiChoDuyet(){
+  const host = $('chamAiChoDuyetList');
+  if(!host) return;
+  const items = Object.keys(chamAiChoDuyet).map(id=> Object.assign({id}, chamAiChoDuyet[id]));
+  $('chamAiChoDuyetDem').textContent = items.length;
+  if(!items.length){ host.innerHTML = `<p class="section-note">Chưa có bài nào chờ duyệt.</p>`; return; }
+
+  const tuyChonRoster = roster.slice().sort((a,b)=> (a.name||'').localeCompare(b.name||'', 'vi'))
+    .map(hs=> `<option value="${esc(hs.name)}">${esc(hs.name)}</option>`).join('');
+
+  host.innerHTML = items.map(x=>{
+    const goiY = x.nguon === 'googlephotos' && !x.hoTenGoi
+      ? timGanDungTrongRoster(x.hoTenDocDuoc || '') : null;
+    const tenGoiY = x.nguon === 'googlephotos' ? (x.hoTenGoi || (goiY ? goiY.hs.name : '')) : (x.hoTenGoi || '');
+    const chonTenHtml = x.nguon === 'googlephotos'
+      ? `<div class="field">
+           <label>Học sinh (AI đọc được: "${esc(x.hoTenDocDuoc || '— không đọc được —')}"${goiY ? ', gợi ý khớp: ' + (goiY.doTinCay==='cao'?'✅':'❔') : ''})</label>
+           <select data-cham-ai-ten="${x.id}">
+             <option value="">-- Chọn học sinh --</option>
+             ${tuyChonRoster}
+           </select>
+         </div>`
+      : `<div class="field"><label>Học sinh</label><input type="text" value="${esc(x.hoTenGoi||'')}" readonly></div>`;
+    return `
+    <div class="card" style="margin-bottom:10px;">
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        ${x.anhId ? `<img src="${anhDriveNho(x.anhId)}" alt="Bài làm" style="width:110px;height:140px;object-fit:cover;border-radius:8px;border:2px solid var(--line);">` : ''}
+        <div style="flex:1; min-width:220px;">
+          ${chonTenHtml}
+          <div class="grid2">
+            <div class="field"><label>Điểm (0–10)</label><input type="number" min="0" max="10" step="0.1" value="${x.diem!=null?x.diem:''}" data-cham-ai-diem="${x.id}"></div>
+            <div class="field"><label>Nguồn</label><input type="text" value="${x.nguon==='nopweb'?'Nộp qua web':'Google Photos'}" readonly></div>
+          </div>
+          <div class="field"><label>Nhận xét của AI</label><textarea data-cham-ai-nhanxet="${x.id}" style="min-height:70px;">${esc(x.nhanXet||'')}</textarea></div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-blue btn-sm" data-cham-ai-duyet="${x.id}">✅ Duyệt &amp; công bố</button>
+            <button class="btn btn-ghost btn-sm" data-cham-ai-xoa="${x.id}">🚫 Xoá, không chấm</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // gán sẵn giá trị gợi ý cho các ô <select> vừa tạo (không đặt trực tiếp trong HTML để tránh escaping phức tạp)
+  items.forEach(x=>{
+    if(x.nguon !== 'googlephotos') return;
+    const sel = host.querySelector(`[data-cham-ai-ten="${x.id}"]`);
+    if(!sel) return;
+    const goiY = timGanDungTrongRoster(x.hoTenDocDuoc || '');
+    if(goiY) sel.value = goiY.hs.name;
+  });
+
+  host.querySelectorAll('[data-cham-ai-duyet]').forEach(btn=> btn.onclick = async ()=>{
+    const id = btn.getAttribute('data-cham-ai-duyet');
+    const x = chamAiChoDuyet[id];
+    if(!x) return;
+    let hoTen = x.hoTenGoi || '';
+    if(x.nguon === 'googlephotos'){
+      const sel = host.querySelector(`[data-cham-ai-ten="${id}"]`);
+      hoTen = sel ? sel.value : '';
+      if(!hoTen){ alert('Vui lòng chọn đúng học sinh trước khi duyệt.'); return; }
+    }
+    const diemInput = host.querySelector(`[data-cham-ai-diem="${id}"]`);
+    const nhanXetInput = host.querySelector(`[data-cham-ai-nhanxet="${id}"]`);
+    const diem = Math.max(0, Math.min(10, parseFloat(diemInput.value)));
+    if(isNaN(diem)){ alert('Vui lòng nhập điểm hợp lệ (0–10).'); return; }
+    const khoa = chamAiKhoaTen(hoTen);
+    try{
+      await chamBaiAIRef.child('daDuyet').child(khoa).set({
+        hoTen, diem: Math.round(diem*10)/10, nhanXet: nhanXetInput.value.trim(),
+        nguon: x.nguon, anhId: x.anhId || '', anhLink: x.anhLink || '', ngayDuyet: Date.now()
+      });
+      await chamBaiAIRef.child('choDuyet').child(id).remove();
+      delete chamAiChoDuyet[id];
+      renderChamAiChoDuyet();
+      await napChamAiDaDuyet();
+      showMsg($('chamAiNopWebMsg'), `✅ Đã công bố điểm cho ${hoTen}.`, 'ok');
+    }catch(e){ alert(baoLoi(e)); }
+  });
+  host.querySelectorAll('[data-cham-ai-xoa]').forEach(btn=> btn.onclick = async ()=>{
+    const id = btn.getAttribute('data-cham-ai-xoa');
+    if(!confirm('Xoá bài này khỏi danh sách chờ duyệt, không công bố điểm?')) return;
+    try{
+      await chamBaiAIRef.child('choDuyet').child(id).remove();
+      delete chamAiChoDuyet[id];
+      renderChamAiChoDuyet();
+    }catch(e){ alert(baoLoi(e)); }
+  });
+}
+
+/* ---- 4) Bảng điểm đã công bố — công khai đọc, học sinh/phụ huynh tự tra cứu ---- */
+async function napChamAiDaDuyet(){
+  try{ chamAiDaDuyet = (await chamBaiAIRef.child('daDuyet').once('value')).val() || {}; }
+  catch(e){ chamAiDaDuyet = {}; }
+  renderChamAiDaDuyet();
+  renderChamAiKetQuaCuaToi();
+}
+function renderChamAiDaDuyet(){
+  const bang = $('chamAiDaDuyetTable');
+  if(!bang) return;
+  const ds = Object.keys(chamAiDaDuyet).map(k=> Object.assign({khoa:k}, chamAiDaDuyet[k]))
+    .sort((a,b)=> (a.hoTen||'').localeCompare(b.hoTen||'', 'vi'));
+  let h = `<tr><th>STT</th><th>Họ và tên</th><th>Điểm</th><th>Nhận xét</th><th>Nguồn</th><th>Ngày duyệt</th></tr>`;
+  if(!ds.length){ h += `<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);">Chưa công bố điểm nào.</td></tr>`; }
+  else ds.forEach((x,i)=>{
+    h += `<tr>
+      <td>${i+1}</td><td>${esc(x.hoTen||'')}</td><td><b>${x.diem!=null?x.diem:''}</b>/10</td>
+      <td>${esc(x.nhanXet||'')}</td><td>${x.nguon==='nopweb'?'Nộp web':'Google Photos'}</td>
+      <td>${x.ngayDuyet ? new Date(x.ngayDuyet).toLocaleString('vi-VN') : ''}</td>
+    </tr>`;
+  });
+  bang.innerHTML = h;
+}
+/* Hiện điểm của CHÍNH học sinh đang xem trang (đối chiếu theo họ tên đã gõ ở ô nộp bài) ngay
+   trong thẻ "Nộp bài tập chuyên đề Vật lý 10", để không cần mở mục quản trị mới xem được. */
+function renderChamAiKetQuaCuaToi(){
+  const host = $('chamAiKetQuaCuaToi');
+  if(!host) return;
+  const hoTen = ($('btvlHoTen') && $('btvlHoTen').value.trim()) || (baiTapVatLy10CuaToi && baiTapVatLy10CuaToi.hoTen) || '';
+  if(!hoTen){ host.style.display = 'none'; return; }
+  const khoa = chamAiKhoaTen(hoTen);
+  const kq = chamAiDaDuyet[khoa];
+  if(!kq){ host.style.display = 'none'; return; }
+  host.style.display = 'block';
+  host.innerHTML = `<div class="card" style="background:var(--sand);">
+    <b>🤖 Điểm AI đã chấm: ${kq.diem}/10</b>
+    ${kq.nhanXet ? `<p class="section-note" style="margin-top:6px;">"${esc(kq.nhanXet)}"</p>` : ''}
+  </div>`;
+}
+if($('btvlHoTen')) $('btvlHoTen').addEventListener('blur', renderChamAiKetQuaCuaToi);
+// Học sinh không cần đăng nhập admin vẫn xem được bảng đã công bố (đọc công khai) — nạp 1 lần khi trang tải xong.
+if(!isAdmin) napChamAiDaDuyet();
 
 /* ================================================================
    CẤP TÀI KHOẢN ĐĂNG NHẬP CHO HỌC SINH
