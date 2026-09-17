@@ -1038,6 +1038,15 @@
       <p class="section-note">Chọn ảnh bài làm từ thư viện Google Photos của Thầy. Vì ảnh trong Google
         Photos không gắn sẵn tên học sinh, AI sẽ cố đọc tên viết trên bài và gợi ý đối chiếu với danh
         sách lớp — Thầy xác nhận/sửa lại tên ở bước duyệt bên dưới trước khi công bố.</p>
+      <p class="section-note"><b>Lưu ý về lọc theo ngày:</b> cửa sổ chọn ảnh do chính Google mở ra và
+        hiển thị TOÀN BỘ thư viện (Google không cho phép trang web giới hạn sẵn theo ngày ở đó) —
+        Thầy vẫn tự cuộn/tìm ảnh như bình thường bên trong cửa sổ đó. Khoảng ngày chọn dưới đây chỉ
+        có tác dụng ở phía trang web: SAU KHI Thầy chọn ảnh xong, hệ thống sẽ tự bỏ qua (không đưa
+        vào chấm) những ảnh có ngày chụp nằm ngoài khoảng đã chọn — để tránh chấm nhầm ảnh chọn sót.</p>
+      <div class="grid2">
+        <div class="field"><label>Chỉ lấy ảnh chụp từ ngày</label><input type="date" id="chamAiTuNgay"></div>
+        <div class="field"><label>đến ngày</label><input type="date" id="chamAiDenNgay"></div>
+      </div>
       <button class="btn btn-blue btn-sm" id="chamAiPhotosBtn">📸 Chọn ảnh từ Google Photos</button>
       <span id="chamAiPhotosMsg" class="msg"></span>
 
@@ -7122,8 +7131,30 @@ $('chamAiPhotosBtn') && ($('chamAiPhotosBtn').onclick = async ()=>{
       headers: { 'Authorization': 'Bearer ' + token }
     });
     const dsKq = await resDs.json();
-    const items = dsKq.mediaItems || [];
-    if(!items.length){ showMsg($('chamAiPhotosMsg'), 'Thầy chưa chọn ảnh nào.', 'info'); nut.disabled = false; return; }
+    const tatCaDaChon = dsKq.mediaItems || [];
+    if(!tatCaDaChon.length){ showMsg($('chamAiPhotosMsg'), 'Thầy chưa chọn ảnh nào.', 'info'); nut.disabled = false; return; }
+
+    // Lọc theo khoảng ngày (nếu Thầy có điền) — dựa vào ngày chụp (createTime) Google trả về kèm
+    // mỗi ảnh. Ảnh nào KHÔNG có createTime (hiếm khi xảy ra) thì vẫn giữ lại, tránh bỏ sót oan.
+    const tuNgay = $('chamAiTuNgay') && $('chamAiTuNgay').value ? new Date($('chamAiTuNgay').value + 'T00:00:00') : null;
+    const denNgay = $('chamAiDenNgay') && $('chamAiDenNgay').value ? new Date($('chamAiDenNgay').value + 'T23:59:59') : null;
+    let items = tatCaDaChon;
+    let soBoQuaVoNgay = 0;
+    if(tuNgay || denNgay){
+      items = tatCaDaChon.filter(mi=>{
+        if(!mi.createTime) return true;
+        const ngayChup = new Date(mi.createTime);
+        if(isNaN(ngayChup.getTime())) return true;
+        if(tuNgay && ngayChup < tuNgay) { soBoQuaVoNgay++; return false; }
+        if(denNgay && ngayChup > denNgay) { soBoQuaVoNgay++; return false; }
+        return true;
+      });
+    }
+    if(!items.length){
+      showMsg($('chamAiPhotosMsg'), `Cả ${tatCaDaChon.length} ảnh đã chọn đều nằm ngoài khoảng ngày đã đặt — không có ảnh nào được đưa vào chấm.`, 'info');
+      fetch('https://photospicker.googleapis.com/v1/sessions/' + phien.id, { method:'DELETE', headers:{'Authorization':'Bearer '+token} }).catch(()=>{});
+      nut.disabled = false; return;
+    }
 
     let daXong = 0;
     for(const mi of items){
@@ -7143,7 +7174,8 @@ $('chamAiPhotosBtn') && ($('chamAiPhotosBtn').onclick = async ()=>{
     }
     // Xoá phiên chọn ảnh trên Google (dọn dẹp, không bắt buộc nhưng nên làm)
     fetch('https://photospicker.googleapis.com/v1/sessions/' + phien.id, { method:'DELETE', headers:{'Authorization':'Bearer '+token} }).catch(()=>{});
-    showMsg($('chamAiPhotosMsg'), `✅ Đã đưa ${daXong}/${items.length} ảnh vào hàng chờ AI chấm — bấm "Làm mới danh sách chờ duyệt" sau ít phút để xem kết quả.`, 'ok');
+    const ghiChuBoQua = soBoQuaVoNgay ? ` (đã tự bỏ qua ${soBoQuaVoNgay} ảnh ngoài khoảng ngày đã chọn)` : '';
+    showMsg($('chamAiPhotosMsg'), `✅ Đã đưa ${daXong}/${items.length} ảnh vào hàng chờ AI chấm${ghiChuBoQua} — bấm "Làm mới danh sách chờ duyệt" sau ít phút để xem kết quả.`, 'ok');
   }catch(e){
     if(cuaSoTam) cuaSoTam.close();
     showMsg($('chamAiPhotosMsg'), baoLoi(e), 'err');
