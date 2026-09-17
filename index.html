@@ -191,6 +191,18 @@
   .qt-kim-phai{right:-18px;}
   .qt-kim-tren{top:-18px; left:50%; transform:translateX(-50%); }
 
+  /* ---------- Đo độ ồn ---------- */
+  .do-on-man-hinh{--mau-do-on:#1f7a4d; text-align:center; background:#0b1120; color:#fff;
+    border-radius:16px; padding:28px 20px; max-width:480px; margin:0 auto;}
+  .do-on-nhan{font-size:18px; font-weight:800; margin-bottom:6px; transition:color .15s;}
+  .do-on-so{font-size:88px; font-weight:900; line-height:1; transition:color .1s;}
+  .do-on-donvi{font-size:12px; color:#9aa5b1; margin-top:2px; margin-bottom:16px;}
+  .do-on-thanh-wrap{background:#1e293b; border-radius:999px; height:22px; overflow:hidden;}
+  .do-on-thanh{height:100%; width:0%; border-radius:999px; transition:width .1s linear, background .15s;}
+  .do-on-dinh{margin-top:12px; font-size:13px; color:#cbd5e1;}
+  .do-on-dinh b{color:#fff; font-size:16px;}
+  @media (max-width:480px){ .do-on-so{font-size:64px;} }
+
   .bcs-admin-item{display:flex; align-items:center; justify-content:space-between; gap:10px;
     background:#fff; border:1px solid var(--line); border-radius:8px; padding:8px 12px; margin-bottom:6px; font-size:13px;}
 
@@ -1414,6 +1426,37 @@
     </div>
   </div>
 
+  <!-- ============ CÔNG CỤ: ĐO ĐỘ ỒN LỚP HỌC (THỜI GIAN THỰC) ============ -->
+  <div class="panel" id="panel-dodoon" data-group="games">
+    <div class="card">
+      <h2>🔊 Đo độ ồn lớp học</h2>
+      <p class="section-note">
+        Dùng micro của thiết bị để ước lượng mức ồn hiện tại của lớp theo thời gian thực — dùng để nhắc
+        cả lớp giữ trật tự khi ồn quá mức. Đây là chỉ số <b>ước lượng tương đối</b> (không phải máy đo
+        độ ồn chuyên dụng đã hiệu chuẩn), phụ thuộc vào micro và khoảng cách của từng thiết bị.
+      </p>
+
+      <div id="doOnChuaBatDau">
+        <button class="btn btn-primary" id="doOnBatDauBtn">🎤 Bắt đầu đo</button>
+        <div id="doOnErr" class="msg err"></div>
+      </div>
+
+      <div id="doOnDangDo" style="display:none;">
+        <div class="do-on-man-hinh" id="doOnManHinh">
+          <div class="do-on-nhan" id="doOnNhan">😃 Yên tĩnh</div>
+          <div class="do-on-so" id="doOnSo">0</div>
+          <div class="do-on-donvi">mức ồn (0–100)</div>
+          <div class="do-on-thanh-wrap"><div class="do-on-thanh" id="doOnThanh"></div></div>
+          <div class="do-on-dinh">Cao nhất: <b id="doOnDinhSo">0</b></div>
+        </div>
+        <div style="text-align:center; margin-top:14px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" id="doOnResetBtn">↺ Đặt lại mức cao nhất</button>
+          <button class="btn btn-ghost btn-sm" id="doOnDungBtn">⏹ Dừng đo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ KHU VỰC GIÁO VIÊN ============ -->
   <details class="admin" id="adminDetails">
     <summary>🔒 Khu vực giáo viên / quản trị</summary>
@@ -2063,7 +2106,7 @@ const TAB_DINH_NGHIA = {
   nhiemvu:    {icon:'📚', ten:'Nhiệm vụ học tập'},
   bangtin:    {icon:'📰', ten:'Bảng tin lớp'},
   confession: {icon:'🎭', ten:'Confession'},
-  games:      {icon:'🎮', ten:'Trò chơi học tập'},
+  games:      {icon:'🎮', ten:'Công cụ học tập'},
 };
 const THU_TU_CHINH_MAC_DINH = ['thongtin', 'quylop', 'hoatdong', 'hoatdongto', 'nhiemvu', 'bangtin', 'confession', 'games'];
 
@@ -2083,13 +2126,14 @@ const SUBTAB_DINH_NGHIA = {
   tongketTuan: {icon:'📊', ten:'Tổng kết tuần'},
   baitapvatly10: {icon:'📸', ten:'Nộp bài tập chuyên đề Vật lý 10'},
   quayten:   {icon:'🐕', ten:'Quay chọn tên'},
+  dodoon:    {icon:'🔊', ten:'Đo độ ồn'},
 };
 const NHOM_TAB = {
   thongtin: ['sodo', 'danhsachhs', 'vitri', 'thanhvien', 'hoso', 'bancansu', 'caulacbo', 'khoanthu'],
   hoatdong: ['laodong', 'phongtrao', 'khaigiang', 'hotro'],
   hoatdongto: ['tongketTuan'],
   nhiemvu:  ['baitapvatly10'],
-  games:    ['quayten'],
+  games:    ['quayten', 'dodoon'],
 };
 /* Map link cũ (trước khi gộp nhóm) -> đúng nhóm mới, để link/bookmark cũ vẫn mở đúng chỗ */
 const TAB_CU_SANG_NHOM = {};
@@ -2133,6 +2177,8 @@ function renderToanBoDieuHuong(){
 
 let tabDangMo = null, subDangMo = null;
 function moTab(tabId, subId){
+  // Rời khỏi mục "Đo độ ồn" thì tắt luôn micro, tránh chạy ngầm tốn pin/quyền riêng tư.
+  if(subDangMo === 'dodoon' && typeof dungDoOn === 'function'){ try{ dungDoOn(); }catch(e){} }
   document.querySelectorAll('.tab').forEach(x=> x.classList.remove('active'));
   document.querySelectorAll('.subtabs').forEach(x=> x.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(x=> x.classList.remove('active'));
@@ -7600,6 +7646,93 @@ $('capTkExcelInput').onchange = async e=>{
 
 /* Danh sách hỗ trợ không dùng lắng nghe liên tục vì là dữ liệu riêng tư —
    chỉ nạp đúng lúc cần: khi mở trang và khi giáo viên đăng nhập. */
+
+/* ================================================================
+   ĐO ĐỘ ỒN LỚP HỌC (THỜI GIAN THỰC) — chỉ chạy hoàn toàn trên trình duyệt, KHÔNG
+   ghi âm, KHÔNG gửi dữ liệu đi đâu cả (không lưu Firebase, không lưu file). Dùng
+   Web Audio API (getUserMedia + AnalyserNode) để đo biên độ âm thanh từ micro rồi
+   quy đổi thành 1 mức "độ ồn tương đối" từ 0-100 cho dễ hình dung — KHÔNG PHẢI là
+   máy đo độ ồn (dB SPL) đã hiệu chuẩn, chỉ mang tính tham khảo để nhắc lớp giữ trật tự.
+   ================================================================ */
+let doOnAudioCtx = null, doOnAnalyser = null, doOnStream = null, doOnDangChay = false;
+let doOnDinhCao = 0;
+
+$('doOnBatDauBtn').onclick = async ()=>{
+  showMsg($('doOnErr'), '', '');
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    showMsg($('doOnErr'), 'Trình duyệt này không hỗ trợ truy cập micro.', 'err');
+    return;
+  }
+  try{
+    doOnStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  }catch(e){
+    showMsg($('doOnErr'), 'Không lấy được quyền dùng micro — hãy cho phép trình duyệt truy cập micro rồi thử lại.', 'err');
+    return;
+  }
+  const AC = window.AudioContext || window.webkitAudioContext;
+  doOnAudioCtx = new AC();
+  const nguon = doOnAudioCtx.createMediaStreamSource(doOnStream);
+  doOnAnalyser = doOnAudioCtx.createAnalyser();
+  doOnAnalyser.fftSize = 2048;
+  nguon.connect(doOnAnalyser);
+
+  doOnDinhCao = 0;
+  $('doOnDinhSo').textContent = '0';
+  $('doOnChuaBatDau').style.display = 'none';
+  $('doOnDangDo').style.display = 'block';
+  doOnDangChay = true;
+  requestAnimationFrame(vongLapDoOn);
+};
+
+function vongLapDoOn(){
+  if(!doOnDangChay || !doOnAnalyser) return;
+  const duLieu = new Uint8Array(doOnAnalyser.fftSize);
+  doOnAnalyser.getByteTimeDomainData(duLieu);
+
+  // Tính RMS (root-mean-square) của tín hiệu âm thanh — biên độ càng lớn thì càng ồn.
+  let tongBinhPhuong = 0;
+  for(let i=0; i<duLieu.length; i++){
+    const bienDo = (duLieu[i] - 128) / 128; // đưa về khoảng -1..1
+    tongBinhPhuong += bienDo * bienDo;
+  }
+  const rms = Math.sqrt(tongBinhPhuong / duLieu.length);
+
+  // Quy đổi RMS (rất nhỏ, dạng 0.00x - 0.x) sang thang điểm 0-100 dễ nhìn, có làm mượt
+  // bằng log để tăng độ nhạy ở mức thấp/trung bình (giống cách tai người cảm nhận âm lượng).
+  const rmsAnToan = Math.max(rms, 0.0001);
+  let mucDo = (Math.log10(rmsAnToan) + 4) / 4 * 100; // rms=0.0001 -> 0 điểm, rms=1 -> 100 điểm
+  mucDo = Math.max(0, Math.min(100, Math.round(mucDo)));
+
+  if(mucDo > doOnDinhCao){ doOnDinhCao = mucDo; $('doOnDinhSo').textContent = doOnDinhCao; }
+
+  $('doOnSo').textContent = mucDo;
+  $('doOnThanh').style.width = mucDo + '%';
+
+  let nhan, mauSac;
+  if(mucDo < 30){ nhan = '😃 Yên tĩnh'; mauSac = '#1f7a4d'; }
+  else if(mucDo < 60){ nhan = '🙂 Bình thường'; mauSac = '#d69e2e'; }
+  else if(mucDo < 80){ nhan = '😐 Hơi ồn'; mauSac = '#dd6b20'; }
+  else { nhan = '😠 QUÁ ỒN!'; mauSac = '#c0392b'; }
+  $('doOnNhan').textContent = nhan;
+  $('doOnNhan').style.color = mauSac;
+  $('doOnSo').style.color = mauSac;
+  $('doOnThanh').style.background = mauSac;
+  $('doOnManHinh').style.setProperty('--mau-do-on', mauSac);
+
+  requestAnimationFrame(vongLapDoOn);
+}
+
+function dungDoOn(){
+  doOnDangChay = false;
+  if(doOnStream){ doOnStream.getTracks().forEach(t=> t.stop()); doOnStream = null; }
+  if(doOnAudioCtx){ try{ doOnAudioCtx.close(); }catch(e){} doOnAudioCtx = null; }
+  doOnAnalyser = null;
+  if($('doOnDangDo')) $('doOnDangDo').style.display = 'none';
+  if($('doOnChuaBatDau')) $('doOnChuaBatDau').style.display = 'block';
+}
+$('doOnDungBtn').onclick = dungDoOn;
+$('doOnResetBtn').onclick = ()=>{ doOnDinhCao = 0; $('doOnDinhSo').textContent = '0'; };
+window.addEventListener('beforeunload', dungDoOn); // đảm bảo tắt micro khi rời trang, dù quên bấm Dừng đo
 </script>
 </body>
 </html>
