@@ -1480,6 +1480,16 @@ const auth = firebase.auth();
 
 const ADMIN_UID = "3eMkknzDuNVFyrpmB1ceIBViTDD2";
 
+/* Tài khoản THỦ QUỸ — đăng nhập bằng email/mật khẩu riêng (tạo trong Firebase Authentication,
+   giống cách tạo tài khoản giáo viên), nhưng chỉ được cấp quyền quản trị mục "Quỹ lớp"
+   (tick đã đóng, đặt mức đóng, thêm/xóa khoản chi, khóa/mở đợt) — KHÔNG thấy được các dữ liệu
+   riêng tư khác của học sinh (hồ sơ cá nhân, hỗ trợ, sơ đồ lớp...). Điền UID của tài khoản thủ
+   quỹ vào đây (xem trong Firebase Console → Authentication → Users, cột "User UID", sau khi đã
+   tạo tài khoản). Có thể ghi nhiều UID nếu có nhiều thủ quỹ/nhiều lớp.
+   QUAN TRỌNG: phải thêm đúng UID này vào Firebase Rules cho phép ghi "quylop2026" thì các thao
+   tác của thủ quỹ mới thực sự lưu được — chỉ sửa ở đây thôi là chưa đủ. */
+const THU_QUY_UIDS = ["DÁN_UID_TÀI_KHOẢN_THỦ_QUỸ_TẠI_ĐÂY"];
+
 /* ---------------------------------------------------------------
    KHO ẢNH GOOGLE DRIVE
    Dán địa chỉ Web App của Apps Script vào DRIVE_URL (xem HUONG-DAN-DRIVE.md).
@@ -1712,7 +1722,7 @@ const CAM_XUC = [
 ];
 let hosoCuaToi=null, hosoTatCa=[];
 let denAnhHienTai=null;
-let myUid=null, isAdmin=false;
+let myUid=null, isAdmin=false, isThuQuy=false;
 
 /* -------------------- TIỆN ÍCH -------------------- */
 const $ = id => document.getElementById(id);
@@ -2025,7 +2035,10 @@ auth.onAuthStateChanged(async user=>{
   }
   myUid = user.uid;
   isAdmin = (user.uid === ADMIN_UID);
-  $('adminLocked').style.display = isAdmin ? 'none' : 'block';
+  isThuQuy = !isAdmin && THU_QUY_UIDS.includes(user.uid);
+  // Thủ quỹ: đăng nhập thành công nên ẩn form đăng nhập, nhưng KHÔNG mở khu vực quản trị đầy
+  // đủ (dữ liệu riêng tư khác của học sinh) — chỉ mục Quỹ lớp mở khóa cho họ (xem renderQuyLop).
+  $('adminLocked').style.display = (isAdmin || isThuQuy) ? 'none' : 'block';
   $('adminPanel').style.display  = isAdmin ? 'block' : 'none';
   capNhatNutTkbAdmin();
   renderThoiKhoaBieu();
@@ -2039,6 +2052,9 @@ auth.onAuthStateChanged(async user=>{
     await napChsAdmin();
     await napBaiTapVatLy10TatCa();
     renderAdmin();
+  } else if(isThuQuy){
+    showMsg($('pageMsg'), '💰 Đã đăng nhập với quyền Thủ quỹ — có thể quản lý mục "Quỹ lớp".', 'ok');
+    htTatCa = []; hosoTatCa = []; confessionChoDuyet = [];
   } else { htTatCa = []; hosoTatCa = []; confessionChoDuyet = []; }
 
   await loadRoster(); // công khai cho mọi người, vì "Danh sách học sinh" giờ hiển thị công khai
@@ -6521,23 +6537,24 @@ function renderQlDots(){
 }
 
 function renderQuyLopChiTieu(){
+  const coQuyen = isAdmin || isThuQuy;
   const ds = qlDsChiTieu();
   const tbl = $('qlBangChi');
   if(!tbl) return;
-  let h = `<tr><th>STT</th><th>Nội dung chi</th><th>Số tiền</th>${isAdmin?'<th></th>':''}</tr>`;
+  let h = `<tr><th>STT</th><th>Nội dung chi</th><th>Số tiền</th>${coQuyen?'<th></th>':''}</tr>`;
   if(!ds.length){
-    h += `<tr><td colspan="${isAdmin?4:3}" style="text-align:center;color:var(--ink-soft);">Chưa có khoản chi nào.</td></tr>`;
+    h += `<tr><td colspan="${coQuyen?4:3}" style="text-align:center;color:var(--ink-soft);">Chưa có khoản chi nào.</td></tr>`;
   } else {
     ds.forEach((c,i)=>{
       h += `<tr>
         <td class="ql-stt">${i+1}</td>
         <td>${esc(c.noiDung||'')}</td>
         <td class="ql-tien">${dinhDangTien(c.soTien)}</td>
-        ${isAdmin ? `<td class="ql-xoa"><button class="btn btn-ghost btn-sm" data-xoa-chi="${c.id}">Xóa</button></td>` : ''}
+        ${coQuyen ? `<td class="ql-xoa"><button class="btn btn-ghost btn-sm" data-xoa-chi="${c.id}">Xóa</button></td>` : ''}
       </tr>`;
     });
   }
-  h += `<tfoot><tr><td colspan="2" style="text-align:right;">Tổng chi</td><td class="ql-tien">${dinhDangTien(qlTongChi())}</td>${isAdmin?'<td></td>':''}</tr></tfoot>`;
+  h += `<tfoot><tr><td colspan="2" style="text-align:right;">Tổng chi</td><td class="ql-tien">${dinhDangTien(qlTongChi())}</td>${coQuyen?'<td></td>':''}</tr></tfoot>`;
   tbl.innerHTML = h;
   tbl.querySelectorAll('[data-xoa-chi]').forEach(b=> b.onclick = async ()=>{
     if(!confirm('Xóa khoản chi này? Không thể hoàn tác.')) return;
@@ -6548,6 +6565,7 @@ function renderQuyLopChiTieu(){
 
 function renderQuyLop(){
   if(!$('qlBangHS')) return; // panel chưa có trong DOM (không nên xảy ra, phòng lỗi)
+  const coQuyenQuyLop = isAdmin || isThuQuy; // giáo viên HOẶC thủ quỹ đều được quản trị mục này
   renderQlDots();
 
   const d = qlLayDot(dotDangXem);
@@ -6574,10 +6592,10 @@ function renderQuyLop(){
   $('qlConLai').textContent = dinhDangTien(tongThu - tongChi);
 
   const khuAdminCauHinh = $('qlAdminCauHinh'), khuAdminKhoa = $('qlAdminKhoaVung'), khuAdminChi = $('qlAdminChiForm');
-  khuAdminCauHinh.style.display = isAdmin ? 'block' : 'none';
-  khuAdminKhoa.style.display = isAdmin ? 'block' : 'none';
-  khuAdminChi.style.display = isAdmin ? 'block' : 'none';
-  if(isAdmin){
+  khuAdminCauHinh.style.display = coQuyenQuyLop ? 'block' : 'none';
+  khuAdminKhoa.style.display = coQuyenQuyLop ? 'block' : 'none';
+  khuAdminChi.style.display = coQuyenQuyLop ? 'block' : 'none';
+  if(coQuyenQuyLop){
     // Không ghi đè ô đang gõ dở nếu người dùng đang focus vào input
     if(document.activeElement !== $('qlMucDongInput')) $('qlMucDongInput').value = mucDong || '';
     $('qlMucDongInput').disabled = daKhoa;
@@ -6597,7 +6615,7 @@ function renderQuyLop(){
       h += `<tr class="${daTick?'ql-daxong':''}">
         <td class="ql-stt">${i+1}</td>
         <td>${esc(hs.name||'')}</td>
-        <td class="ql-chk">${isAdmin
+        <td class="ql-chk">${coQuyenQuyLop
           ? `<input type="checkbox" data-key="${key}" ${daTick?'checked':''} ${daKhoa?'disabled':''}>`
           : `<span class="${daTick?'ql-tick-ok':'ql-tick-no'}">${daTick?'✔️ Đã đóng':'— Chưa đóng'}</span>`}</td>
       </tr>`;
@@ -6605,7 +6623,7 @@ function renderQuyLop(){
   }
   $('qlBangHS').innerHTML = h;
 
-  if(isAdmin){
+  if(coQuyenQuyLop){
     $('qlBangHS').querySelectorAll('[data-key]').forEach(cb=> cb.onchange = async ()=>{
       try{
         await quyLopRef.child(`dots/dot${dotDangXem}/daDong/${cb.dataset.key}`).set(cb.checked);
