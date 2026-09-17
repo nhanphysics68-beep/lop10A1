@@ -191,17 +191,18 @@
   .qt-kim-phai{right:-18px;}
   .qt-kim-tren{top:-18px; left:50%; transform:translateX(-50%); }
 
-  /* ---------- Đo độ ồn ---------- */
+  /* ---------- Đo độ ồn (kích thước gấp đôi bản đầu, dễ nhìn từ xa khi chiếu lên màn hình lớp) ---------- */
   .do-on-man-hinh{--mau-do-on:#1f7a4d; text-align:center; background:#0b1120; color:#fff;
-    border-radius:16px; padding:28px 20px; max-width:480px; margin:0 auto;}
-  .do-on-nhan{font-size:18px; font-weight:800; margin-bottom:6px; transition:color .15s;}
-  .do-on-so{font-size:88px; font-weight:900; line-height:1; transition:color .1s;}
-  .do-on-donvi{font-size:12px; color:#9aa5b1; margin-top:2px; margin-bottom:16px;}
-  .do-on-thanh-wrap{background:#1e293b; border-radius:999px; height:22px; overflow:hidden;}
+    border-radius:28px; padding:56px 40px; max-width:960px; margin:0 auto;}
+  .do-on-nhan{font-size:36px; font-weight:800; margin-bottom:12px; transition:color .15s;}
+  .do-on-so{font-size:176px; font-weight:900; line-height:1; transition:color .1s;}
+  .do-on-donvi{font-size:24px; color:#9aa5b1; margin-top:4px; margin-bottom:32px;}
+  .do-on-thanh-wrap{background:#1e293b; border-radius:999px; height:44px; overflow:hidden;}
   .do-on-thanh{height:100%; width:0%; border-radius:999px; transition:width .1s linear, background .15s;}
-  .do-on-dinh{margin-top:12px; font-size:13px; color:#cbd5e1;}
-  .do-on-dinh b{color:#fff; font-size:16px;}
-  @media (max-width:480px){ .do-on-so{font-size:64px;} }
+  .do-on-dinh{margin-top:24px; font-size:26px; color:#cbd5e1;}
+  .do-on-dinh b{color:#fff; font-size:32px;}
+  @media (max-width:900px){ .do-on-so{font-size:120px;} .do-on-nhan{font-size:28px;} .do-on-man-hinh{padding:40px 24px;} }
+  @media (max-width:480px){ .do-on-so{font-size:80px;} .do-on-nhan{font-size:22px;} .do-on-donvi{font-size:16px;} .do-on-dinh{font-size:18px;} .do-on-dinh b{font-size:22px;} .do-on-man-hinh{padding:28px 16px; border-radius:20px;} }
 
   .bcs-admin-item{display:flex; align-items:center; justify-content:space-between; gap:10px;
     background:#fff; border:1px solid var(--line); border-radius:8px; padding:8px 12px; margin-bottom:6px; font-size:13px;}
@@ -1441,18 +1442,28 @@
         <div id="doOnErr" class="msg err"></div>
       </div>
 
+      <div id="doOnDangHieuChinh" style="display:none;">
+        <p class="msg info show">🤫 Đang đo mức yên tĩnh nền — cả lớp giữ im lặng khoảng 2 giây để máy tự hiệu chỉnh...</p>
+      </div>
+
       <div id="doOnDangDo" style="display:none;">
         <div class="do-on-man-hinh" id="doOnManHinh">
           <div class="do-on-nhan" id="doOnNhan">😃 Yên tĩnh</div>
           <div class="do-on-so" id="doOnSo">0</div>
-          <div class="do-on-donvi">mức ồn (0–100)</div>
+          <div class="do-on-donvi">mức ồn (0–100, đã trừ tiếng ồn nền phòng)</div>
           <div class="do-on-thanh-wrap"><div class="do-on-thanh" id="doOnThanh"></div></div>
           <div class="do-on-dinh">Cao nhất: <b id="doOnDinhSo">0</b></div>
         </div>
         <div style="text-align:center; margin-top:14px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" id="doOnHieuChinhLaiBtn">🤫 Hiệu chỉnh lại mức nền</button>
           <button class="btn btn-ghost btn-sm" id="doOnResetBtn">↺ Đặt lại mức cao nhất</button>
           <button class="btn btn-ghost btn-sm" id="doOnDungBtn">⏹ Dừng đo</button>
         </div>
+        <p class="section-note" style="text-align:center; margin-top:8px;">
+          💡 Nếu vẫn thấy mức hiện lên dù phòng đang im lặng, có thể do micro nhạy hoặc còn tiếng ồn
+          nền (quạt, điều hòa...) — bấm "Hiệu chỉnh lại mức nền" khi phòng đang ở trạng thái yên tĩnh
+          bình thường để máy lấy lại đúng mốc 0.
+        </p>
       </div>
     </div>
   </div>
@@ -7656,6 +7667,21 @@ $('capTkExcelInput').onchange = async e=>{
    ================================================================ */
 let doOnAudioCtx = null, doOnAnalyser = null, doOnStream = null, doOnDangChay = false;
 let doOnDinhCao = 0;
+let doOnNguongNenDb = -55;      // "mức nền" (dB tương đối) coi là im lặng — tự hiệu chỉnh theo từng phòng/thiết bị
+const DO_ON_KHOANG_DB = 30;     // từ mức nền tới +30dB thì coi là mức 100 (ồn nhất trên thang đo)
+const DO_ON_THOI_GIAN_HIEU_CHINH = 1800; // ms giữ im lặng để lấy mức nền
+
+function doOnTinhDb(){
+  const duLieu = new Uint8Array(doOnAnalyser.fftSize);
+  doOnAnalyser.getByteTimeDomainData(duLieu);
+  let tongBinhPhuong = 0;
+  for(let i=0; i<duLieu.length; i++){
+    const bienDo = (duLieu[i] - 128) / 128; // đưa về khoảng -1..1
+    tongBinhPhuong += bienDo * bienDo;
+  }
+  const rms = Math.sqrt(tongBinhPhuong / duLieu.length);
+  return 20 * Math.log10(Math.max(rms, 0.00001)); // dB tương đối (không phải dB SPL thật)
+}
 
 $('doOnBatDauBtn').onclick = async ()=>{
   showMsg($('doOnErr'), '', '');
@@ -7676,31 +7702,49 @@ $('doOnBatDauBtn').onclick = async ()=>{
   doOnAnalyser.fftSize = 2048;
   nguon.connect(doOnAnalyser);
 
+  doOnDangChay = true;
+  $('doOnChuaBatDau').style.display = 'none';
+  await hieuChinhMucNen();
   doOnDinhCao = 0;
   $('doOnDinhSo').textContent = '0';
-  $('doOnChuaBatDau').style.display = 'none';
   $('doOnDangDo').style.display = 'block';
-  doOnDangChay = true;
   requestAnimationFrame(vongLapDoOn);
 };
 
+/* Đo mức "yên tĩnh nền" của chính phòng học/thiết bị đang dùng trong ~1.8 giây (lấy giá trị NHỎ
+   NHẤT đo được, vì trong lúc "im lặng" vẫn có thể có 1-2 tiếng động ngắn xen vào) — nhờ vậy dù
+   micro nhạy hay phòng có tiếng ồn nền (quạt, điều hòa...) thì mức 0 vẫn luôn ứng với đúng
+   trạng thái "yên tĩnh bình thường" của phòng đó, thay vì một ngưỡng cố định không phù hợp mọi
+   thiết bị. */
+function hieuChinhMucNen(){
+  return new Promise(resolve=>{
+    $('doOnDangHieuChinh').style.display = 'block';
+    const mauDb = [];
+    const batDau = Date.now();
+    (function layMau(){
+      if(!doOnDangChay || !doOnAnalyser){ resolve(); return; }
+      mauDb.push(doOnTinhDb());
+      if(Date.now() - batDau < DO_ON_THOI_GIAN_HIEU_CHINH){
+        requestAnimationFrame(layMau);
+      } else {
+        mauDb.sort((a,b)=> a-b);
+        // Lấy giá trị ở khoảng 20% thấp nhất (thay vì đúng giá trị nhỏ nhất) để tránh 1 mẫu
+        // quá thấp bất thường làm ngưỡng nền bị đặt sai lệch.
+        doOnNguongNenDb = mauDb[Math.floor(mauDb.length * 0.2)] || mauDb[0] || -55;
+        $('doOnDangHieuChinh').style.display = 'none';
+        resolve();
+      }
+    })();
+  });
+}
+
 function vongLapDoOn(){
   if(!doOnDangChay || !doOnAnalyser) return;
-  const duLieu = new Uint8Array(doOnAnalyser.fftSize);
-  doOnAnalyser.getByteTimeDomainData(duLieu);
+  const db = doOnTinhDb();
 
-  // Tính RMS (root-mean-square) của tín hiệu âm thanh — biên độ càng lớn thì càng ồn.
-  let tongBinhPhuong = 0;
-  for(let i=0; i<duLieu.length; i++){
-    const bienDo = (duLieu[i] - 128) / 128; // đưa về khoảng -1..1
-    tongBinhPhuong += bienDo * bienDo;
-  }
-  const rms = Math.sqrt(tongBinhPhuong / duLieu.length);
-
-  // Quy đổi RMS (rất nhỏ, dạng 0.00x - 0.x) sang thang điểm 0-100 dễ nhìn, có làm mượt
-  // bằng log để tăng độ nhạy ở mức thấp/trung bình (giống cách tai người cảm nhận âm lượng).
-  const rmsAnToan = Math.max(rms, 0.0001);
-  let mucDo = (Math.log10(rmsAnToan) + 4) / 4 * 100; // rms=0.0001 -> 0 điểm, rms=1 -> 100 điểm
+  // Mức hiển thị = vị trí của dB hiện tại so với mức nền đã hiệu chỉnh, trải trên khoảng
+  // DO_ON_KHOANG_DB (mặc định 30dB) rồi quy về thang 0-100 cho dễ nhìn.
+  let mucDo = ((db - doOnNguongNenDb) / DO_ON_KHOANG_DB) * 100;
   mucDo = Math.max(0, Math.min(100, Math.round(mucDo)));
 
   if(mucDo > doOnDinhCao){ doOnDinhCao = mucDo; $('doOnDinhSo').textContent = doOnDinhCao; }
@@ -7709,9 +7753,9 @@ function vongLapDoOn(){
   $('doOnThanh').style.width = mucDo + '%';
 
   let nhan, mauSac;
-  if(mucDo < 30){ nhan = '😃 Yên tĩnh'; mauSac = '#1f7a4d'; }
-  else if(mucDo < 60){ nhan = '🙂 Bình thường'; mauSac = '#d69e2e'; }
-  else if(mucDo < 80){ nhan = '😐 Hơi ồn'; mauSac = '#dd6b20'; }
+  if(mucDo < 20){ nhan = '😃 Yên tĩnh'; mauSac = '#1f7a4d'; }
+  else if(mucDo < 50){ nhan = '🙂 Bình thường'; mauSac = '#d69e2e'; }
+  else if(mucDo < 75){ nhan = '😐 Hơi ồn'; mauSac = '#dd6b20'; }
   else { nhan = '😠 QUÁ ỒN!'; mauSac = '#c0392b'; }
   $('doOnNhan').textContent = nhan;
   $('doOnNhan').style.color = mauSac;
@@ -7727,11 +7771,20 @@ function dungDoOn(){
   if(doOnStream){ doOnStream.getTracks().forEach(t=> t.stop()); doOnStream = null; }
   if(doOnAudioCtx){ try{ doOnAudioCtx.close(); }catch(e){} doOnAudioCtx = null; }
   doOnAnalyser = null;
+  if($('doOnDangHieuChinh')) $('doOnDangHieuChinh').style.display = 'none';
   if($('doOnDangDo')) $('doOnDangDo').style.display = 'none';
   if($('doOnChuaBatDau')) $('doOnChuaBatDau').style.display = 'block';
 }
 $('doOnDungBtn').onclick = dungDoOn;
 $('doOnResetBtn').onclick = ()=>{ doOnDinhCao = 0; $('doOnDinhSo').textContent = '0'; };
+$('doOnHieuChinhLaiBtn').onclick = async ()=>{
+  if(!doOnAnalyser) return;
+  $('doOnDangDo').style.display = 'none';
+  await hieuChinhMucNen();
+  doOnDinhCao = 0;
+  $('doOnDinhSo').textContent = '0';
+  $('doOnDangDo').style.display = 'block';
+};
 window.addEventListener('beforeunload', dungDoOn); // đảm bảo tắt micro khi rời trang, dù quên bấm Dừng đo
 </script>
 </body>
