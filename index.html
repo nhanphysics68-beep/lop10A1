@@ -1050,11 +1050,23 @@
       <button class="btn btn-blue btn-sm" id="chamAiPhotosBtn">📸 Chọn ảnh từ Google Photos</button>
       <span id="chamAiPhotosMsg" class="msg"></span>
 
-      <div class="section-title" style="margin-top:18px;">3) Chờ duyệt (<span id="chamAiChoDuyetDem">0</span>)</div>
+      <div class="section-title" style="margin-top:18px;">3) Dán link ảnh trực tiếp từ Google Photos</div>
+      <p class="section-note">Dùng khi Thầy đã có sẵn link ảnh (ví dụ mở ảnh trong Google Photos ở
+        chế độ xem toàn màn hình, bấm chuột phải → "Sao chép địa chỉ hình ảnh"/"Copy image address",
+        KHÔNG phải link "Chia sẻ" của cả album). Mỗi dòng 1 link, dán nhiều dòng để thêm nhiều ảnh
+        cùng lúc. Cách này không cần đăng nhập Google Photos qua cửa sổ chọn ảnh như mục 2.</p>
+      <div class="field">
+        <label>Link ảnh (mỗi dòng 1 link)</label>
+        <textarea id="chamAiLinkTextarea" style="min-height:90px;" placeholder="https://lh3.googleusercontent.com/...&#10;https://lh3.googleusercontent.com/..."></textarea>
+      </div>
+      <button class="btn btn-blue btn-sm" id="chamAiLinkBtn">➕ Thêm các link trên vào hàng chờ AI chấm</button>
+      <span id="chamAiLinkMsg" class="msg"></span>
+
+      <div class="section-title" style="margin-top:18px;">4) Chờ duyệt (<span id="chamAiChoDuyetDem">0</span>)</div>
       <button class="btn btn-clay btn-sm" id="chamAiLamMoiBtn">🔄 Làm mới danh sách chờ duyệt</button>
       <div id="chamAiChoDuyetList" style="margin-top:10px;"></div>
 
-      <div class="section-title" style="margin-top:18px;">4) Đã công bố cho học sinh</div>
+      <div class="section-title" style="margin-top:18px;">5) Đã công bố cho học sinh</div>
       <div class="scroll-x"><table id="chamAiDaDuyetTable"></table></div>
     </div>
   </div>
@@ -7183,7 +7195,28 @@ $('chamAiPhotosBtn') && ($('chamAiPhotosBtn').onclick = async ()=>{
   nut.disabled = false;
 });
 
-/* ---- 3) Danh sách chờ duyệt — do Apps Script (Gemini) ghi vào chamBaiAI2026/choDuyet ---- */
+/* ---- 3) Dán link ảnh trực tiếp — không cần OAuth, Apps Script sẽ tự tải ảnh từ link này ---- */
+$('chamAiLinkBtn') && ($('chamAiLinkBtn').onclick = async ()=>{
+  if(!isAdmin) return;
+  const box = $('chamAiLinkTextarea');
+  const dongDs = (box.value || '').split('\n').map(s=> s.trim()).filter(Boolean);
+  const linkDs = dongDs.filter(s=> /^https?:\/\//i.test(s));
+  if(!linkDs.length){ showMsg($('chamAiLinkMsg'), 'Chưa dán link nào hợp lệ (mỗi dòng phải bắt đầu bằng http:// hoặc https://).', 'err'); return; }
+  const nut = $('chamAiLinkBtn'); nut.disabled = true;
+  try{
+    for(const link of linkDs){
+      await chamBaiAIRef.child('hangCho').push({
+        nguon: 'link', hoTenGoi: '', linkAnh: link.slice(0, 500),
+        luc: Date.now(), trangThai: 'cho_xu_ly'
+      });
+    }
+    box.value = '';
+    showMsg($('chamAiLinkMsg'), `✅ Đã đưa ${linkDs.length} link vào hàng chờ AI chấm — bấm "Làm mới danh sách chờ duyệt" sau ít phút để xem kết quả.`, 'ok');
+  }catch(e){ showMsg($('chamAiLinkMsg'), baoLoi(e), 'err'); }
+  nut.disabled = false;
+});
+
+/* ---- 4) Danh sách chờ duyệt — do Apps Script (Gemini) ghi vào chamBaiAI2026/choDuyet ---- */
 async function napChamAiChoDuyet(){
   if(!isAdmin) return;
   try{ chamAiChoDuyet = (await chamBaiAIRef.child('choDuyet').once('value')).val() || {}; }
@@ -7203,10 +7236,11 @@ function renderChamAiChoDuyet(){
     .map(hs=> `<option value="${esc(hs.name)}">${esc(hs.name)}</option>`).join('');
 
   host.innerHTML = items.map(x=>{
-    const goiY = x.nguon === 'googlephotos' && !x.hoTenGoi
+    const canChonTen = x.nguon === 'googlephotos' || x.nguon === 'link'; // 2 nguồn này chưa biết sẵn tên học sinh
+    const goiY = canChonTen && !x.hoTenGoi
       ? timGanDungTrongRoster(x.hoTenDocDuoc || '') : null;
-    const tenGoiY = x.nguon === 'googlephotos' ? (x.hoTenGoi || (goiY ? goiY.hs.name : '')) : (x.hoTenGoi || '');
-    const chonTenHtml = x.nguon === 'googlephotos'
+    const tenGoiY = canChonTen ? (x.hoTenGoi || (goiY ? goiY.hs.name : '')) : (x.hoTenGoi || '');
+    const chonTenHtml = canChonTen
       ? `<div class="field">
            <label>Học sinh (AI đọc được: "${esc(x.hoTenDocDuoc || '— không đọc được —')}"${goiY ? ', gợi ý khớp: ' + (goiY.doTinCay==='cao'?'✅':'❔') : ''})</label>
            <select data-cham-ai-ten="${x.id}">
@@ -7218,12 +7252,13 @@ function renderChamAiChoDuyet(){
     return `
     <div class="card" style="margin-bottom:10px;">
       <div style="display:flex; gap:12px; flex-wrap:wrap;">
-        ${x.anhId ? `<img src="${anhDriveNho(x.anhId)}" alt="Bài làm" style="width:110px;height:140px;object-fit:cover;border-radius:8px;border:2px solid var(--line);">` : ''}
+        ${x.anhId ? `<img src="${anhDriveNho(x.anhId)}" alt="Bài làm" style="width:110px;height:140px;object-fit:cover;border-radius:8px;border:2px solid var(--line);">`
+          : (x.anhLink ? `<img src="${esc(x.anhLink)}" alt="Bài làm" style="width:110px;height:140px;object-fit:cover;border-radius:8px;border:2px solid var(--line);" onerror="this.style.display='none'">` : '')}
         <div style="flex:1; min-width:220px;">
           ${chonTenHtml}
           <div class="grid2">
             <div class="field"><label>Điểm (0–10)</label><input type="number" min="0" max="10" step="0.1" value="${x.diem!=null?x.diem:''}" data-cham-ai-diem="${x.id}"></div>
-            <div class="field"><label>Nguồn</label><input type="text" value="${x.nguon==='nopweb'?'Nộp qua web':'Google Photos'}" readonly></div>
+            <div class="field"><label>Nguồn</label><input type="text" value="${x.nguon==='nopweb'?'Nộp qua web':(x.nguon==='link'?'Link ảnh':'Google Photos')}" readonly></div>
           </div>
           <div class="field"><label>Nhận xét của AI</label><textarea data-cham-ai-nhanxet="${x.id}" style="min-height:70px;">${esc(x.nhanXet||'')}</textarea></div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -7237,7 +7272,7 @@ function renderChamAiChoDuyet(){
 
   // gán sẵn giá trị gợi ý cho các ô <select> vừa tạo (không đặt trực tiếp trong HTML để tránh escaping phức tạp)
   items.forEach(x=>{
-    if(x.nguon !== 'googlephotos') return;
+    if(x.nguon !== 'googlephotos' && x.nguon !== 'link') return;
     const sel = host.querySelector(`[data-cham-ai-ten="${x.id}"]`);
     if(!sel) return;
     const goiY = timGanDungTrongRoster(x.hoTenDocDuoc || '');
@@ -7249,7 +7284,7 @@ function renderChamAiChoDuyet(){
     const x = chamAiChoDuyet[id];
     if(!x) return;
     let hoTen = x.hoTenGoi || '';
-    if(x.nguon === 'googlephotos'){
+    if(x.nguon === 'googlephotos' || x.nguon === 'link'){
       const sel = host.querySelector(`[data-cham-ai-ten="${id}"]`);
       hoTen = sel ? sel.value : '';
       if(!hoTen){ alert('Vui lòng chọn đúng học sinh trước khi duyệt.'); return; }
@@ -7299,7 +7334,7 @@ function renderChamAiDaDuyet(){
   else ds.forEach((x,i)=>{
     h += `<tr>
       <td>${i+1}</td><td>${esc(x.hoTen||'')}</td><td><b>${x.diem!=null?x.diem:''}</b>/10</td>
-      <td>${esc(x.nhanXet||'')}</td><td>${x.nguon==='nopweb'?'Nộp web':'Google Photos'}</td>
+      <td>${esc(x.nhanXet||'')}</td><td>${x.nguon==='nopweb'?'Nộp web':(x.nguon==='link'?'Link ảnh':'Google Photos')}</td>
       <td>${x.ngayDuyet ? new Date(x.ngayDuyet).toLocaleString('vi-VN') : ''}</td>
     </tr>`;
   });
