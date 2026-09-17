@@ -560,21 +560,25 @@
   .ql-badge.mo{background:#eaf7ee; color:var(--leaf-dark); border:1px solid #bfe3c9;}
   .ql-badge.khoa{background:#fdecea; color:var(--red); border:1px solid #f4b8b0;}
   .ql-thongke{display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin:16px 0 4px;}
+  .ql-thongke-3{grid-template-columns:repeat(3,1fr);}
   @media (max-width:900px){ .ql-thongke{grid-template-columns:repeat(2,1fr);} }
   .ql-o{background:#f7fbf8; border:1.5px solid var(--line); border-radius:12px; padding:12px 10px; text-align:center;}
   .ql-o-conlai{background:#fff8ec; border-color:var(--clay);}
   .ql-so{font-size:17px; font-weight:800; color:var(--leaf-dark);}
   .ql-o-conlai .ql-so{color:var(--clay);}
   .ql-nhan{font-size:11.5px; color:var(--ink-soft); margin-top:3px; line-height:1.3;}
-  #qlBangHS{width:100%; border-collapse:collapse; font-size:13px;}
-  #qlBangHS th, #qlBangHS td{border:1px solid var(--line); padding:7px 10px; text-align:left;}
-  #qlBangHS thead th{background:var(--leaf); color:#fff; font-size:12.5px; white-space:nowrap;}
-  #qlBangHS tbody tr:nth-child(odd){background:#fbfdfb;}
+  #qlBangHS, #qlBangChi{width:100%; border-collapse:collapse; font-size:13px;}
+  #qlBangHS th, #qlBangHS td, #qlBangChi th, #qlBangChi td{border:1px solid var(--line); padding:7px 10px; text-align:left;}
+  #qlBangHS thead th, #qlBangChi thead th{background:var(--leaf); color:#fff; font-size:12.5px; white-space:nowrap;}
+  #qlBangHS tbody tr:nth-child(odd), #qlBangChi tbody tr:nth-child(odd){background:#fbfdfb;}
   #qlBangHS td.ql-stt, #qlBangHS td.ql-chk{text-align:center; white-space:nowrap;}
   #qlBangHS input[type="checkbox"]{width:19px; height:19px; cursor:pointer;}
   #qlBangHS tr.ql-daxong td{background:#eaf5ee;}
   .ql-tick-ok{color:var(--leaf-dark); font-weight:800;}
   .ql-tick-no{color:var(--ink-soft);}
+  #qlBangChi td.ql-tien{text-align:right; white-space:nowrap; font-weight:700; color:var(--clay);}
+  #qlBangChi tfoot td{font-weight:800; color:var(--leaf-dark); background:#eaf5ee;}
+  #qlBangChi td.ql-xoa{text-align:center; white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -1149,37 +1153,28 @@
   <div class="panel" id="panel-quylop">
     <div class="card">
       <h2>🐷 Quỹ lớp</h2>
-      <p class="section-note">Theo dõi quỹ lớp theo từng <b>đợt thu</b>. Cả lớp và phụ huynh có thể xem tình hình đóng quỹ bất cứ lúc nào mà không cần hỏi trực tiếp giáo viên.
+      <p class="section-note">Phần <b>thu</b> theo dõi theo từng <b>đợt thu</b>. Phần <b>chi</b> là một sổ chi dùng chung, cộng dồn xuyên suốt mọi đợt (không tách theo đợt).
+        Cả lớp và phụ huynh xem được tình hình quỹ bất cứ lúc nào mà không cần hỏi trực tiếp giáo viên.
         Khi thu xong một đợt, giáo viên bấm <b>Khóa đợt này</b> để chốt số liệu và mở đợt thu tiếp theo.</p>
       <div id="qlDotChon" class="ql-dots"></div>
     </div>
 
     <div class="card">
-      <h2 id="qlTenDot">📊 Tổng quan — Đợt 1</h2>
+      <h2 id="qlTenDot">📥 Thu — Đợt 1</h2>
       <span id="qlTrangThai" class="ql-badge"></span>
 
       <div id="qlAdminCauHinh" style="display:none; margin-top:14px;">
-        <div class="grid2">
-          <div class="field">
-            <label>Mức đóng mỗi học sinh (đ)</label>
-            <input type="text" inputmode="numeric" id="qlMucDongInput" placeholder="VD: 100000">
-          </div>
-          <div class="field">
-            <label>Tổng chi trong đợt (đ)</label>
-            <input type="text" inputmode="numeric" id="qlTongChiInput" placeholder="VD: 500000">
-          </div>
-        </div>
         <div class="field">
-          <label>Ghi chú khoản chi (không bắt buộc)</label>
-          <input type="text" id="qlGhiChuChiInput" maxlength="200" placeholder="VD: Mua hoa + phần thưởng thi đua">
+          <label>Mức đóng mỗi học sinh trong đợt này (đ)</label>
+          <input type="text" inputmode="numeric" id="qlMucDongInput" placeholder="VD: 100000">
         </div>
-        <button class="btn btn-primary btn-sm" id="qlLuuCauHinhBtn">💾 Lưu mức đóng &amp; chi tiêu</button>
+        <button class="btn btn-primary btn-sm" id="qlLuuCauHinhBtn">💾 Lưu mức đóng</button>
       </div>
 
-      <div class="ql-thongke">
+      <div class="ql-thongke ql-thongke-3">
         <div class="ql-o">
           <div class="ql-so" id="qlSoDaDong">0/0</div>
-          <div class="ql-nhan">Học sinh đã đóng</div>
+          <div class="ql-nhan">Học sinh đã đóng (đợt này)</div>
         </div>
         <div class="ql-o">
           <div class="ql-so" id="qlMucDongXem">0 đ</div>
@@ -1187,15 +1182,7 @@
         </div>
         <div class="ql-o">
           <div class="ql-so" id="qlThanhTien">0 đ</div>
-          <div class="ql-nhan">Thành tiền (đã thu)</div>
-        </div>
-        <div class="ql-o">
-          <div class="ql-so" id="qlTongChiXem">0 đ</div>
-          <div class="ql-nhan">Tổng chi</div>
-        </div>
-        <div class="ql-o ql-o-conlai">
-          <div class="ql-so" id="qlConLai">0 đ</div>
-          <div class="ql-nhan">Còn lại</div>
+          <div class="ql-nhan">Thành tiền đợt này</div>
         </div>
       </div>
 
@@ -1207,8 +1194,44 @@
     </div>
 
     <div class="card">
-      <h2>📋 Danh sách đóng quỹ</h2>
-      <p class="section-note" id="qlGhiChuChiXem"></p>
+      <h2>💰 Tổng quỹ lớp (cộng dồn tất cả các đợt)</h2>
+      <div class="ql-thongke ql-thongke-3">
+        <div class="ql-o">
+          <div class="ql-so" id="qlTongThu">0 đ</div>
+          <div class="ql-nhan">Tổng thu (tất cả các đợt)</div>
+        </div>
+        <div class="ql-o">
+          <div class="ql-so" id="qlTongChiXem">0 đ</div>
+          <div class="ql-nhan">Tổng chi</div>
+        </div>
+        <div class="ql-o ql-o-conlai">
+          <div class="ql-so" id="qlConLai">0 đ</div>
+          <div class="ql-nhan">Còn lại</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📤 Các khoản chi</h2>
+      <p class="section-note">Sổ chi dùng chung cho quỹ lớp — mỗi khoản chi thêm vào đây sẽ cộng dồn vào <b>Tổng chi</b> ở trên, không phân biệt đợt thu nào.</p>
+      <div id="qlAdminChiForm" style="display:none; margin-bottom:14px;">
+        <div class="grid2">
+          <div class="field">
+            <label>Nội dung chi</label>
+            <input type="text" id="qlNoiDungChiInput" maxlength="200" placeholder="VD: Mua hoa + phần thưởng thi đua">
+          </div>
+          <div class="field">
+            <label>Số tiền (đ)</label>
+            <input type="text" inputmode="numeric" id="qlSoTienChiInput" placeholder="VD: 200000">
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="qlThemChiBtn">➕ Thêm khoản chi</button>
+      </div>
+      <div class="scroll-x"><table id="qlBangChi"></table></div>
+    </div>
+
+    <div class="card">
+      <h2>📋 Danh sách đóng quỹ — Đợt <span id="qlDotTenBang">1</span></h2>
       <div class="scroll-x"><table id="qlBangHS"></table></div>
     </div>
   </div>
@@ -6585,15 +6608,23 @@ clbDiemRef.on('value', s=>{
 });
 
 /* ================================================================
-   QUỸ LỚP — theo dõi quỹ lớp theo từng ĐỢT thu. Công khai đọc (để phụ huynh/học sinh tự
-   tra cứu, đúng tiêu chí "tự tra cứu mà không cần hỏi trực tiếp giáo viên"), CHỈ giáo viên
-   (isAdmin) mới được tick "đã đóng", đặt mức đóng/tổng chi, và khóa/mở khóa từng đợt.
-   Dùng chung danh sách lớp (biến roster) — không lưu tên học sinh riêng ở đây, tránh
-   2 nguồn dữ liệu lệch nhau khi giáo viên sửa danh sách lớp.
-   Cấu trúc Firebase: quylop2026 = { soDotHienTai: 1, dots: { dot1: {mucDong, tongChi,
-   ghiChuChi, khoa, daDong:{ <khóaHocSinh>: true }}, dot2: {...}, ... } }
+   QUỸ LỚP — phần THU theo dõi theo từng ĐỢT (dots), phần CHI là một sổ chi DÙNG CHUNG,
+   cộng dồn xuyên suốt mọi đợt (không tách theo đợt). Công khai đọc (để phụ huynh/học sinh
+   tự tra cứu, đúng tiêu chí "tự tra cứu mà không cần hỏi trực tiếp giáo viên"), CHỈ giáo
+   viên (isAdmin) mới được tick "đã đóng", đặt mức đóng, thêm/xóa khoản chi, và khóa/mở
+   khóa từng đợt thu. Dùng chung danh sách lớp (biến roster) — không lưu tên học sinh riêng
+   ở đây, tránh 2 nguồn dữ liệu lệch nhau khi giáo viên sửa danh sách lớp.
+
+   Cấu trúc Firebase: quylop2026 = {
+     soDotHienTai: 1,
+     dots: { dot1: {mucDong, khoa, daDong:{ <khóaHocSinh>: true }}, dot2: {...}, ... },
+     chiTieu: { <pushId>: {noiDung, soTien, luc} }   // sổ chi dùng chung, cộng dồn mọi đợt
+   }
+   Tổng thu = cộng thành tiền (số HS đã đóng × mức đóng) của TẤT CẢ các đợt.
+   Tổng chi = cộng toàn bộ chiTieu (không phân biệt đợt nào).
+   Còn lại = Tổng thu − Tổng chi.
    ================================================================ */
-let quyLop = { soDotHienTai: 1, dots: {} };
+let quyLop = { soDotHienTai: 1, dots: {}, chiTieu: {} };
 let dotDangXem = 1;
 
 // Khóa nhận diện học sinh ổn định theo tên (bỏ dấu, thường hóa) — nhất quán với cách các
@@ -6601,6 +6632,25 @@ let dotDangXem = 1;
 function qlKhoaHS(ten){ return boDauTiengViet(ten||'').toLowerCase().replace(/\s+/g,'_'); }
 function qlLayDot(n){ return (quyLop.dots && quyLop.dots['dot'+n]) || {}; }
 function qlSoTuChuoi(s){ return Number(String(s||'').replace(/[^\d]/g,'')) || 0; }
+
+// Thành tiền của 1 đợt = số học sinh đã tick "đã đóng" trong đợt đó × mức đóng của đợt đó
+function qlThanhTienDot(n){
+  const d = qlLayDot(n);
+  const daDong = d.daDong || {};
+  const soDaDong = roster.filter(hs=> daDong[qlKhoaHS(hs.name)]).length;
+  return soDaDong * (d.mucDong || 0);
+}
+// Tổng thu = cộng thành tiền của mọi đợt đã/đang mở (không phụ thuộc đợt đang xem)
+function qlTongThu(){
+  let tong = 0;
+  for(let n=1; n<=(quyLop.soDotHienTai||1); n++) tong += qlThanhTienDot(n);
+  return tong;
+}
+function qlDsChiTieu(){
+  const ct = quyLop.chiTieu || {};
+  return Object.keys(ct).map(id=> Object.assign({id}, ct[id])).sort((a,b)=> (a.luc||0)-(b.luc||0));
+}
+function qlTongChi(){ return qlDsChiTieu().reduce((s,c)=> s + (c.soTien||0), 0); }
 
 function renderQlDots(){
   const host = $('qlDotChon');
@@ -6619,41 +6669,67 @@ function renderQlDots(){
   });
 }
 
+function renderQuyLopChiTieu(){
+  const ds = qlDsChiTieu();
+  const tbl = $('qlBangChi');
+  if(!tbl) return;
+  let h = `<tr><th>STT</th><th>Nội dung chi</th><th>Số tiền</th>${isAdmin?'<th></th>':''}</tr>`;
+  if(!ds.length){
+    h += `<tr><td colspan="${isAdmin?4:3}" style="text-align:center;color:var(--ink-soft);">Chưa có khoản chi nào.</td></tr>`;
+  } else {
+    ds.forEach((c,i)=>{
+      h += `<tr>
+        <td class="ql-stt">${i+1}</td>
+        <td>${esc(c.noiDung||'')}</td>
+        <td class="ql-tien">${dinhDangTien(c.soTien)}</td>
+        ${isAdmin ? `<td class="ql-xoa"><button class="btn btn-ghost btn-sm" data-xoa-chi="${c.id}">Xóa</button></td>` : ''}
+      </tr>`;
+    });
+  }
+  h += `<tfoot><tr><td colspan="2" style="text-align:right;">Tổng chi</td><td class="ql-tien">${dinhDangTien(qlTongChi())}</td>${isAdmin?'<td></td>':''}</tr></tfoot>`;
+  tbl.innerHTML = h;
+  tbl.querySelectorAll('[data-xoa-chi]').forEach(b=> b.onclick = async ()=>{
+    if(!confirm('Xóa khoản chi này? Không thể hoàn tác.')) return;
+    try{ await quyLopRef.child('chiTieu/'+b.getAttribute('data-xoa-chi')).remove(); }
+    catch(e){ showMsg($('qlMsg'), baoLoi(e), 'err'); }
+  });
+}
+
 function renderQuyLop(){
   if(!$('qlBangHS')) return; // panel chưa có trong DOM (không nên xảy ra, phòng lỗi)
   renderQlDots();
 
   const d = qlLayDot(dotDangXem);
   const mucDong = d.mucDong || 0;
-  const tongChi = d.tongChi || 0;
   const daDong = d.daDong || {};
   const daKhoa = !!d.khoa;
 
-  $('qlTenDot').textContent = `📊 Tổng quan — Đợt ${dotDangXem}`;
+  $('qlTenDot').textContent = `📥 Thu — Đợt ${dotDangXem}`;
+  $('qlDotTenBang').textContent = dotDangXem;
   const badge = $('qlTrangThai');
   badge.textContent = daKhoa ? '🔒 Đã khóa' : '🟢 Đang mở thu';
   badge.className = 'ql-badge ' + (daKhoa ? 'khoa' : 'mo');
 
   const soDaDong = roster.filter(hs=> daDong[qlKhoaHS(hs.name)]).length;
-  const thanhTien = soDaDong * mucDong;
+  const thanhTienDot = soDaDong * mucDong;
   $('qlSoDaDong').textContent = `${soDaDong}/${roster.length}`;
   $('qlMucDongXem').textContent = dinhDangTien(mucDong);
-  $('qlThanhTien').textContent = dinhDangTien(thanhTien);
-  $('qlTongChiXem').textContent = dinhDangTien(tongChi);
-  $('qlConLai').textContent = dinhDangTien(thanhTien - tongChi);
-  $('qlGhiChuChiXem').textContent = d.ghiChuChi ? ('Ghi chú chi: ' + d.ghiChuChi) : '';
+  $('qlThanhTien').textContent = dinhDangTien(thanhTienDot);
 
-  const khuAdminCauHinh = $('qlAdminCauHinh'), khuAdminKhoa = $('qlAdminKhoaVung');
+  // Tổng quỹ lớp: cộng dồn TẤT CẢ các đợt thu, trừ cho sổ chi dùng chung
+  const tongThu = qlTongThu(), tongChi = qlTongChi();
+  $('qlTongThu').textContent = dinhDangTien(tongThu);
+  $('qlTongChiXem').textContent = dinhDangTien(tongChi);
+  $('qlConLai').textContent = dinhDangTien(tongThu - tongChi);
+
+  const khuAdminCauHinh = $('qlAdminCauHinh'), khuAdminKhoa = $('qlAdminKhoaVung'), khuAdminChi = $('qlAdminChiForm');
   khuAdminCauHinh.style.display = isAdmin ? 'block' : 'none';
   khuAdminKhoa.style.display = isAdmin ? 'block' : 'none';
+  khuAdminChi.style.display = isAdmin ? 'block' : 'none';
   if(isAdmin){
     // Không ghi đè ô đang gõ dở nếu người dùng đang focus vào input
     if(document.activeElement !== $('qlMucDongInput')) $('qlMucDongInput').value = mucDong || '';
-    if(document.activeElement !== $('qlTongChiInput')) $('qlTongChiInput').value = tongChi || '';
-    if(document.activeElement !== $('qlGhiChuChiInput')) $('qlGhiChuChiInput').value = d.ghiChuChi || '';
     $('qlMucDongInput').disabled = daKhoa;
-    $('qlTongChiInput').disabled = daKhoa;
-    $('qlGhiChuChiInput').disabled = daKhoa;
     $('qlLuuCauHinhBtn').style.display = daKhoa ? 'none' : 'inline-block';
     $('qlKhoaBtn').style.display = daKhoa ? 'none' : 'inline-block';
     $('qlMoKhoaBtn').style.display = daKhoa ? 'inline-block' : 'none';
@@ -6685,15 +6761,27 @@ function renderQuyLop(){
       }catch(e){ showMsg($('qlMsg'), baoLoi(e), 'err'); cb.checked = !cb.checked; }
     });
   }
+
+  renderQuyLopChiTieu();
 }
 
 $('qlLuuCauHinhBtn').onclick = async ()=>{
   const mucDong = qlSoTuChuoi($('qlMucDongInput').value);
-  const tongChi = qlSoTuChuoi($('qlTongChiInput').value);
-  const ghiChuChi = $('qlGhiChuChiInput').value.trim();
   try{
-    await quyLopRef.child(`dots/dot${dotDangXem}`).update({ mucDong, tongChi, ghiChuChi });
-    showMsg($('qlMsg'), 'Đã lưu mức đóng và chi tiêu.', 'ok');
+    await quyLopRef.child(`dots/dot${dotDangXem}`).update({ mucDong });
+    showMsg($('qlMsg'), 'Đã lưu mức đóng.', 'ok');
+  }catch(e){ showMsg($('qlMsg'), baoLoi(e), 'err'); }
+};
+
+$('qlThemChiBtn').onclick = async ()=>{
+  const noiDung = $('qlNoiDungChiInput').value.trim();
+  const soTien = qlSoTuChuoi($('qlSoTienChiInput').value);
+  if(!noiDung){ showMsg($('qlMsg'), 'Vui lòng nhập nội dung chi.', 'err'); return; }
+  if(!soTien){ showMsg($('qlMsg'), 'Vui lòng nhập số tiền hợp lệ.', 'err'); return; }
+  try{
+    await quyLopRef.child('chiTieu').push({ noiDung, soTien, luc: Date.now() });
+    $('qlNoiDungChiInput').value = ''; $('qlSoTienChiInput').value = '';
+    showMsg($('qlMsg'), 'Đã thêm khoản chi.', 'ok');
   }catch(e){ showMsg($('qlMsg'), baoLoi(e), 'err'); }
 };
 
@@ -6717,9 +6805,10 @@ $('qlMoKhoaBtn').onclick = async ()=>{
 };
 
 quyLopRef.on('value', s=>{
-  quyLop = s.val() || { soDotHienTai: 1, dots: {} };
+  quyLop = s.val() || { soDotHienTai: 1, dots: {}, chiTieu: {} };
   if(!quyLop.soDotHienTai) quyLop.soDotHienTai = 1;
   if(!quyLop.dots) quyLop.dots = {};
+  if(!quyLop.chiTieu) quyLop.chiTieu = {};
   renderQuyLop();
 });
 
