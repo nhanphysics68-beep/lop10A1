@@ -54,6 +54,12 @@
   .tab .ico{font-size:17px; display:block; margin-bottom:2px;}
   .panel{display:none;} .panel.active{display:block;}
 
+  /* Nổi bật riêng mục "Nhiệm vụ học tập" trên thanh menu chính — nền cam, chữ to hơn */
+  .tab[data-tab="nhiemvu"]{background:#fff3e0; border-color:var(--clay); color:#9a5b00; font-size:16px;}
+  .tab[data-tab="nhiemvu"] .ico{font-size:21px;}
+  .tab[data-tab="nhiemvu"]:hover{background:#ffe6c2; border-color:var(--clay); color:#7a4700;}
+  .tab[data-tab="nhiemvu"].active{background:var(--clay); border-color:var(--clay); color:#fff; box-shadow:var(--shadow);}
+
   /* ---------- Thẻ con (subtabs) trong 1 nhóm ---------- */
   .subtabs{display:none; gap:6px; flex-wrap:wrap; margin:-6px 0 16px; padding:10px;
     background:#eef5f0; border-radius:12px;}
