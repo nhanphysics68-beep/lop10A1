@@ -202,6 +202,7 @@
   .clb-thongtin{flex:1; min-width:0;}
   .clb-ten{font-weight:800; color:var(--leaf-dark); font-size:14.5px; margin-bottom:3px;}
   .clb-mota{font-size:12.5px; color:var(--ink-soft); line-height:1.5;}
+  .clb-phutrach{font-size:12px; color:var(--leaf-dark); font-weight:700; margin-top:4px;}
   .clb-top .btn{flex:none; white-space:nowrap;}
   .clb-thanhvien-list{margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);}
   .clb-tv-tieude{font-size:11.5px; font-weight:700; color:var(--ink-soft); margin-bottom:6px; text-transform:uppercase; letter-spacing:.3px;}
@@ -234,7 +235,8 @@
   .tv-luoi{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px;}
   .tv-the{background:#fffefb; border-radius:12px; overflow:hidden; box-shadow:0 4px 14px rgba(20,83,45,.14);
     border:1px solid var(--line); display:flex; flex-direction:column; position:relative;}
-  .tv-the-xoa{position:absolute; top:8px; right:8px; z-index:2; padding:3px 9px; font-size:11px;}
+  .tv-the-actions{position:absolute; top:8px; right:8px; z-index:2; display:flex; gap:6px;}
+  .tv-the-actions .btn{padding:3px 9px; font-size:11px;}
   .tv-the-dau{background:linear-gradient(120deg, var(--leaf-dark), var(--leaf)); color:#fff;
     display:flex; align-items:center; gap:8px; padding:8px 12px;}
   .tv-the-dau img{width:28px; height:28px; flex:none; filter:drop-shadow(0 1px 2px rgba(0,0,0,.3));}
@@ -4423,6 +4425,7 @@ function renderCauLacBo(){
         <div class="clb-thongtin">
           <div class="clb-ten">${esc(c.ten)}</div>
           <div class="clb-mota">${esc(c.moTa)}</div>
+          ${c.phuTrach ? `<div class="clb-phutrach">👤 Phụ trách: ${esc(c.phuTrach)}</div>` : ''}
         </div>
         <button class="btn btn-sm ${daThamGia ? 'btn-ghost' : 'btn-primary'}" data-clb-toggle="${c.id}">
           ${daThamGia ? 'Rời CLB' : '+ Tham gia'}
@@ -4486,6 +4489,8 @@ function moModalThemSuaCLB(clbId){
     <label style="font-size:12.5px;font-weight:700;">Mô tả ngắn</label>
     <textarea id="clbFMoTa" style="width:100%;min-height:70px;padding:10px 12px;border:1.5px solid var(--line);
       border-radius:8px;font-family:inherit;font-size:14px;">${esc(c ? c.moTa : '')}</textarea>
+    <label style="font-size:12.5px;font-weight:700;">Người phụ trách (giáo viên/học sinh phụ trách CLB)</label>
+    <input type="text" id="clbFPhuTrach" value="${esc(c ? (c.phuTrach||'') : '')}" maxlength="80" placeholder="Vd: Thầy Nguyễn Thanh Nhân">
     <label style="font-size:12.5px;font-weight:700;">Thứ tự hiển thị</label>
     <input type="number" id="clbFThuTu" value="${c ? (c.thuTu||0) : (Object.keys(clbDinhNghia).length+1)}" min="0">
     <div id="clbFErr" class="msg err"></div>
@@ -4498,11 +4503,12 @@ function moModalThemSuaCLB(clbId){
     const icon = $('clbFIcon').value.trim() || '🎯';
     const ten = $('clbFTen').value.trim();
     const moTa = $('clbFMoTa').value.trim();
+    const phuTrach = $('clbFPhuTrach').value.trim();
     const thuTu = parseInt($('clbFThuTu').value, 10) || 0;
     if(!ten){ showMsg($('clbFErr'), 'Vui lòng nhập tên câu lạc bộ.', 'err'); return; }
     try{
       const id = clbId || clbDinhNghiaRef.push().key;
-      await clbDinhNghiaRef.child(id).set({ icon, ten, moTa, thuTu });
+      await clbDinhNghiaRef.child(id).set({ icon, ten, moTa, phuTrach, thuTu });
       closeModal();
     }catch(e){ showMsg($('clbFErr'), baoLoi(e),'err'); }
   };
@@ -4576,7 +4582,10 @@ function renderThanhVien(){
     const hsRoster = roster.find(r=> chuanTen(r.name) === chuanTen(x.hoTen));
     return `
     <div class="tv-the">
-      ${isAdmin ? `<button class="btn btn-ghost btn-sm tv-the-xoa" data-tv-xoa="${uid}">Xóa</button>` : ''}
+      ${isAdmin ? `<div class="tv-the-actions">
+        <button class="btn btn-blue btn-sm" data-tv-sua="${uid}">Sửa</button>
+        <button class="btn btn-ghost btn-sm" data-tv-xoa="${uid}">Xóa</button>
+      </div>` : ''}
       <div class="tv-the-dau">
         <img src="1.png" alt="Logo">
         <div class="tv-the-truong">
@@ -4604,6 +4613,60 @@ function renderThanhVien(){
     try{ await thanhVienRef.child(uid).remove(); }
     catch(e){ alert(baoLoi(e)); }
   });
+  luoi.querySelectorAll('[data-tv-sua]').forEach(b=> b.onclick = ()=> moModalSuaTheThanhVien(b.getAttribute('data-tv-sua')));
+}
+
+/* Sửa trực tiếp 1 thẻ học sinh ngay tại mục "Thành viên lớp" — chỉ giáo viên (isAdmin) mới thấy
+   nút "Sửa". Ghi vào ĐÚNG 3 nơi để không bị lệch dữ liệu về sau:
+   1) hosocanhan2026 (chsRef)   — nguồn gốc mà học sinh tự nhập ở "Nhập hồ sơ"
+   2) thanhvien2026 (thanhVienRef) — bản công khai rút gọn hiển thị ở đúng thẻ này
+   3) lop10a1/roster (rosterRef)  — danh sách lớp dùng chung cho Sơ đồ lớp/Ban cán sự/Các khoản thu...
+      (chỉ cập nhật nếu tìm thấy đúng 1 bạn khớp tên trong danh sách; không tự thêm mới ở đây
+      để tránh tạo học sinh "ảo" ngoài danh sách chính — muốn thêm mới thì vào mục
+      "Danh sách học sinh".) */
+function moModalSuaTheThanhVien(uid){
+  const x = thanhVienState[uid] || {};
+  const hsRoster = roster.find(r=> chuanTen(r.name) === chuanTen(x.hoTen));
+  openModal(`<h3>Sửa thẻ học sinh</h3>
+    <label style="font-size:12.5px;font-weight:700;">Họ và tên</label>
+    <input type="text" id="tvFTen" maxlength="60" value="${esc(x.hoTen||'')}">
+    <label style="font-size:12.5px;font-weight:700;">Giới tính</label>
+    <select id="tvFGioiTinh">
+      <option value="Nam" ${x.gioiTinh==='Nam'?'selected':''}>Nam</option>
+      <option value="Nữ" ${x.gioiTinh==='Nữ'?'selected':''}>Nữ</option>
+    </select>
+    <label style="font-size:12.5px;font-weight:700;">Ngày sinh (vd: 01/01/2011)</label>
+    <input type="text" id="tvFNgaySinh" maxlength="12" value="${esc(x.ngaySinh||'')}">
+    <label style="font-size:12.5px;font-weight:700;">Dân tộc</label>
+    <input type="text" id="tvFDanToc" maxlength="30" value="${esc(hsRoster ? (hsRoster.ethnic||'') : '')}">
+    ${!hsRoster ? '<p class="msg info show" style="font-size:11.5px;">⚠️ Không tìm thấy tên này trong "Danh sách học sinh" nên riêng mục Dân tộc sẽ không lưu được vào đó — kiểm tra lại chính tả họ tên nếu cần.</p>' : ''}
+    <div id="tvFErr" class="msg err"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Hủy</button>
+      <button class="btn btn-primary btn-sm" id="tvFLuu">Lưu</button>
+    </div>`, 'gen');
+
+  $('tvFLuu').onclick = async ()=>{
+    const hoTen = $('tvFTen').value.trim();
+    const gioiTinh = $('tvFGioiTinh').value;
+    const ngaySinh = $('tvFNgaySinh').value.trim();
+    const danToc = $('tvFDanToc').value.trim();
+    if(!hoTen){ showMsg($('tvFErr'), 'Vui lòng nhập họ tên.', 'err'); return; }
+    try{
+      // 1) + 2) — nguồn gốc + bản công khai (giữ nguyên anhTheId/thành tích đã có)
+      await chsRef.child(uid).update({ hoTen, ngaySinh, gioiTinh });
+      await thanhVienRef.child(uid).update({ hoTen, ngaySinh, gioiTinh });
+      // 3) — đồng bộ danh sách lớp nếu khớp đúng 1 người (theo tên CŨ, trước khi sửa)
+      const idx = roster.findIndex(r=> chuanTen(r.name) === chuanTen(x.hoTen));
+      if(idx !== -1){
+        const dsMoi = roster.slice();
+        dsMoi[idx] = Object.assign({}, dsMoi[idx], { name: hoTen, gender: gioiTinh, dob: ngaySinh, ethnic: danToc });
+        await rosterRef.set(dsMoi);
+      }
+      closeModal();
+      showMsg($('tvLayDuLieuMsg'), '✅ Đã lưu thay đổi.', 'ok');
+    }catch(e){ showMsg($('tvFErr'), baoLoi(e), 'err'); }
+  };
 }
 
 /* Giáo viên bấm để quét lại TOÀN BỘ "Dữ liệu cá nhân" (hosocanhan2026) một lần — đưa những
