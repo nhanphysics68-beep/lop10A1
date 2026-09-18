@@ -1038,6 +1038,9 @@
 
     <div class="card" id="btvlDanhSachCard" style="display:none;">
       <h2>📋 Danh sách đã nộp (chỉ giáo viên xem)</h2>
+      <p class="section-note">Danh sách này chỉ tự nạp lúc đăng nhập — học sinh nộp bài mới trong lúc
+        Thầy đang mở trang sẽ KHÔNG tự hiện ra, bấm nút bên dưới để lấy danh sách mới nhất.</p>
+      <button class="btn btn-ghost btn-sm" id="btvlLamMoiBtn">🔄 Làm mới danh sách đã nộp</button>
       <div class="scroll-x"><table id="btvlDanhSachTable"></table></div>
     </div>
 
@@ -7222,6 +7225,15 @@ async function napBaiTapVatLy10TatCa(){
   catch(e){ baiTapVatLy10TatCa = {}; }
   renderBtvlAdmin();
 }
+if($('btvlLamMoiBtn')) $('btvlLamMoiBtn').onclick = async ()=>{
+  const btn = $('btvlLamMoiBtn');
+  btn.disabled = true;
+  const chuCu = btn.textContent;
+  btn.textContent = '⏳ Đang tải...';
+  await napBaiTapVatLy10TatCa();
+  btn.textContent = chuCu;
+  btn.disabled = false;
+};
 
 /* ================================================================
    CHẤM BÀI BẰNG AI (GEMINI) — hàng chờ + duyệt + công bố
