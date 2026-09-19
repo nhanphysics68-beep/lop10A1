@@ -1039,8 +1039,14 @@
     <div class="card" id="btvlDanhSachCard" style="display:none;">
       <h2>📋 Danh sách đã nộp (chỉ giáo viên xem)</h2>
       <p class="section-note">Danh sách này chỉ tự nạp lúc đăng nhập — học sinh nộp bài mới trong lúc
-        Thầy đang mở trang sẽ KHÔNG tự hiện ra, bấm nút bên dưới để lấy danh sách mới nhất.</p>
-      <button class="btn btn-ghost btn-sm" id="btvlLamMoiBtn">🔄 Làm mới danh sách đã nộp</button>
+        Thầy đang mở trang sẽ KHÔNG tự hiện ra, bấm nút bên dưới để lấy danh sách mới nhất. Mỗi dòng là 1 bài
+        học sinh đã nộp — khóa bài nào thì học sinh không thể nộp lại/thay ảnh của đúng bài đó nữa.</p>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" id="btvlLamMoiBtn">🔄 Làm mới danh sách đã nộp</button>
+        <button class="btn btn-clay btn-sm" id="btvlKhoaTatCaBtn">🔒 Khóa tất cả bài đã nộp</button>
+        <button class="btn btn-ghost btn-sm" id="btvlMoKhoaTatCaBtn">🔓 Mở khóa tất cả</button>
+      </div>
+      <div id="btvlKhoaMsg" class="msg"></div>
       <div class="scroll-x"><table id="btvlDanhSachTable"></table></div>
     </div>
 
@@ -7228,13 +7234,15 @@ function renderBtvlBaiTapCuaToi(){
   }
 
   const tuyChonHtml = ds.map((b,i)=>{
-    const daNop = !!((duLieuBaiCuaUid(bt, b.id, i===0)||{}).anhId);
-    return `<option value="${esc(b.id)}" ${b.id===btvlBaiDangChon?'selected':''}>${daNop?'✅ ':'⬜ '}${esc(b.ten)}</option>`;
+    const dl = duLieuBaiCuaUid(bt, b.id, i===0) || {};
+    const icon = dl.khoa ? '🔒 ' : (dl.anhId ? '✅ ' : '⬜ ');
+    return `<option value="${esc(b.id)}" ${b.id===btvlBaiDangChon?'selected':''}>${icon}${esc(b.ten)}</option>`;
   }).join('');
 
   const iChon = ds.findIndex(b=> b.id === btvlBaiDangChon);
   const bChon = ds[iChon] || ds[0];
   const dlChon = duLieuBaiCuaUid(bt, bChon.id, iChon===0);
+  const daKhoaChon = !!(dlChon && dlChon.khoa);
 
   const dsDaNop = ds.filter((b,i)=> (duLieuBaiCuaUid(bt, b.id, i===0)||{}).anhId);
 
@@ -7245,28 +7253,32 @@ function renderBtvlBaiTapCuaToi(){
     </div>
     <div class="chs-anh-xemtruoc">${dlChon && dlChon.anhId
       ? `✅ Đã nộp "${esc(bChon.ten)}".<br><img src="${anhDriveNho(dlChon.anhId)}" alt="${esc(bChon.ten)}" style="max-width:200px;max-height:260px;border-radius:10px;border:2px solid var(--line);margin-top:6px;display:block;">`
-      : `Chưa đính kèm ảnh cho "${esc(bChon.ten)}".`}</div>
+      : `Chưa đính kèm ảnh cho "${esc(bChon.ten)}".`}
+      ${daKhoaChon ? `<p class="section-note" style="color:#b33; margin-top:6px;">🔒 Bài này đã được Thầy khóa — không thể nộp/thay đổi nữa.</p>` : ''}</div>
     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:6px;">
-      <input type="file" id="btvlInputChon" accept="image/*" style="display:none;">
-      <button class="btn btn-blue btn-sm" id="btvlChonAnhBtnMoi">📎 ${dlChon && dlChon.anhId ? 'Nộp lại' : 'Thêm ảnh'}</button>
+      <input type="file" id="btvlInputChon" accept="image/*" style="display:none;" ${daKhoaChon?'disabled':''}>
+      <button class="btn btn-blue btn-sm" id="btvlChonAnhBtnMoi" ${daKhoaChon?'disabled':''}>${daKhoaChon ? '🔒 Đã khóa' : (dlChon && dlChon.anhId ? '📎 Nộp lại' : '📎 Thêm ảnh')}</button>
       ${dlChon && dlChon.anhId ? `<a href="${esc(dlChon.anhLink || anhDriveLon(dlChon.anhId))}" target="_blank" rel="noopener" class="btn btn-clay btn-sm" style="text-decoration:none;">👁️ Xem bài đã nộp</a>` : ''}
     </div>
 
     <div class="section-title" style="margin-top:20px;">📋 Các bài em đã nộp</div>
     ${dsDaNop.length ? `<div class="scroll-x"><table>
-        <tr><th>Bài</th><th>Thời gian nộp</th><th>Xem lại</th></tr>
+        <tr><th>Bài</th><th>Thời gian nộp</th><th>Trạng thái</th><th>Xem lại</th></tr>
         ${dsDaNop.map((b,i)=>{
           const dl = duLieuBaiCuaUid(bt, b.id, ds[0] && ds[0].id === b.id);
           const luc = dl.luc ? new Date(dl.luc) : null;
           return `<tr><td>${esc(b.ten)}</td><td>${luc && !isNaN(luc.getTime()) ? luc.toLocaleString('vi-VN') : ''}</td>
+            <td>${dl.khoa ? '🔒 Đã khóa' : '🔓 Đang mở'}</td>
             <td><a href="${esc(dl.anhLink || anhDriveLon(dl.anhId))}" target="_blank" rel="noopener">👁️ Xem ảnh</a></td></tr>`;
         }).join('')}
       </table></div>` : `<p class="section-note">Chưa nộp bài nào.</p>`}
   `;
 
   $('btvlChonBaiSelect').onchange = ()=>{ btvlBaiDangChon = $('btvlChonBaiSelect').value; renderBtvlBaiTapCuaToi(); };
-  $('btvlChonAnhBtnMoi').onclick = ()=> $('btvlInputChon').click();
-  $('btvlInputChon').onchange = e=> btvlNopMotBai(btvlBaiDangChon, e);
+  if(!daKhoaChon){
+    $('btvlChonAnhBtnMoi').onclick = ()=> $('btvlInputChon').click();
+    $('btvlInputChon').onchange = e=> btvlNopMotBai(btvlBaiDangChon, e);
+  }
 }
 
 async function napBaiTapVatLy10CuaToi(){
@@ -7288,6 +7300,9 @@ async function btvlNopMotBai(baiId, e){
 
   const ds = danhSachBaiTapHienTai();
   const tenBai = (ds.find(b=> b.id === baiId) || {}).ten || baiId;
+  const btCu0 = baiTapVatLy10CuaToi;
+  const dlCu0 = duLieuBaiCuaUid(btCu0, baiId, ds[0] && ds[0].id === baiId);
+  if(dlCu0 && dlCu0.khoa){ showMsg($('btvlMsg'), `🔒 "${tenBai}" đã bị Thầy khóa, không thể nộp lại — báo Thầy nếu cần mở khóa.`, 'err'); return; }
   showMsg($('btvlMsg'), `Đang tải "${tenBai}" lên...`, 'info');
   try{
     const btCu = baiTapVatLy10CuaToi;
@@ -7380,34 +7395,88 @@ $('btvlThemBaiBtn') && ($('btvlThemBaiBtn').onclick = ()=>{
 });
 napBaiTapDanhSach();
 
+/* Bảng quản trị "Danh sách đã nộp" — dàn phẳng thành 1 dòng cho mỗi (học sinh, bài) ĐÃ NỘP
+   (thay vì 1 dòng/học sinh với 1 ô "Đính kèm" duy nhất như trước — cách cũ chỉ đọc được
+   anhId/anhLink cấp ngoài nên chỉ hiện đúng bài nộp kiểu CŨ, còn Bài 2..10 kiểu mới không
+   hiện ra được gì). Mỗi dòng có nút khóa/mở riêng cho đúng bài đó của đúng học sinh đó. */
 function renderBtvlAdmin(){
   const card = $('btvlDanhSachCard');
   if(!card) return;
   card.style.display = isAdmin ? 'block' : 'none';
   if(!isAdmin) return;
 
-  const ds = Object.keys(baiTapVatLy10TatCa).map(uid=> Object.assign({uid}, baiTapVatLy10TatCa[uid]))
+  const dsHocSinh = Object.keys(baiTapVatLy10TatCa).map(uid=> Object.assign({uid}, baiTapVatLy10TatCa[uid]))
     .sort((a,b)=> (a.hoTen||'').localeCompare(b.hoTen||'', 'vi'));
-  let h = `<tr><th>STT</th><th>Họ và tên</th><th>Ngày sinh</th><th>Giới tính</th><th>Dân tộc</th><th>Đính kèm</th><th>Xem lại</th><th></th></tr>`;
-  if(!ds.length){
-    h += `<tr><td colspan="8" style="text-align:center;color:var(--ink-soft);">Chưa có học sinh nào nộp bài.</td></tr>`;
+  const dsBai = danhSachBaiTapHienTai();
+
+  const dong = [];
+  dsHocSinh.forEach(hs=>{
+    dsBai.forEach((b,i)=>{
+      const dl = duLieuBaiCuaUid(hs, b.id, i===0);
+      if(dl && dl.anhId) dong.push({ uid: hs.uid, hoTen: hs.hoTen, ngaySinh: hs.ngaySinh, gioiTinh: hs.gioiTinh, danToc: hs.danToc, baiId: b.id, tenBai: b.ten, dl });
+    });
+  });
+
+  let h = `<tr><th>Họ và tên</th><th>Bài</th><th>Đính kèm</th><th>Xem lại</th><th>Trạng thái</th><th>Khóa/Mở</th><th></th></tr>`;
+  if(!dong.length){
+    h += `<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);">Chưa có học sinh nào nộp bài.</td></tr>`;
   } else {
-    ds.forEach((b,i)=>{
+    dong.forEach(d=>{
+      const khoa = !!d.dl.khoa;
       h += `<tr>
-        <td>${i+1}</td>
-        <td>${esc(b.hoTen||'')}</td>
-        <td>${esc(b.ngaySinh||'')}</td>
-        <td>${esc(b.gioiTinh||'')}</td>
-        <td>${esc(b.danToc||'')}</td>
-        <td>${b.anhId ? `<img src="${anhDriveNho(b.anhId)}" alt="Bài làm" style="max-width:60px;max-height:60px;border-radius:6px;object-fit:cover;">` : '—'}</td>
-        <td>${b.anhId ? `<a href="${esc(b.anhLink || anhDriveLon(b.anhId))}" target="_blank" rel="noopener">👁️ Xem</a>` : '—'}</td>
-        <td><button class="btn btn-blue btn-sm" data-sua-btvl="${b.uid}">Sửa</button></td>
+        <td>${esc(d.hoTen||'')}</td>
+        <td>${esc(d.tenBai||'')}</td>
+        <td><img src="${anhDriveNho(d.dl.anhId)}" alt="Bài làm" style="max-width:60px;max-height:60px;border-radius:6px;object-fit:cover;"></td>
+        <td><a href="${esc(d.dl.anhLink || anhDriveLon(d.dl.anhId))}" target="_blank" rel="noopener">👁️ Xem</a></td>
+        <td>${khoa ? '🔒 Đã khóa' : '🔓 Đang mở'}</td>
+        <td><button class="btn ${khoa?'btn-clay':'btn-ghost'} btn-sm" data-btvl-khoabai="${esc(d.uid)}|${esc(d.baiId)}">${khoa?'Mở khóa':'Khóa'}</button></td>
+        <td><button class="btn btn-blue btn-sm" data-sua-btvl="${esc(d.uid)}">Sửa tên</button></td>
       </tr>`;
     });
   }
   $('btvlDanhSachTable').innerHTML = h;
   $('btvlDanhSachTable').querySelectorAll('[data-sua-btvl]').forEach(btn=> btn.onclick = ()=> suaBtvlHoTen(btn.getAttribute('data-sua-btvl')));
+  $('btvlDanhSachTable').querySelectorAll('[data-btvl-khoabai]').forEach(btn=> btn.onclick = async ()=>{
+    const [uid, baiId] = btn.getAttribute('data-btvl-khoabai').split('|');
+    await btvlDatKhoaMotBai(uid, baiId, !btn.textContent.includes('Mở khóa'));
+  });
 }
+
+/* Đặt trạng thái khóa cho đúng 1 bài của đúng 1 học sinh — dùng .update() để không đụng tới
+   các trường khác (anhId/anhLink/thuMucId/luc) của đúng bài đó, và không đụng tới các bài khác. */
+async function btvlDatKhoaMotBai(uid, baiId, khoaMoi){
+  try{
+    await baiTapVatLy10Ref.child(uid).child('baiTap').child(baiId).update({ khoa: khoaMoi });
+    await napBaiTapVatLy10TatCa();
+  }catch(e){ showMsg($('btvlKhoaMsg'), baoLoi(e), 'err'); }
+}
+
+/* Khóa/mở HÀNG LOẠT tất cả các bài ĐÃ NỘP của TẤT CẢ học sinh — dùng 1 lệnh .update() nhiều
+   đường dẫn cùng lúc (giống tính năng khóa hàng loạt vị trí học sinh), tránh phải bấm khóa
+   từng dòng một khi cả lớp đã nộp xong hết. */
+async function btvlKhoaHangLoat(khoaMoi){
+  const dsBai = danhSachBaiTapHienTai();
+  const capNhat = {};
+  Object.keys(baiTapVatLy10TatCa).forEach(uid=>{
+    const hs = baiTapVatLy10TatCa[uid];
+    dsBai.forEach((b,i)=>{
+      const dl = duLieuBaiCuaUid(hs, b.id, i===0);
+      if(dl && dl.anhId) capNhat[`${uid}/baiTap/${b.id}/khoa`] = khoaMoi;
+    });
+  });
+  if(!Object.keys(capNhat).length){ showMsg($('btvlKhoaMsg'), 'Chưa có bài nào đã nộp để khóa/mở.', 'info'); return; }
+  try{
+    await baiTapVatLy10Ref.update(capNhat);
+    await napBaiTapVatLy10TatCa();
+    showMsg($('btvlKhoaMsg'), khoaMoi ? '✅ Đã khóa tất cả bài đã nộp.' : '✅ Đã mở khóa tất cả.', 'ok');
+  }catch(e){ showMsg($('btvlKhoaMsg'), baoLoi(e), 'err'); }
+}
+$('btvlKhoaTatCaBtn') && ($('btvlKhoaTatCaBtn').onclick = ()=>{
+  if(confirm('Khóa TẤT CẢ các bài đã nộp của cả lớp? Học sinh sẽ không thể nộp lại bất kỳ bài nào cho đến khi được mở khóa.')) btvlKhoaHangLoat(true);
+});
+$('btvlMoKhoaTatCaBtn') && ($('btvlMoKhoaTatCaBtn').onclick = ()=>{
+  if(confirm('Mở khóa TẤT CẢ các bài đã nộp của cả lớp?')) btvlKhoaHangLoat(false);
+});
 
 // Cho phép giáo viên sửa lại họ tên khi học sinh gõ sai chính tả (không đối chiếu được với
 // danh sách lớp) — sửa xong sẽ tự lấy lại Ngày sinh/Giới tính/Dân tộc theo tên mới.
