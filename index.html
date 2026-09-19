@@ -782,6 +782,8 @@
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
         <button class="btn btn-blue btn-sm" id="vtSapXepBtn">🔽 Khoảng cách: Gần → Xa</button>
         <button class="btn btn-ghost btn-sm" id="vtChuaNhapBtn" style="display:none;">📊 Thống kê chưa nhập</button>
+        <button class="btn btn-clay btn-sm" id="vtKhoaTatCaBtn" style="display:none;">🔒 Khóa tất cả</button>
+        <button class="btn btn-ghost btn-sm" id="vtMoKhoaTatCaBtn" style="display:none;">🔓 Mở khóa tất cả</button>
       </div>
       <div class="scroll-x"><table id="vtBang"></table></div>
       <div id="vtRong" class="empty" style="display:none;">Chưa có bạn nào nộp vị trí.</div>
@@ -5618,6 +5620,10 @@ function renderVitriBang(){
     const soChuaNop = roster.filter(hs=> !Object.values(vitriState).some(vt=> chuanTen(vt.hoTen)===chuanTen(hs.name))).length;
     nutChuaNhap.textContent = `📊 Thống kê chưa nhập (${soChuaNop})`;
   }
+  // Nút khóa/mở khóa hàng loạt — chỉ giáo viên thấy, ẩn khi chưa có ai nộp vị trí.
+  const nutKhoaTatCa = $('vtKhoaTatCaBtn'), nutMoKhoaTatCa = $('vtMoKhoaTatCaBtn');
+  if(nutKhoaTatCa) nutKhoaTatCa.style.display = (isAdmin && ds.length) ? 'inline-block' : 'none';
+  if(nutMoKhoaTatCa) nutMoKhoaTatCa.style.display = (isAdmin && ds.length) ? 'inline-block' : 'none';
 
   let h = `<tr><th>STT</th><th>Họ và tên</th><th>Giới tính</th><th>Ngày sinh</th><th>Dân tộc</th><th>Khoảng cách</th><th>Thời gian</th><th></th>${isAdmin?'<th></th>':''}</tr>`;
   if(ds.length){
@@ -5711,6 +5717,22 @@ $('vtChuaNhapBtn').onclick = ()=>{
     </div>` : `<p class="section-note" style="color:var(--leaf-dark); font-weight:700;">🎉 Tất cả học sinh đã nộp vị trí!</p>`}
     <div class="modal-btns" style="margin-top:14px;"><button class="btn btn-ghost btn-sm" onclick="closeModal()">Đóng</button></div>`, 'gen');
 };
+/* Khóa/mở khóa HÀNG LOẠT tất cả vị trí đang hiển thị trong bảng — dùng update() nhiều đường dẫn
+   cùng lúc (1 lệnh ghi Firebase duy nhất) thay vì lặp .set() từng em, vừa nhanh vừa đỡ tốn lượt ghi. */
+async function khoaHangLoat(khoa){
+  const ds = Object.keys(vitriState);
+  if(!ds.length) return;
+  const xacNhan = khoa
+    ? confirm(`Khóa vị trí của TẤT CẢ ${ds.length} bạn đang hiện trong danh sách? Các bạn sẽ không tự đổi vị trí được nữa cho tới khi Thầy mở khóa lại.`)
+    : confirm(`Mở khóa vị trí của TẤT CẢ ${ds.length} bạn đang hiện trong danh sách? Các bạn sẽ tự sửa/nộp lại vị trí được.`);
+  if(!xacNhan) return;
+  const capNhat = {};
+  ds.forEach(uid=> capNhat[`${uid}/khoa`] = khoa);
+  try{ await vitriRef.update(capNhat); }
+  catch(e){ alert(baoLoi(e)); }
+}
+$('vtKhoaTatCaBtn').onclick = ()=> khoaHangLoat(true);
+$('vtMoKhoaTatCaBtn').onclick = ()=> khoaHangLoat(false);
 
 /* Bản đồ hiện ĐỒNG THỜI vị trí + khoảng cách của tất cả học sinh, dùng Leaflet + OpenStreetMap —
    thư viện bản đồ mã nguồn mở, hoàn toàn miễn phí, không cần API Key hay đăng ký gì cả. */
