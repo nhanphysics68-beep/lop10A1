@@ -1107,6 +1107,11 @@
       <p class="section-note" style="margin:4px 0 0;">"Duyệt tất cả" sẽ công bố điểm/nhận xét đang hiển thị của TỪNG bài (đúng theo điểm, nhận xét, tên học sinh đang thấy trên mỗi thẻ bên dưới) — Thầy nên sửa lại số liệu nào cần sửa trước khi bấm. Bài nào chưa xác định được tên học sinh (từ Google Photos/link) sẽ tự động bị bỏ qua để Thầy duyệt tay riêng.</p>
       <div id="chamAiChoDuyetList" style="margin-top:10px;"></div>
 
+      <div class="section-title" style="margin-top:18px;">🐞 Bài bị lỗi khi chấm (nếu có)</div>
+      <p class="section-note">Bài nào Apps Script gặp lỗi lúc chấm (ảnh hỏng, hết quota Gemini, link sai...) sẽ nằm ở đây thay vì vào "Chờ duyệt" — xem lý do cụ thể để biết cách xử lý.</p>
+      <button class="btn btn-ghost btn-sm" id="chamAiLoiLamMoiBtn">🔄 Kiểm tra bài lỗi</button>
+      <div id="chamAiLoiList" style="margin-top:10px;"></div>
+
       <div class="section-title" style="margin-top:18px;">5) Đã công bố cho học sinh</div>
       <div class="scroll-x"><table id="chamAiDaDuyetTable"></table></div>
     </div>
@@ -2381,6 +2386,7 @@ auth.onAuthStateChanged(async user=>{
     if($('chamAiCard')) $('chamAiCard').style.display = 'block';
     await napChamAiChoDuyet();
     await napChamAiDaDuyet();
+    await napChamAiLoi();
     if($('ndkmChuaDangNhap')) $('ndkmChuaDangNhap').style.display = 'none';
     if($('ndkmCard')) $('ndkmCard').style.display = 'block';
     renderAdmin();
@@ -7791,7 +7797,7 @@ function renderChamAiChoDuyet(){
             <div class="field"><label>Điểm (0–10)</label><input type="number" min="0" max="10" step="0.1" value="${x.diem!=null?x.diem:''}" data-cham-ai-diem="${x.id}"></div>
             <div class="field"><label>Nguồn</label><input type="text" value="${x.nguon==='nopweb'?'Nộp qua web':(x.nguon==='link'?'Link ảnh':'Google Photos')}" readonly></div>
           </div>
-          ${x.tenBai ? `<p class="section-note" style="margin:-4px 0 8px;"><b>📚 ${esc(x.tenBai)}</b></p>` : ''}
+          <p class="section-note" style="margin:-4px 0 8px;"><b>📚 ${esc(x.tenBai || (danhSachBaiTapHienTai().find(b=> b.id === (x.baiId||'bai1'))||{}).ten || 'Bài 1')}</b></p>
           <div class="field"><label>Nhận xét của AI</label><textarea data-cham-ai-nhanxet="${x.id}" style="min-height:70px;">${esc(x.nhanXet||'')}</textarea></div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="btn btn-blue btn-sm" data-cham-ai-duyet="${x.id}">✅ Duyệt &amp; công bố</button>
@@ -7866,14 +7872,51 @@ function renderChamAiDaDuyet(){
   let h = `<tr><th>STT</th><th>Họ và tên</th><th>Bài</th><th>Điểm</th><th>Nhận xét</th><th>Nguồn</th><th>Ngày duyệt</th></tr>`;
   if(!ds.length){ h += `<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);">Chưa công bố điểm nào.</td></tr>`; }
   else ds.forEach((x,i)=>{
+    // Vài bài công bố TRƯỚC KHI có trường tenBai (lúc mới thêm tính năng 10 bài) không lưu sẵn
+    // tên bài — suy ra lại tên bài từ baiId (hoặc tách từ chính khóa lưu "ten|baiId" nếu thiếu
+    // luôn cả baiId) rồi tra tên hiện tại trong danh mục bài tập, thay vì hiện dấu gạch ngang.
+    const baiIdSuyRa = x.baiId || (x.khoa && x.khoa.indexOf('|') !== -1 ? x.khoa.split('|')[1] : '') || 'bai1';
+    const tenBaiHienThi = x.tenBai || (danhSachBaiTapHienTai().find(b=> b.id === baiIdSuyRa) || {}).ten || baiIdSuyRa;
     h += `<tr>
-      <td>${i+1}</td><td>${esc(x.hoTen||'')}</td><td>${esc(x.tenBai||'')||'—'}</td><td><b>${x.diem!=null?x.diem:''}</b>/10</td>
+      <td>${i+1}</td><td>${esc(x.hoTen||'')}</td><td>${esc(tenBaiHienThi)}</td><td><b>${x.diem!=null?x.diem:''}</b>/10</td>
       <td>${esc(x.nhanXet||'')}</td><td>${x.nguon==='nopweb'?'Nộp web':(x.nguon==='link'?'Link ảnh':'Google Photos')}</td>
       <td>${x.ngayDuyet ? new Date(x.ngayDuyet).toLocaleString('vi-VN') : ''}</td>
     </tr>`;
   });
   bang.innerHTML = h;
 }
+
+/* ---- Xem các bài bị lỗi khi Apps Script chấm (chamBaiAI2026/loi) ----
+   Trước đây trang KHÔNG có chỗ nào hiển thị nhánh này, nên khi Apps Script chấm lỗi hàng loạt
+   (hết quota Gemini, ảnh hỏng, link sai...) Thầy không biết lý do cụ thể vì sao "Chờ duyệt"
+   không lên đủ số bài đã nộp vào hàng chờ. */
+async function napChamAiLoi(){
+  if(!isAdmin) return;
+  const host = $('chamAiLoiList');
+  if(!host) return;
+  host.innerHTML = '<p class="section-note">Đang tải...</p>';
+  let ds = {};
+  try{ ds = (await chamBaiAIRef.child('loi').once('value')).val() || {}; }
+  catch(e){ host.innerHTML = `<p class="section-note" style="color:#b33;">${esc(baoLoi(e))}</p>`; return; }
+  const items = Object.keys(ds).map(id=> Object.assign({id}, ds[id]));
+  if(!items.length){ host.innerHTML = '<p class="section-note">✅ Không có bài nào bị lỗi.</p>'; return; }
+  host.innerHTML = `<p class="section-note" style="color:#b33;">⚠️ Có ${items.length} bài bị lỗi khi chấm:</p>` +
+    items.map(x=>{
+      const job = x.job || {};
+      return `<div class="card" style="margin-bottom:8px; background:#fff3f0;">
+        <div><b>${esc(job.hoTenGoi || '(chưa rõ tên)')}</b>${job.tenBai ? ' — ' + esc(job.tenBai) : ''}
+          <span class="section-note">(nguồn: ${esc(job.nguon||'?')}, lúc ${x.luc ? new Date(x.luc).toLocaleString('vi-VN') : ''})</span></div>
+        <p style="color:#b33; margin:6px 0 8px;">${esc(x.thongBao || '(không rõ lý do)')}</p>
+        <button class="btn btn-ghost btn-sm" data-cham-ai-xoaloi="${esc(x.id)}">🗑️ Xóa khỏi danh sách lỗi</button>
+      </div>`;
+    }).join('');
+  host.querySelectorAll('[data-cham-ai-xoaloi]').forEach(btn=> btn.onclick = async ()=>{
+    try{ await chamBaiAIRef.child('loi').child(btn.getAttribute('data-cham-ai-xoaloi')).remove(); await napChamAiLoi(); }
+    catch(e){ alert(baoLoi(e)); }
+  });
+}
+$('chamAiLoiLamMoiBtn') && ($('chamAiLoiLamMoiBtn').onclick = napChamAiLoi);
+
 /* Hiện điểm của CHÍNH học sinh đang xem trang (đối chiếu theo họ tên đã gõ ở ô nộp bài) ngay
    trong thẻ "Nộp bài tập chuyên đề Vật lý 10", để không cần mở mục quản trị mới xem được. */
 function renderChamAiKetQuaCuaToi(){
