@@ -5554,6 +5554,10 @@ async function tinhKhoangCachXeMay(diemBatDau, diemKetThuc){
 }
 
 $('vtXacNhanBtn').onclick = async ()=>{
+  if(myUid && vitriState[myUid] && vitriState[myUid].khoa === true){
+    showMsg($('vtMsg'), '🔒 Vị trí của em đã được Thầy khóa lại, không thể tự thay đổi nữa. Liên hệ Thầy nếu cần sửa.', 'err');
+    return;
+  }
   const hoTen = $('vtNhapHoTen').value.trim();
   const link = $('vtNhapLink').value.trim();
   $('vtKhongDocDuoc').style.display = 'none';
@@ -5626,15 +5630,31 @@ function renderVitriBang(){
       const ngaySinh = vt.ngaySinh || (hsRoster ? hsRoster.dob : '');
       const danToc = vt.danToc || (hsRoster ? hsRoster.ethnic : '');
       const nhanKieu = vt.duongThat ? '<span title="Tính theo đường đi thật">🛣️</span>' : '<span title="Tạm tính đường chim bay">📏</span>';
-      h += `<tr><td>${i+1}</td><td>${esc(vt.hoTen||'')}</td><td>${esc(gioiTinh)||'—'}</td>
+      const daKhoa = vt.khoa === true;
+      const tenHienThi = esc(vt.hoTen||'') + (daKhoa ? ' <span title="Đã khóa, học sinh không tự sửa được">🔒</span>' : '');
+      h += `<tr><td>${i+1}</td><td>${tenHienThi}</td><td>${esc(gioiTinh)||'—'}</td>
         <td>${esc(ngaySinh)||'—'}</td><td>${esc(danToc)||'—'}</td>
         <td class="vt-khoangcach">${nhanKieu} ${vt.khoangCachKm!=null ? vt.khoangCachKm+' km' : '—'}</td>
         <td>${vt.thoiGianPhut!=null ? '~'+vt.thoiGianPhut+' phút' : '—'}</td>
         <td><button class="btn btn-clay btn-sm" data-vt-xemban-do="${uid}">🗺️ Xem bản đồ</button></td>
-        ${isAdmin ? `<td><button class="btn btn-ghost btn-sm" data-vt-xoa="${uid}">Xóa</button></td>` : ''}</tr>`;
+        ${isAdmin ? `<td style="white-space:nowrap;">
+          <button class="btn ${daKhoa?'btn-ghost':'btn-blue'} btn-sm" data-vt-khoa="${uid}" data-khoa-hientai="${daKhoa?'1':'0'}">${daKhoa?'🔓 Mở khóa':'🔒 Khóa'}</button>
+          <button class="btn btn-ghost btn-sm" data-vt-xoa="${uid}">Xóa</button>
+        </td>` : ''}</tr>`;
     });
   }
   table.innerHTML = h;
+  table.querySelectorAll('[data-vt-khoa]').forEach(b=> b.onclick = async ()=>{
+    const uid = b.getAttribute('data-vt-khoa');
+    const dangKhoa = b.getAttribute('data-khoa-hientai') === '1';
+    const vt = vitriState[uid];
+    const xacNhan = dangKhoa
+      ? confirm(`Mở khóa vị trí của "${vt.hoTen||''}"? Bạn ấy sẽ tự sửa/nộp lại được.`)
+      : confirm(`Khóa vị trí của "${vt.hoTen||''}"? Bạn ấy sẽ KHÔNG tự đổi vị trí được nữa cho tới khi Thầy mở khóa lại.`);
+    if(!xacNhan) return;
+    try{ await vitriRef.child(uid).update({ khoa: !dangKhoa }); }
+    catch(e){ alert(baoLoi(e)); }
+  });
   table.querySelectorAll('[data-vt-xoa]').forEach(b=> b.onclick = async ()=>{
     const uid = b.getAttribute('data-vt-xoa');
     const vt = vitriState[uid];
@@ -5655,14 +5675,19 @@ let banDoVitri = null, lopMarkerVitri = null, lopHocSinhVitri = null;
 /* Nếu người đang xem đã từng nộp vị trí rồi, hiện rõ kết quả cũ + đổi nút thành "Cập nhật vị trí"
    (về mặt kỹ thuật, nộp lại chỉ là ghi đè lên đúng bản ghi cũ theo uid, không tạo bản ghi mới). */
 function capNhatTrangThaiDaNop(){
-  const hop = $('vtDaNopTruocDo'), nut = $('vtXacNhanBtn'), oTen = $('vtNhapHoTen');
+  const hop = $('vtDaNopTruocDo'), nut = $('vtXacNhanBtn'), oTen = $('vtNhapHoTen'), oLink = $('vtNhapLink');
   if(!hop || !nut) return;
   const cuaToi = myUid ? vitriState[myUid] : null;
+  const daKhoa = !!(cuaToi && cuaToi.khoa === true);
+  nut.disabled = daKhoa;
+  if(oLink) oLink.disabled = daKhoa;
   if(cuaToi){
     const nhanKieu = cuaToi.duongThat ? 'đường đi thật' : 'tạm tính đường chim bay';
-    hop.textContent = `Bạn đã nộp vị trí trước đó: khoảng ${cuaToi.khoangCachKm} km (${nhanKieu}). Dán link mới rồi bấm nút bên dưới nếu muốn cập nhật lại.`;
+    hop.textContent = daKhoa
+      ? `🔒 Vị trí của em đã được Thầy khóa lại: khoảng ${cuaToi.khoangCachKm} km (${nhanKieu}). Không tự sửa được nữa — liên hệ Thầy nếu cần đổi.`
+      : `Bạn đã nộp vị trí trước đó: khoảng ${cuaToi.khoangCachKm} km (${nhanKieu}). Dán link mới rồi bấm nút bên dưới nếu muốn cập nhật lại.`;
     hop.style.display = 'block';
-    nut.textContent = 'Cập nhật vị trí';
+    nut.textContent = daKhoa ? '🔒 Đã khóa' : 'Cập nhật vị trí';
     if(oTen && !oTen.value.trim() && cuaToi.hoTen) oTen.value = cuaToi.hoTen; // gợi ý lại đúng tên đã nộp trước đó, không ghi đè nếu đang gõ dở
   } else {
     hop.style.display = 'none';
