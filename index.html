@@ -1026,7 +1026,14 @@
       </div>
       <div class="field"><label>Dân tộc</label><input type="text" id="btvlDanToc" readonly></div>
       <div id="btvlMsg" class="msg"></div>
-      <div id="chamAiKetQuaCuaToi" style="display:none; margin-top:10px;"></div>
+
+      <!-- ============ CHỌN BÀI ĐỂ NỘP (Bài 1..10) — chọn 1 bài từ danh mục, nộp lại sẽ tự xóa ảnh cũ ============ -->
+      <div class="section-title" style="margin-top:20px;">📚 Chọn bài để nộp</div>
+      <p class="section-note">Chọn đúng bài rồi đính kèm ảnh bài làm — mỗi bài chỉ giữ <b>duy nhất 1 ảnh mới nhất</b>,
+        chọn ảnh khác để nộp lại thì ảnh cũ của đúng bài đó sẽ tự động bị xóa khỏi Drive.</p>
+      <div id="btvlBaiTapWrap"></div>
+
+      <div id="chamAiKetQuaCuaToi" style="display:none; margin-top:14px;"></div>
     </div>
 
     <div class="card" id="btvlDanhSachCard" style="display:none;">
@@ -1035,14 +1042,6 @@
         Thầy đang mở trang sẽ KHÔNG tự hiện ra, bấm nút bên dưới để lấy danh sách mới nhất.</p>
       <button class="btn btn-ghost btn-sm" id="btvlLamMoiBtn">🔄 Làm mới danh sách đã nộp</button>
       <div class="scroll-x"><table id="btvlDanhSachTable"></table></div>
-    </div>
-
-    <!-- ============ NỘP TỪNG BÀI TẬP RIÊNG (Bài 1..10) — mỗi bài 1 ảnh, nộp lại sẽ tự xóa ảnh cũ ============ -->
-    <div class="card">
-      <h2>📚 Nộp từng bài tập</h2>
-      <p class="section-note">Mỗi bài chỉ giữ <b>duy nhất 1 ảnh mới nhất</b> — chọn ảnh khác để nộp lại,
-        ảnh cũ của đúng bài đó sẽ tự động bị xóa khỏi Drive. Cần nhập Họ và tên ở khung phía trên trước khi nộp.</p>
-      <div id="btvlBaiTapWrap"></div>
     </div>
 
     <!-- ============ QUẢN LÝ DANH SÁCH BÀI TẬP (chỉ giáo viên) ============ -->
@@ -7198,6 +7197,7 @@ $('btvlHoTen').oninput = btvlDongBoTuRoster;
    ================================================================ */
 const BAITAP_MAC_DINH = Array.from({length:10}, (_,i)=> ({ id: 'bai'+(i+1), ten: 'Bài '+(i+1) }));
 let baiTapDanhSach = BAITAP_MAC_DINH.slice();
+let btvlBaiDangChon = null; // bài đang được chọn trong ô "Chọn bài để nộp"
 function danhSachBaiTapHienTai(){ return baiTapDanhSach.length ? baiTapDanhSach : BAITAP_MAC_DINH; }
 function duLieuBaiCuaUid(bt, baiId, laBaiDauTien){
   if(bt && bt.baiTap && bt.baiTap[baiId]) return bt.baiTap[baiId];
@@ -7217,20 +7217,56 @@ function renderBtvlBaiTapCuaToi(){
   if(!wrap) return;
   const bt = baiTapVatLy10CuaToi;
   const ds = danhSachBaiTapHienTai();
-  wrap.innerHTML = ds.map((b,i)=>{
-    const dl = duLieuBaiCuaUid(bt, b.id, i===0);
-    return `<div class="section-title" style="margin-top:${i===0?'8px':'20px'};">${esc(b.ten)}</div>
-      <div class="chs-anh-xemtruoc">${dl && dl.anhId
-        ? `✅ Đã nộp.<br><img src="${anhDriveNho(dl.anhId)}" alt="${esc(b.ten)}" style="max-width:200px;max-height:260px;border-radius:10px;border:2px solid var(--line);margin-top:6px;display:block;">`
-        : 'Chưa đính kèm ảnh.'}</div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:6px;">
-        <input type="file" id="btvlInput-${b.id}" accept="image/*" style="display:none;">
-        <button class="btn btn-blue btn-sm" data-btvl-chon="${b.id}">📎 ${dl && dl.anhId ? 'Nộp lại' : 'Thêm ảnh'}</button>
-        ${dl && dl.anhId ? `<a href="${esc(dl.anhLink || anhDriveLon(dl.anhId))}" target="_blank" rel="noopener" class="btn btn-clay btn-sm" style="text-decoration:none;">👁️ Xem bài đã nộp</a>` : ''}
-      </div>`;
+  if(!ds.length) return;
+
+  // Giữ lại bài đang chọn giữa các lần render; nếu chưa chọn bài nào (lần đầu) hoặc bài đang
+  // chọn không còn tồn tại trong danh mục nữa, tự động chọn bài ĐẦU TIÊN CHƯA NỘP (để học sinh
+  // không phải tự tìm), hoặc bài đầu tiên nếu đã nộp hết.
+  if(!btvlBaiDangChon || !ds.some(b=> b.id === btvlBaiDangChon)){
+    const baiChuaNop = ds.find((b,i)=> !((duLieuBaiCuaUid(bt, b.id, i===0)||{}).anhId));
+    btvlBaiDangChon = (baiChuaNop || ds[0]).id;
+  }
+
+  const tuyChonHtml = ds.map((b,i)=>{
+    const daNop = !!((duLieuBaiCuaUid(bt, b.id, i===0)||{}).anhId);
+    return `<option value="${esc(b.id)}" ${b.id===btvlBaiDangChon?'selected':''}>${daNop?'✅ ':'⬜ '}${esc(b.ten)}</option>`;
   }).join('');
-  wrap.querySelectorAll('[data-btvl-chon]').forEach(btn=> btn.onclick = ()=> $('btvlInput-'+btn.getAttribute('data-btvl-chon')).click());
-  ds.forEach(b=>{ const input = $('btvlInput-'+b.id); if(input) input.onchange = e=> btvlNopMotBai(b.id, e); });
+
+  const iChon = ds.findIndex(b=> b.id === btvlBaiDangChon);
+  const bChon = ds[iChon] || ds[0];
+  const dlChon = duLieuBaiCuaUid(bt, bChon.id, iChon===0);
+
+  const dsDaNop = ds.filter((b,i)=> (duLieuBaiCuaUid(bt, b.id, i===0)||{}).anhId);
+
+  wrap.innerHTML = `
+    <div class="field">
+      <label>Bài đang chọn (${dsDaNop.length}/${ds.length} bài đã nộp)</label>
+      <select id="btvlChonBaiSelect">${tuyChonHtml}</select>
+    </div>
+    <div class="chs-anh-xemtruoc">${dlChon && dlChon.anhId
+      ? `✅ Đã nộp "${esc(bChon.ten)}".<br><img src="${anhDriveNho(dlChon.anhId)}" alt="${esc(bChon.ten)}" style="max-width:200px;max-height:260px;border-radius:10px;border:2px solid var(--line);margin-top:6px;display:block;">`
+      : `Chưa đính kèm ảnh cho "${esc(bChon.ten)}".`}</div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:6px;">
+      <input type="file" id="btvlInputChon" accept="image/*" style="display:none;">
+      <button class="btn btn-blue btn-sm" id="btvlChonAnhBtnMoi">📎 ${dlChon && dlChon.anhId ? 'Nộp lại' : 'Thêm ảnh'}</button>
+      ${dlChon && dlChon.anhId ? `<a href="${esc(dlChon.anhLink || anhDriveLon(dlChon.anhId))}" target="_blank" rel="noopener" class="btn btn-clay btn-sm" style="text-decoration:none;">👁️ Xem bài đã nộp</a>` : ''}
+    </div>
+
+    <div class="section-title" style="margin-top:20px;">📋 Các bài em đã nộp</div>
+    ${dsDaNop.length ? `<div class="scroll-x"><table>
+        <tr><th>Bài</th><th>Thời gian nộp</th><th>Xem lại</th></tr>
+        ${dsDaNop.map((b,i)=>{
+          const dl = duLieuBaiCuaUid(bt, b.id, ds[0] && ds[0].id === b.id);
+          const luc = dl.luc ? new Date(dl.luc) : null;
+          return `<tr><td>${esc(b.ten)}</td><td>${luc && !isNaN(luc.getTime()) ? luc.toLocaleString('vi-VN') : ''}</td>
+            <td><a href="${esc(dl.anhLink || anhDriveLon(dl.anhId))}" target="_blank" rel="noopener">👁️ Xem ảnh</a></td></tr>`;
+        }).join('')}
+      </table></div>` : `<p class="section-note">Chưa nộp bài nào.</p>`}
+  `;
+
+  $('btvlChonBaiSelect').onchange = ()=>{ btvlBaiDangChon = $('btvlChonBaiSelect').value; renderBtvlBaiTapCuaToi(); };
+  $('btvlChonAnhBtnMoi').onclick = ()=> $('btvlInputChon').click();
+  $('btvlInputChon').onchange = e=> btvlNopMotBai(btvlBaiDangChon, e);
 }
 
 async function napBaiTapVatLy10CuaToi(){
@@ -7784,11 +7820,11 @@ function renderChamAiKetQuaCuaToi(){
   if(!ketQua.length){ host.style.display = 'none'; return; }
   host.style.display = 'block';
   host.innerHTML = `<div class="card" style="background:var(--sand);">
-    <b>🤖 Điểm AI đã chấm:</b>
-    ${ketQua.map(x=> `<div style="margin-top:6px;">
-        <b>${esc(x.ten)}: ${x.kq.diem}/10</b>
-        ${x.kq.nhanXet ? `<p class="section-note" style="margin:2px 0 0;">"${esc(x.kq.nhanXet)}"</p>` : ''}
-      </div>`).join('')}
+    <h2 style="margin-top:0;">🤖 Bảng điểm AI đã chấm</h2>
+    <div class="scroll-x"><table>
+      <tr><th>Bài</th><th>Điểm</th><th>Nhận xét</th></tr>
+      ${ketQua.map(x=> `<tr><td>${esc(x.ten)}</td><td><b>${x.kq.diem}</b>/10</td><td>${esc(x.kq.nhanXet||'')}</td></tr>`).join('')}
+    </table></div>
   </div>`;
 }
 if($('btvlHoTen')) $('btvlHoTen').addEventListener('blur', renderChamAiKetQuaCuaToi);
