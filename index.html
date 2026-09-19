@@ -1025,15 +1025,6 @@
         <div class="field"><label>Giới tính</label><input type="text" id="btvlGioiTinh" readonly></div>
       </div>
       <div class="field"><label>Dân tộc</label><input type="text" id="btvlDanToc" readonly></div>
-
-      <div class="section-title">Ảnh bài làm</div>
-      <div id="btvlAnhXemTruoc" class="chs-anh-xemtruoc">Chưa đính kèm ảnh.</div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-        <input type="file" id="btvlAnhInput" accept="image/*" style="display:none;">
-        <button class="btn btn-blue btn-sm" id="btvlChonAnhBtn">📎 Thêm ảnh bài làm</button>
-        <a href="#" target="_blank" rel="noopener" id="btvlXemBaiBtn" class="btn btn-clay btn-sm" style="display:none; text-decoration:none;">👁️ Xem bài đã nộp</a>
-      </div>
-      <p class="section-note" style="margin-top:8px;">Chọn ảnh xong là hệ thống nộp bài ngay — không cần bấm thêm nút nào khác. Chọn ảnh khác bất cứ lúc nào để nộp lại (bài mới sẽ thay cho bài cũ).</p>
       <div id="btvlMsg" class="msg"></div>
       <div id="chamAiKetQuaCuaToi" style="display:none; margin-top:10px;"></div>
     </div>
@@ -1044,6 +1035,24 @@
         Thầy đang mở trang sẽ KHÔNG tự hiện ra, bấm nút bên dưới để lấy danh sách mới nhất.</p>
       <button class="btn btn-ghost btn-sm" id="btvlLamMoiBtn">🔄 Làm mới danh sách đã nộp</button>
       <div class="scroll-x"><table id="btvlDanhSachTable"></table></div>
+    </div>
+
+    <!-- ============ NỘP TỪNG BÀI TẬP RIÊNG (Bài 1..10) — mỗi bài 1 ảnh, nộp lại sẽ tự xóa ảnh cũ ============ -->
+    <div class="card">
+      <h2>📚 Nộp từng bài tập</h2>
+      <p class="section-note">Mỗi bài chỉ giữ <b>duy nhất 1 ảnh mới nhất</b> — chọn ảnh khác để nộp lại,
+        ảnh cũ của đúng bài đó sẽ tự động bị xóa khỏi Drive. Cần nhập Họ và tên ở khung phía trên trước khi nộp.</p>
+      <div id="btvlBaiTapWrap"></div>
+    </div>
+
+    <!-- ============ QUẢN LÝ DANH SÁCH BÀI TẬP (chỉ giáo viên) ============ -->
+    <div class="card" id="btvlQuanLyCard" style="display:none;">
+      <h2>⚙️ Quản lý danh sách bài tập</h2>
+      <p class="section-note">Đổi tên, thêm hoặc xóa bớt các bài ở mục "Nộp từng bài tập" phía trên —
+        sửa xong áp dụng ngay cho cả lớp, không cần đụng tới mã nguồn trang web.</p>
+      <div id="btvlQuanLyDs"></div>
+      <button class="btn btn-blue btn-sm" id="btvlThemBaiBtn" style="margin-top:10px;">+ Thêm bài tập mới</button>
+      <div id="btvlQuanLyMsg" class="msg"></div>
     </div>
 
     <!-- ============ CHẤM BÀI BẰNG AI (GEMINI) — chỉ giáo viên thấy ============ -->
@@ -1089,6 +1098,8 @@
 
       <div class="section-title" style="margin-top:18px;">4) Chờ duyệt (<span id="chamAiChoDuyetDem">0</span>)</div>
       <button class="btn btn-clay btn-sm" id="chamAiLamMoiBtn">🔄 Làm mới danh sách chờ duyệt</button>
+      <button class="btn btn-blue btn-sm" id="chamAiDuyetTatCaBtn">✅ Duyệt tất cả</button>
+      <p class="section-note" style="margin:4px 0 0;">"Duyệt tất cả" sẽ công bố điểm/nhận xét đang hiển thị của TỪNG bài (đúng theo điểm, nhận xét, tên học sinh đang thấy trên mỗi thẻ bên dưới) — Thầy nên sửa lại số liệu nào cần sửa trước khi bấm. Bài nào chưa xác định được tên học sinh (từ Google Photos/link) sẽ tự động bị bỏ qua để Thầy duyệt tay riêng.</p>
       <div id="chamAiChoDuyetList" style="margin-top:10px;"></div>
 
       <div class="section-title" style="margin-top:18px;">5) Đã công bố cho học sinh</div>
@@ -1749,6 +1760,19 @@ async function guiAnhBaiTapLenDrive(duLieuAnh, tenHocSinh){
   if(!kq.ok) throw new Error(kq.loi || 'Không tải được ảnh bài làm lên Drive.');
   return { id: kq.id, link: kq.link || anhDriveLon(kq.id), thuMucId: kq.thuMucId || null };
 }
+/* Xóa 1 ảnh bài làm CŨ trên Drive khi học sinh nộp lại (mỗi bài chỉ giữ đúng 1 ảnh mới nhất) —
+   gọi cùng Apps Script Web App ở trên với hanhDong: 'xoa'. Cần Apps Script có xử lý hành động
+   này (mã mẫu bàn giao riêng) — nếu Apps Script CHƯA có, lệnh này sẽ lỗi âm thầm (best-effort,
+   không chặn việc nộp bài mới), ảnh cũ khi đó vẫn còn trên Drive cho tới khi Apps Script được bổ sung. */
+async function xoaAnhBaiTapTrenDrive(anhId){
+  if(!dungBaiTapDrive() || !anhId) return;
+  const res = await fetch(BAITAP_DRIVE_URL, {
+    method: 'POST',
+    body: JSON.stringify({ ma: MA_BAITAP, hanhDong: 'xoa', id: anhId })
+  });
+  const kq = await res.json();
+  if(!kq.ok) throw new Error(kq.loi || 'Không xóa được ảnh cũ trên Drive.');
+}
 
 /* ---------------------------------------------------------------
    CHẤM BÀI BẰNG AI (Gemini) — TỪ GOOGLE PHOTOS
@@ -1804,6 +1828,7 @@ const nhapMaToTuanRef = db.ref('nhapMaToTuan2026'); // nhánh tạm để Rules 
 const khoanThuRef = db.ref('khoanthu2026'); // các khoản thu đầu năm — công khai đọc, mỗi người tự ghi phần của mình
 const quyLopRef = db.ref('quylop2026'); // quỹ lớp theo từng đợt thu — công khai đọc (minh bạch với PH/HS), CHỈ giáo viên ghi được
 const baiTapVatLy10Ref = db.ref('baitap2026/vatly10'); // nộp bài tập chuyên đề Vật lý 10 — công khai đọc (để đối chiếu đã nộp/chưa nộp), mỗi học sinh tự ghi đúng phần của mình (khóa theo uid), riêng việc SỬA tên do giáo viên (admin) thực hiện
+const baiTapDanhSachRef = db.ref('caidat2026/baiTapDanhSach'); // danh sách tên các bài tập (Bài 1..10) — công khai đọc, CHỈ giáo viên (admin) ghi được; giáo viên tự đổi tên/thêm/bớt trực tiếp trên web, không cần sửa mã nguồn
 const taiKhoanHocSinhRef = db.ref('taiKhoanHocSinh2026'); // sổ ghi lại tài khoản đăng nhập đã cấp cho học sinh (email nội bộ, KHÔNG chứa mật khẩu) — chỉ giáo viên (admin) đọc/ghi được
 const phongTraoRef = db.ref('phongtrao2026'); // phong trào của lớp — công khai đọc/ghi, giống Bảng tin/Đăng ký lao động
 const hosoRef   = db.ref('hoso2026/hoso');         // riêng tư: khóa theo uid, giống hotro2026
@@ -7162,22 +7187,50 @@ function btvlDongBoTuRoster(){
 }
 $('btvlHoTen').oninput = btvlDongBoTuRoster;
 
+/* ================================================================
+   NỘP TỪNG BÀI TẬP RIÊNG (Bài 1..10) — thay cho khung nộp 1 ảnh duy nhất trước đây.
+   Cấu trúc dữ liệu: baitap2026/vatly10/{uid}/baiTap/{baiId} = {anhId, anhLink, thuMucId, luc}
+   Danh sách tên các bài (baiTapDanhSach, đọc từ Firebase caidat2026/baiTapDanhSach) để giáo
+   viên tự đổi tên/thêm/bớt được ngay trên web — chưa có dữ liệu (mới triển khai lần đầu) thì
+   dùng mặc định 10 bài "Bài 1".."Bài 10". Để không mất bài các em đã nộp theo cách CŨ (1 ảnh
+   duy nhất, trước khi có tính năng này), nếu bản ghi chưa có baiTap.bai1 nhưng có anhId ở cấp
+   ngoài (kiểu cũ) thì tự động hiển thị ảnh đó làm "Bài 1" — không ghi đè, không xóa dữ liệu cũ.
+   ================================================================ */
+const BAITAP_MAC_DINH = Array.from({length:10}, (_,i)=> ({ id: 'bai'+(i+1), ten: 'Bài '+(i+1) }));
+let baiTapDanhSach = BAITAP_MAC_DINH.slice();
+function danhSachBaiTapHienTai(){ return baiTapDanhSach.length ? baiTapDanhSach : BAITAP_MAC_DINH; }
+function duLieuBaiCuaUid(bt, baiId, laBaiDauTien){
+  if(bt && bt.baiTap && bt.baiTap[baiId]) return bt.baiTap[baiId];
+  if(laBaiDauTien && bt && bt.anhId) return { anhId: bt.anhId, anhLink: bt.anhLink, thuMucId: bt.thuMucId, luc: bt.luc };
+  return null;
+}
+
 function renderBtvlCuaToi(){
-  if(!$('btvlAnhXemTruoc')) return;
   const bt = baiTapVatLy10CuaToi;
-  if(bt){
-    if(!$('btvlHoTen').value) $('btvlHoTen').value = bt.hoTen || '';
-    btvlDongBoTuRoster();
-    $('btvlAnhXemTruoc').innerHTML = bt.anhId
-      ? `✅ Đã nộp bài.<br><img src="${anhDriveNho(bt.anhId)}" alt="Bài làm" style="max-width:220px;max-height:280px;border-radius:10px;border:2px solid var(--line);margin-top:6px;display:block;">`
-      : 'Chưa đính kèm ảnh.';
-    const nut = $('btvlXemBaiBtn');
-    if(bt.anhId){ nut.href = bt.anhLink || anhDriveLon(bt.anhId); nut.style.display = 'inline-block'; }
-    else nut.style.display = 'none';
-  } else {
-    $('btvlAnhXemTruoc').textContent = 'Chưa đính kèm ảnh.';
-    $('btvlXemBaiBtn').style.display = 'none';
-  }
+  if(bt && !$('btvlHoTen').value) $('btvlHoTen').value = bt.hoTen || '';
+  if(bt) btvlDongBoTuRoster();
+  renderBtvlBaiTapCuaToi();
+}
+
+function renderBtvlBaiTapCuaToi(){
+  const wrap = $('btvlBaiTapWrap');
+  if(!wrap) return;
+  const bt = baiTapVatLy10CuaToi;
+  const ds = danhSachBaiTapHienTai();
+  wrap.innerHTML = ds.map((b,i)=>{
+    const dl = duLieuBaiCuaUid(bt, b.id, i===0);
+    return `<div class="section-title" style="margin-top:${i===0?'8px':'20px'};">${esc(b.ten)}</div>
+      <div class="chs-anh-xemtruoc">${dl && dl.anhId
+        ? `✅ Đã nộp.<br><img src="${anhDriveNho(dl.anhId)}" alt="${esc(b.ten)}" style="max-width:200px;max-height:260px;border-radius:10px;border:2px solid var(--line);margin-top:6px;display:block;">`
+        : 'Chưa đính kèm ảnh.'}</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:6px;">
+        <input type="file" id="btvlInput-${b.id}" accept="image/*" style="display:none;">
+        <button class="btn btn-blue btn-sm" data-btvl-chon="${b.id}">📎 ${dl && dl.anhId ? 'Nộp lại' : 'Thêm ảnh'}</button>
+        ${dl && dl.anhId ? `<a href="${esc(dl.anhLink || anhDriveLon(dl.anhId))}" target="_blank" rel="noopener" class="btn btn-clay btn-sm" style="text-decoration:none;">👁️ Xem bài đã nộp</a>` : ''}
+      </div>`;
+  }).join('');
+  wrap.querySelectorAll('[data-btvl-chon]').forEach(btn=> btn.onclick = ()=> $('btvlInput-'+btn.getAttribute('data-btvl-chon')).click());
+  ds.forEach(b=>{ const input = $('btvlInput-'+b.id); if(input) input.onchange = e=> btvlNopMotBai(b.id, e); });
 }
 
 async function napBaiTapVatLy10CuaToi(){
@@ -7187,38 +7240,109 @@ async function napBaiTapVatLy10CuaToi(){
   renderBtvlCuaToi();
 }
 
-$('btvlChonAnhBtn').onclick = ()=> $('btvlAnhInput').click();
-$('btvlAnhInput').onchange = async e=>{
+async function btvlNopMotBai(baiId, e){
   const file = e.target.files[0];
   e.target.value = '';
   if(!file) return;
   if(!/^image\//.test(file.type)){ showMsg($('btvlMsg'), 'Vui lòng chọn đúng tệp ảnh.', 'err'); return; }
   const hoTen = $('btvlHoTen').value.trim();
-  if(!hoTen){ showMsg($('btvlMsg'), 'Vui lòng nhập họ tên trước khi đính kèm ảnh.', 'err'); return; }
+  if(!hoTen){ showMsg($('btvlMsg'), 'Vui lòng nhập họ và tên ở khung phía trên trước khi nộp.', 'err'); return; }
   if(!myUid){ showMsg($('btvlMsg'), 'Đang kết nối, thử lại sau vài giây.', 'info'); return; }
   if(!dungBaiTapDrive()){ showMsg($('btvlMsg'), 'Chưa cấu hình nơi lưu bài (Drive), báo thầy kiểm tra.', 'err'); return; }
 
-  showMsg($('btvlMsg'), 'Đang tải bài lên...', 'info');
+  const ds = danhSachBaiTapHienTai();
+  const tenBai = (ds.find(b=> b.id === baiId) || {}).ten || baiId;
+  showMsg($('btvlMsg'), `Đang tải "${tenBai}" lên...`, 'info');
   try{
+    const btCu = baiTapVatLy10CuaToi;
+    const dlCu = duLieuBaiCuaUid(btCu, baiId, ds[0] && ds[0].id === baiId);
+    const anhIdCu = dlCu && dlCu.anhId;
+
     const anhNen = await nenAnh(file, 1400, 0.85);
-    const kqDrive = await guiAnhBaiTapLenDrive(anhNen, hoTen);
+    const kqDrive = await guiAnhBaiTapLenDrive(anhNen, `${hoTen} - ${tenBai}`);
     const hs = btvlTimTrongRoster(hoTen);
-    const banGhi = {
+
+    const capNhat = {
       hoTen,
       ngaySinh: (hs && hs.dob) || $('btvlNgaySinh').value || '',
       gioiTinh: (hs && hs.gender) || $('btvlGioiTinh').value || '',
       danToc: (hs && hs.ethnic) || $('btvlDanToc').value || '',
-      anhId: kqDrive.id,
-      anhLink: kqDrive.link,
-      thuMucId: kqDrive.thuMucId,
-      luc: new Date().toISOString()
     };
-    await baiTapVatLy10Ref.child(myUid).set(banGhi);
-    baiTapVatLy10CuaToi = banGhi;
+    const banGhiBai = { anhId: kqDrive.id, anhLink: kqDrive.link, thuMucId: kqDrive.thuMucId, luc: new Date().toISOString() };
+    capNhat['baiTap/' + baiId] = banGhiBai;
+    await baiTapVatLy10Ref.child(myUid).update(capNhat);
+
+    baiTapVatLy10CuaToi = Object.assign({}, btCu, capNhat, {
+      baiTap: Object.assign({}, (btCu && btCu.baiTap) || {}, { [baiId]: banGhiBai })
+    });
     renderBtvlCuaToi();
-    showMsg($('btvlMsg'), '✅ Đã nộp bài thành công.', 'ok');
+    showMsg($('btvlMsg'), `✅ Đã nộp "${tenBai}" thành công.`, 'ok');
+
+    // Ảnh cũ (nếu có) chỉ xóa SAU KHI ảnh mới đã lưu thành công vào Firebase, để không mất dữ
+    // liệu nếu có lỗi giữa chừng — xóa kiểu "cố gắng hết sức" (best-effort), không chặn việc nộp bài.
+    if(anhIdCu && anhIdCu !== kqDrive.id) xoaAnhBaiTapTrenDrive(anhIdCu).catch(()=>{});
   }catch(err){ showMsg($('btvlMsg'), baoLoi(err), 'err'); }
-};
+}
+
+/* ---- Quản lý danh sách bài tập (giáo viên tự đổi tên/thêm/bớt trực tiếp trên web) ---- */
+async function napBaiTapDanhSach(){
+  try{
+    const dl = (await baiTapDanhSachRef.once('value')).val();
+    if(dl && Object.keys(dl).length){
+      baiTapDanhSach = Object.keys(dl).sort((a,b)=> (dl[a].thuTu||0)-(dl[b].thuTu||0))
+        .map(id=> ({ id, ten: dl[id].ten || id }));
+    }
+  }catch(e){ /* giữ mặc định nếu chưa đọc được */ }
+  renderBtvlBaiTapCuaToi();
+  renderBtvlQuanLy();
+}
+function renderBtvlQuanLy(){
+  const card = $('btvlQuanLyCard'), khung = $('btvlQuanLyDs');
+  if(!card || !khung) return;
+  card.style.display = isAdmin ? 'block' : 'none';
+  if(!isAdmin) return;
+  const ds = danhSachBaiTapHienTai();
+  khung.innerHTML = ds.map((b,i)=> `<div class="sap-xep-item">
+      <span class="sap-xep-icon">📚</span>
+      <input class="sap-xep-ten-input" data-btvl-doiten="${b.id}" value="${esc(b.ten)}" style="flex:1;">
+      <button class="btn-len-xuong" data-btvl-len="${b.id}" ${i===0?'disabled':''} title="Chuyển lên">↑</button>
+      <button class="btn-len-xuong" data-btvl-xuong="${b.id}" ${i===ds.length-1?'disabled':''} title="Chuyển xuống">↓</button>
+      <button class="btn-xoa-mau" data-btvl-xoabai="${b.id}" title="Xóa bài này khỏi danh sách">🗑️</button>
+    </div>`).join('');
+  khung.querySelectorAll('[data-btvl-doiten]').forEach(inp=> inp.onchange = ()=> btvlLuuDanhSach(ds.map(b=>
+    b.id === inp.getAttribute('data-btvl-doiten') ? Object.assign({}, b, {ten: inp.value.trim() || b.ten}) : b)));
+  khung.querySelectorAll('[data-btvl-len]').forEach(btn=> btn.onclick = ()=>{
+    const i = ds.findIndex(b=> b.id === btn.getAttribute('data-btvl-len'));
+    if(i > 0){ const moi = ds.slice(); [moi[i-1],moi[i]] = [moi[i],moi[i-1]]; btvlLuuDanhSach(moi); }
+  });
+  khung.querySelectorAll('[data-btvl-xuong]').forEach(btn=> btn.onclick = ()=>{
+    const i = ds.findIndex(b=> b.id === btn.getAttribute('data-btvl-xuong'));
+    if(i < ds.length-1){ const moi = ds.slice(); [moi[i],moi[i+1]] = [moi[i+1],moi[i]]; btvlLuuDanhSach(moi); }
+  });
+  khung.querySelectorAll('[data-btvl-xoabai]').forEach(btn=> btn.onclick = ()=>{
+    const id = btn.getAttribute('data-btvl-xoabai');
+    const b = ds.find(x=> x.id===id);
+    if(!confirm(`Xóa "${b?b.ten:id}" khỏi danh sách? (Ảnh học sinh đã nộp cho bài này vẫn còn nguyên trên Drive, chỉ là không còn hiện ô nộp bài nữa — thêm lại đúng mã "${id}" nếu muốn hiện lại.)`)) return;
+    btvlLuuDanhSach(ds.filter(x=> x.id !== id));
+  });
+}
+async function btvlLuuDanhSach(dsMoi){
+  try{
+    const ghi = {};
+    dsMoi.forEach((b,i)=> ghi[b.id] = { ten: b.ten, thuTu: i });
+    await baiTapDanhSachRef.set(ghi);
+    baiTapDanhSach = dsMoi;
+    renderBtvlBaiTapCuaToi(); renderBtvlQuanLy();
+    showMsg($('btvlQuanLyMsg'), '✅ Đã lưu danh sách bài tập.', 'ok');
+  }catch(e){ showMsg($('btvlQuanLyMsg'), baoLoi(e), 'err'); }
+}
+$('btvlThemBaiBtn') && ($('btvlThemBaiBtn').onclick = ()=>{
+  const ds = danhSachBaiTapHienTai();
+  let n = ds.length+1, idMoi = 'bai'+n;
+  while(ds.some(b=> b.id===idMoi)) idMoi = 'bai'+(++n);
+  btvlLuuDanhSach(ds.concat([{ id: idMoi, ten: 'Bài '+n }]));
+});
+napBaiTapDanhSach();
 
 function renderBtvlAdmin(){
   const card = $('btvlDanhSachCard');
@@ -7309,14 +7433,24 @@ $('chamAiNopWebBtn') && ($('chamAiNopWebBtn').onclick = async ()=>{
   if(!isAdmin) return;
   const nut = $('chamAiNopWebBtn'); nut.disabled = true;
   try{
-    const ds = Object.keys(baiTapVatLy10TatCa).map(uid=> Object.assign({uid}, baiTapVatLy10TatCa[uid])).filter(b=> b.anhId);
+    // Mỗi học sinh giờ có thể nộp NHIỀU bài (Bài 1..10) — dàn phẳng thành 1 danh sách các
+    // (học sinh, bài) cần chấm, mỗi bài chấm và công bố điểm ĐỘC LẬP với các bài khác.
+    const dsBai = danhSachBaiTapHienTai();
+    const ds = [];
+    Object.keys(baiTapVatLy10TatCa).forEach(uid=>{
+      const bt = Object.assign({uid}, baiTapVatLy10TatCa[uid]);
+      dsBai.forEach((bai,i)=>{
+        const dl = duLieuBaiCuaUid(bt, bai.id, i===0);
+        if(dl && dl.anhId) ds.push({ hoTen: bt.hoTen, anhId: dl.anhId, anhLink: dl.anhLink, baiId: bai.id, tenBai: bai.ten });
+      });
+    });
     let soLuong = 0;
     for(const b of ds){
-      const khoa = chamAiKhoaTen(b.hoTen);
+      const khoa = chamAiKhoaTen(b.hoTen) + '|' + b.baiId;
       if(chamAiDaDuyet[khoa]) continue; // đã có điểm công bố rồi thì bỏ qua, tránh chấm lại tốn phí API
       await chamBaiAIRef.child('hangCho').push({
-        nguon: 'nopweb', hoTenGoi: b.hoTen, khoa, anhId: b.anhId, anhLink: b.anhLink || '',
-        luc: Date.now(), trangThai: 'cho_xu_ly'
+        nguon: 'nopweb', hoTenGoi: b.hoTen, khoa, baiId: b.baiId, tenBai: b.tenBai,
+        anhId: b.anhId, anhLink: b.anhLink || '', luc: Date.now(), trangThai: 'cho_xu_ly'
       });
       soLuong++;
     }
@@ -7471,6 +7605,52 @@ async function napChamAiChoDuyet(){
 }
 $('chamAiLamMoiBtn') && ($('chamAiLamMoiBtn').onclick = async ()=>{ await napChamAiChoDuyet(); await napChamAiDaDuyet(); });
 
+/* Duyệt & công bố hàng loạt TẤT CẢ các bài đang chờ duyệt — dùng đúng điểm/nhận xét/tên
+   đang hiển thị trên mỗi thẻ (Thầy sửa tay từng ô trước nếu cần, rồi bấm nút này 1 lần
+   thay vì bấm "Duyệt & công bố" lặp lại cho từng bài). Bài nào chưa xác định được tên học
+   sinh (nguồn Google Photos/dán link, AI đọc tên không khớp ai trong lớp) sẽ tự bỏ qua,
+   Thầy chọn tên rồi duyệt tay riêng bài đó. */
+$('chamAiDuyetTatCaBtn') && ($('chamAiDuyetTatCaBtn').onclick = async ()=>{
+  if(!isAdmin) return;
+  const host = $('chamAiChoDuyetList');
+  const ids = Object.keys(chamAiChoDuyet);
+  if(!ids.length){ alert('Không có bài nào đang chờ duyệt.'); return; }
+  if(!confirm(`Duyệt & công bố toàn bộ ${ids.length} bài đang chờ duyệt, theo đúng điểm/nhận xét/tên đang hiển thị?`)) return;
+  const nut = $('chamAiDuyetTatCaBtn'); nut.disabled = true;
+  let soThanhCong = 0, soBoQua = 0;
+  for(const id of ids){
+    const x = chamAiChoDuyet[id];
+    if(!x) continue;
+    let hoTen = x.hoTenGoi || '';
+    if(x.nguon === 'googlephotos' || x.nguon === 'link'){
+      const sel = host.querySelector(`[data-cham-ai-ten="${id}"]`);
+      hoTen = sel ? sel.value : '';
+    }
+    const diemInput = host.querySelector(`[data-cham-ai-diem="${id}"]`);
+    const nhanXetInput = host.querySelector(`[data-cham-ai-nhanxet="${id}"]`);
+    const diem = Math.max(0, Math.min(10, parseFloat(diemInput ? diemInput.value : x.diem)));
+    if(!hoTen || isNaN(diem)){ soBoQua++; continue; } // thiếu tên hoặc điểm không hợp lệ -> bỏ qua, duyệt tay riêng
+    const baiId = x.baiId || 'bai1';
+    const khoa = chamAiKhoaTen(hoTen) + '|' + baiId;
+    try{
+      await chamBaiAIRef.child('daDuyet').child(khoa).set({
+        hoTen, diem: Math.round(diem*10)/10,
+        nhanXet: (nhanXetInput ? nhanXetInput.value.trim() : (x.nhanXet||'')),
+        nguon: x.nguon, anhId: x.anhId || '', anhLink: x.anhLink || '',
+        baiId, tenBai: x.tenBai || '', ngayDuyet: Date.now()
+      });
+      await chamBaiAIRef.child('choDuyet').child(id).remove();
+      delete chamAiChoDuyet[id];
+      soThanhCong++;
+    }catch(e){ soBoQua++; }
+  }
+  renderChamAiChoDuyet();
+  await napChamAiDaDuyet();
+  const ghiChuBoQua = soBoQua ? ` — đã bỏ qua ${soBoQua} bài (chưa xác định được tên học sinh hoặc điểm không hợp lệ), Thầy duyệt tay riêng các bài đó.` : '';
+  showMsg($('chamAiNopWebMsg'), `✅ Đã duyệt & công bố hàng loạt ${soThanhCong} bài${ghiChuBoQua}`, 'ok');
+  nut.disabled = false;
+});
+
 function renderChamAiChoDuyet(){
   const host = $('chamAiChoDuyetList');
   if(!host) return;
@@ -7506,6 +7686,7 @@ function renderChamAiChoDuyet(){
             <div class="field"><label>Điểm (0–10)</label><input type="number" min="0" max="10" step="0.1" value="${x.diem!=null?x.diem:''}" data-cham-ai-diem="${x.id}"></div>
             <div class="field"><label>Nguồn</label><input type="text" value="${x.nguon==='nopweb'?'Nộp qua web':(x.nguon==='link'?'Link ảnh':'Google Photos')}" readonly></div>
           </div>
+          ${x.tenBai ? `<p class="section-note" style="margin:-4px 0 8px;"><b>📚 ${esc(x.tenBai)}</b></p>` : ''}
           <div class="field"><label>Nhận xét của AI</label><textarea data-cham-ai-nhanxet="${x.id}" style="min-height:70px;">${esc(x.nhanXet||'')}</textarea></div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="btn btn-blue btn-sm" data-cham-ai-duyet="${x.id}">✅ Duyệt &amp; công bố</button>
@@ -7539,11 +7720,13 @@ function renderChamAiChoDuyet(){
     const nhanXetInput = host.querySelector(`[data-cham-ai-nhanxet="${id}"]`);
     const diem = Math.max(0, Math.min(10, parseFloat(diemInput.value)));
     if(isNaN(diem)){ alert('Vui lòng nhập điểm hợp lệ (0–10).'); return; }
-    const khoa = chamAiKhoaTen(hoTen);
+    const baiId = x.baiId || 'bai1'; // bài nộp cũ (trước khi có Bài 1..10) mặc định tính là "bai1"
+    const khoa = chamAiKhoaTen(hoTen) + '|' + baiId;
     try{
       await chamBaiAIRef.child('daDuyet').child(khoa).set({
         hoTen, diem: Math.round(diem*10)/10, nhanXet: nhanXetInput.value.trim(),
-        nguon: x.nguon, anhId: x.anhId || '', anhLink: x.anhLink || '', ngayDuyet: Date.now()
+        nguon: x.nguon, anhId: x.anhId || '', anhLink: x.anhLink || '',
+        baiId, tenBai: x.tenBai || '', ngayDuyet: Date.now()
       });
       await chamBaiAIRef.child('choDuyet').child(id).remove();
       delete chamAiChoDuyet[id];
@@ -7575,11 +7758,11 @@ function renderChamAiDaDuyet(){
   if(!bang) return;
   const ds = Object.keys(chamAiDaDuyet).map(k=> Object.assign({khoa:k}, chamAiDaDuyet[k]))
     .sort((a,b)=> (a.hoTen||'').localeCompare(b.hoTen||'', 'vi'));
-  let h = `<tr><th>STT</th><th>Họ và tên</th><th>Điểm</th><th>Nhận xét</th><th>Nguồn</th><th>Ngày duyệt</th></tr>`;
-  if(!ds.length){ h += `<tr><td colspan="6" style="text-align:center;color:var(--ink-soft);">Chưa công bố điểm nào.</td></tr>`; }
+  let h = `<tr><th>STT</th><th>Họ và tên</th><th>Bài</th><th>Điểm</th><th>Nhận xét</th><th>Nguồn</th><th>Ngày duyệt</th></tr>`;
+  if(!ds.length){ h += `<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);">Chưa công bố điểm nào.</td></tr>`; }
   else ds.forEach((x,i)=>{
     h += `<tr>
-      <td>${i+1}</td><td>${esc(x.hoTen||'')}</td><td><b>${x.diem!=null?x.diem:''}</b>/10</td>
+      <td>${i+1}</td><td>${esc(x.hoTen||'')}</td><td>${esc(x.tenBai||'')||'—'}</td><td><b>${x.diem!=null?x.diem:''}</b>/10</td>
       <td>${esc(x.nhanXet||'')}</td><td>${x.nguon==='nopweb'?'Nộp web':(x.nguon==='link'?'Link ảnh':'Google Photos')}</td>
       <td>${x.ngayDuyet ? new Date(x.ngayDuyet).toLocaleString('vi-VN') : ''}</td>
     </tr>`;
@@ -7593,13 +7776,19 @@ function renderChamAiKetQuaCuaToi(){
   if(!host) return;
   const hoTen = ($('btvlHoTen') && $('btvlHoTen').value.trim()) || (baiTapVatLy10CuaToi && baiTapVatLy10CuaToi.hoTen) || '';
   if(!hoTen){ host.style.display = 'none'; return; }
-  const khoa = chamAiKhoaTen(hoTen);
-  const kq = chamAiDaDuyet[khoa];
-  if(!kq){ host.style.display = 'none'; return; }
+  const goc = chamAiKhoaTen(hoTen);
+  // Mỗi bài (Bài 1..10) có điểm công bố RIÊNG — gom hết các bài đã có điểm của đúng học sinh này lại.
+  const ketQua = danhSachBaiTapHienTai()
+    .map(b=> ({ ten: b.ten, kq: chamAiDaDuyet[goc + '|' + b.id] }))
+    .filter(x=> x.kq);
+  if(!ketQua.length){ host.style.display = 'none'; return; }
   host.style.display = 'block';
   host.innerHTML = `<div class="card" style="background:var(--sand);">
-    <b>🤖 Điểm AI đã chấm: ${kq.diem}/10</b>
-    ${kq.nhanXet ? `<p class="section-note" style="margin-top:6px;">"${esc(kq.nhanXet)}"</p>` : ''}
+    <b>🤖 Điểm AI đã chấm:</b>
+    ${ketQua.map(x=> `<div style="margin-top:6px;">
+        <b>${esc(x.ten)}: ${x.kq.diem}/10</b>
+        ${x.kq.nhanXet ? `<p class="section-note" style="margin:2px 0 0;">"${esc(x.kq.nhanXet)}"</p>` : ''}
+      </div>`).join('')}
   </div>`;
 }
 if($('btvlHoTen')) $('btvlHoTen').addEventListener('blur', renderChamAiKetQuaCuaToi);
