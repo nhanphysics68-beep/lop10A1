@@ -1111,6 +1111,7 @@
       <p class="section-note">Bài nào Apps Script gặp lỗi lúc chấm (ảnh hỏng, hết quota Gemini, link sai...) sẽ nằm ở đây thay vì vào "Chờ duyệt" — xem lý do cụ thể để biết cách xử lý.</p>
       <button class="btn btn-ghost btn-sm" id="chamAiLoiLamMoiBtn">🔄 Kiểm tra bài lỗi</button>
       <button class="btn btn-primary btn-sm" id="chamAiLoiThuLaiTatCaBtn">🔁 Chấm lại tất cả bài lỗi</button>
+      <button class="btn btn-ghost btn-sm" id="chamAiLoiXoaTatCaBtn" style="color:#b33;">🗑️ Xóa tất cả bài lỗi</button>
       <div id="chamAiLoiList" style="margin-top:10px;"></div>
 
       <div class="section-title" style="margin-top:18px;">5) Đã công bố cho học sinh</div>
@@ -7997,6 +7998,24 @@ async function napChamAiLoi(){
 }
 $('chamAiLoiLamMoiBtn') && ($('chamAiLoiLamMoiBtn').onclick = napChamAiLoi);
 $('chamAiLoiThuLaiTatCaBtn') && ($('chamAiLoiThuLaiTatCaBtn').onclick = chamAiThuLaiTatCaLoi);
+
+/* Xóa HÀNG LOẠT tất cả bài đang lỗi — dùng khi Thầy đã xem qua và chỉ muốn dọn sạch danh sách
+   (VD: toàn bộ đều là lỗi link sai do học sinh dán nhầm, không cần chấm lại). */
+async function chamAiXoaTatCaLoi(){
+  if(!isAdmin) return;
+  let ds = {};
+  try{ ds = (await chamBaiAIRef.child('loi').once('value')).val() || {}; }
+  catch(e){ alert(baoLoi(e)); return; }
+  const ids = Object.keys(ds);
+  if(!ids.length){ alert('Không có bài nào đang lỗi.'); return; }
+  if(!confirm(`Xóa VĨNH VIỄN toàn bộ ${ids.length} bài đang trong danh sách lỗi? Thao tác này KHÔNG đưa bài trở lại hàng chờ chấm — chỉ dùng khi Thầy chắc chắn không cần chấm lại các bài này (VD học sinh cần nộp lại từ đầu).`)) return;
+  try{
+    await chamBaiAIRef.child('loi').remove();
+    alert(`✅ Đã xóa ${ids.length} bài khỏi danh sách lỗi.`);
+    await napChamAiLoi();
+  }catch(e){ alert(baoLoi(e)); }
+}
+$('chamAiLoiXoaTatCaBtn') && ($('chamAiLoiXoaTatCaBtn').onclick = chamAiXoaTatCaLoi);
 
 /* Chấm lại HÀNG LOẠT tất cả các bài đang lỗi — đưa nguyên "job" đã lưu trở lại hàng chờ để
    Apps Script (đã đổi sang model Gemini mới) chấm lại tự động ở lượt chạy kế tiếp. Bài nào
