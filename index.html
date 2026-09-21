@@ -7599,13 +7599,23 @@ if($('btvlLamMoiBtn')) $('btvlLamMoiBtn').onclick = async ()=>{
 let chamAiChoDuyet = {};   // cache đang hiển thị ở bước duyệt
 let chamAiDaDuyet  = {};   // cache bảng đã công bố
 
-function chamAiKhoaTen(ten){
+function chamAiKhoaTen(ten, uid){
   const slugGoc = slugTenDangNhap(ten);
-  const trungTen = roster.filter(hs=> slugTenDangNhap(hs.name) === slugGoc);
+  const trungSlug = roster.filter(hs=> slugTenDangNhap(hs.name) === slugGoc);
   let slug = slugGoc;
-  if(trungTen.length > 1){
-    const viTri = trungTen.findIndex(hs=> hs.name === ten);
-    if(viTri > 0) slug = slugGoc + (viTri + 1);
+  if(trungSlug.length > 1){
+    const trungYHet = trungSlug.filter(hs=> hs.name === ten);
+    if(trungYHet.length > 1){
+      // 2+ học sinh trong lớp trùng Y HỆT tên chữ (không thể phân biệt chỉ bằng tên) — PHẢI dùng
+      // uid để tách khóa riêng cho từng em, nếu không điểm của em nộp SAU sẽ ghi đè lên điểm của
+      // em nộp TRƯỚC (đã từng xảy ra thật: lớp có 2 cặp trùng tên, làm mất 2 điểm đã chấm).
+      // uid chỉ có khi nộp qua web; nguồn Google Photos/dán link không có uid nên vẫn dùng slug
+      // gốc như cũ — Thầy cần tự để ý phân biệt các trường hợp này khi duyệt tay.
+      slug = uid ? (slugGoc + '_' + uid.slice(-6)) : slugGoc;
+    } else {
+      const viTri = trungSlug.findIndex(hs=> hs.name === ten);
+      if(viTri > 0) slug = slugGoc + (viTri + 1);
+    }
   }
   return slug || ('hs_' + Date.now());
 }
@@ -7623,15 +7633,17 @@ $('chamAiNopWebBtn') && ($('chamAiNopWebBtn').onclick = async ()=>{
       const bt = Object.assign({uid}, baiTapVatLy10TatCa[uid]);
       dsBai.forEach((bai,i)=>{
         const dl = duLieuBaiCuaUid(bt, bai.id, i===0);
-        if(dl && dl.anhId) ds.push({ hoTen: bt.hoTen, anhId: dl.anhId, anhLink: dl.anhLink, baiId: bai.id, tenBai: bai.ten });
+        if(dl && dl.anhId) ds.push({ hoTen: bt.hoTen, uid: bt.uid, anhId: dl.anhId, anhLink: dl.anhLink, baiId: bai.id, tenBai: bai.ten });
       });
     });
     let soLuong = 0;
     for(const b of ds){
-      const khoa = chamAiKhoaTen(b.hoTen) + '|' + b.baiId;
+      // Truyền kèm uid để chamAiKhoaTen tự tách riêng 2 học sinh TRÙNG Y HỆT tên chữ (nếu có) —
+      // nếu không, điểm của em nộp sau sẽ ghi đè lên điểm của em nộp trước do cùng chung 1 khóa.
+      const khoa = chamAiKhoaTen(b.hoTen, b.uid) + '|' + b.baiId;
       if(chamAiDaDuyet[khoa]) continue; // đã có điểm công bố rồi thì bỏ qua, tránh chấm lại tốn phí API
       await chamBaiAIRef.child('hangCho').push({
-        nguon: 'nopweb', hoTenGoi: b.hoTen, khoa, baiId: b.baiId, tenBai: b.tenBai,
+        nguon: 'nopweb', hoTenGoi: b.hoTen, uid: b.uid || '', khoa, baiId: b.baiId, tenBai: b.tenBai,
         anhId: b.anhId, anhLink: b.anhLink || '', luc: Date.now(), trangThai: 'cho_xu_ly'
       });
       soLuong++;
@@ -7813,12 +7825,12 @@ $('chamAiDuyetTatCaBtn') && ($('chamAiDuyetTatCaBtn').onclick = async ()=>{
     const diem = Math.max(0, Math.min(10, parseFloat(diemInput ? diemInput.value : x.diem)));
     if(!hoTen || isNaN(diem)){ soBoQua++; continue; } // thiếu tên hoặc điểm không hợp lệ -> bỏ qua, duyệt tay riêng
     const baiId = x.baiId || 'bai1';
-    const khoa = chamAiKhoaTen(hoTen) + '|' + baiId;
+    const khoa = chamAiKhoaTen(hoTen, x.uid) + '|' + baiId;
     try{
       await chamBaiAIRef.child('daDuyet').child(khoa).set({
         hoTen, diem: Math.round(diem*10)/10,
         nhanXet: (nhanXetInput ? nhanXetInput.value.trim() : (x.nhanXet||'')),
-        nguon: x.nguon, anhId: x.anhId || '', anhLink: x.anhLink || '',
+        nguon: x.nguon, anhId: x.anhId || '', anhLink: x.anhLink || '', uid: x.uid || '',
         baiId, tenBai: x.tenBai || '', ngayDuyet: Date.now()
       });
       await chamBaiAIRef.child('choDuyet').child(id).remove();
@@ -7903,11 +7915,11 @@ function renderChamAiChoDuyet(){
     const diem = Math.max(0, Math.min(10, parseFloat(diemInput.value)));
     if(isNaN(diem)){ alert('Vui lòng nhập điểm hợp lệ (0–10).'); return; }
     const baiId = x.baiId || 'bai1'; // bài nộp cũ (trước khi có Bài 1..10) mặc định tính là "bai1"
-    const khoa = chamAiKhoaTen(hoTen) + '|' + baiId;
+    const khoa = chamAiKhoaTen(hoTen, x.uid) + '|' + baiId;
     try{
       await chamBaiAIRef.child('daDuyet').child(khoa).set({
         hoTen, diem: Math.round(diem*10)/10, nhanXet: nhanXetInput.value.trim(),
-        nguon: x.nguon, anhId: x.anhId || '', anhLink: x.anhLink || '',
+        nguon: x.nguon, anhId: x.anhId || '', anhLink: x.anhLink || '', uid: x.uid || '',
         baiId, tenBai: x.tenBai || '', ngayDuyet: Date.now()
       });
       await chamBaiAIRef.child('choDuyet').child(id).remove();
@@ -8055,7 +8067,9 @@ function renderChamAiKetQuaCuaToi(){
   if(!host) return;
   const hoTen = ($('btvlHoTen') && $('btvlHoTen').value.trim()) || (baiTapVatLy10CuaToi && baiTapVatLy10CuaToi.hoTen) || '';
   if(!hoTen){ host.style.display = 'none'; return; }
-  const goc = chamAiKhoaTen(hoTen);
+  // Truyền kèm uid của chính máy đang xem để tra đúng điểm của MÌNH khi trùng tên với bạn khác
+  // trong lớp (2 học sinh trùng y hệt tên chữ sẽ có khóa điểm khác nhau nhờ uid — xem chamAiKhoaTen).
+  const goc = chamAiKhoaTen(hoTen, myUid);
   // Mỗi bài (Bài 1..10) có điểm công bố RIÊNG — gom hết các bài đã có điểm của đúng học sinh này lại.
   const ketQua = danhSachBaiTapHienTai()
     .map(b=> ({ ten: b.ten, kq: chamAiDaDuyet[goc + '|' + b.id] }))
