@@ -8009,8 +8009,13 @@ async function chamAiXoaTatCaLoi(){
   const ids = Object.keys(ds);
   if(!ids.length){ alert('Không có bài nào đang lỗi.'); return; }
   if(!confirm(`Xóa VĨNH VIỄN toàn bộ ${ids.length} bài đang trong danh sách lỗi? Thao tác này KHÔNG đưa bài trở lại hàng chờ chấm — chỉ dùng khi Thầy chắc chắn không cần chấm lại các bài này (VD học sinh cần nộp lại từ đầu).`)) return;
+  // Lưu ý: Rules chỉ cấp quyền ghi ở TỪNG mục con "loi/$id", không cấp quyền ghi ở cấp "loi"
+  // (giống hangCho) — nên phải xóa theo kiểu multi-path update (mỗi id 1 đường dẫn riêng),
+  // KHÔNG được gọi .child('loi').remove() thẳng vì đó là ghi vào node "loi" cấp cha → bị chặn.
+  const capNhat = {};
+  ids.forEach(id=> capNhat['loi/' + id] = null);
   try{
-    await chamBaiAIRef.child('loi').remove();
+    await chamBaiAIRef.update(capNhat);
     alert(`✅ Đã xóa ${ids.length} bài khỏi danh sách lỗi.`);
     await napChamAiLoi();
   }catch(e){ alert(baoLoi(e)); }
