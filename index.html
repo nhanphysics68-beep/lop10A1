@@ -7493,13 +7493,14 @@ function renderBtvlAdmin(){
     });
   });
 
-  let h = `<tr><th>Họ và tên</th><th>Bài</th><th>Đính kèm</th><th>Xem lại</th><th>Trạng thái</th><th>Khóa/Mở</th><th></th></tr>`;
+  let h = `<tr><th>STT</th><th>Họ và tên</th><th>Bài</th><th>Đính kèm</th><th>Xem lại</th><th>Trạng thái</th><th>Khóa/Mở</th><th></th></tr>`;
   if(!dong.length){
-    h += `<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);">Chưa có học sinh nào nộp bài.</td></tr>`;
+    h += `<tr><td colspan="8" style="text-align:center;color:var(--ink-soft);">Chưa có học sinh nào nộp bài.</td></tr>`;
   } else {
-    dong.forEach(d=>{
+    dong.forEach((d,i)=>{
       const khoa = !!d.dl.khoa;
       h += `<tr>
+        <td>${i+1}</td>
         <td>${esc(d.hoTen||'')}</td>
         <td>${esc(d.tenBai||'')}</td>
         <td><img src="${anhDriveNho(d.dl.anhId)}" alt="Bài làm" style="max-width:60px;max-height:60px;border-radius:6px;object-fit:cover;"></td>
