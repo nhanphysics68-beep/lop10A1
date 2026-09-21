@@ -1107,6 +1107,11 @@
       <p class="section-note" style="margin:4px 0 0;">"Duyệt tất cả" sẽ công bố điểm/nhận xét đang hiển thị của TỪNG bài (đúng theo điểm, nhận xét, tên học sinh đang thấy trên mỗi thẻ bên dưới) — Thầy nên sửa lại số liệu nào cần sửa trước khi bấm. Bài nào chưa xác định được tên học sinh (từ Google Photos/link) sẽ tự động bị bỏ qua để Thầy duyệt tay riêng.</p>
       <div id="chamAiChoDuyetList" style="margin-top:10px;"></div>
 
+      <div class="section-title" style="margin-top:18px;">🐞 Bài bị lỗi khi chấm (nếu có)</div>
+      <p class="section-note">Bài nào Apps Script gặp lỗi lúc chấm (ảnh hỏng, hết quota Gemini, link sai...) sẽ nằm ở đây thay vì vào "Chờ duyệt" — xem lý do cụ thể để biết cách xử lý.</p>
+      <button class="btn btn-ghost btn-sm" id="chamAiLoiLamMoiBtn">🔄 Kiểm tra bài lỗi</button>
+      <div id="chamAiLoiList" style="margin-top:10px;"></div>
+
       <div class="section-title" style="margin-top:18px;">5) Đã công bố cho học sinh</div>
       <div class="scroll-x"><table id="chamAiDaDuyetTable"></table></div>
     </div>
@@ -1154,6 +1159,7 @@
       <h2>Bảng tin <span class="count-badge" id="btCountBadge">0</span></h2>
       <div id="btFeed"></div>
       <div id="btEmpty" class="empty" style="display:none;">Chưa có bài đăng nào. Hãy là người đầu tiên! 📰</div>
+      <button class="btn btn-ghost btn-sm" id="btXemThemBtn" style="display:none; margin-top:10px;">🔽 Xem thêm bài cũ hơn</button>
     </div>
   </div>
 
@@ -1520,15 +1526,33 @@
           dùng làm bằng chứng duy nhất cho việc gì.
         </p>
 
-        <div class="section-title" style="margin-top:6px;">Bước 1 — Nạp dữ liệu khuôn mặt học sinh</div>
+        <div class="section-title" style="margin-top:6px;">Bước 1 — (Tuỳ chọn) Thêm ảnh khuôn mặt bổ sung cho từng học sinh</div>
         <p class="section-note">
-          Lấy ảnh thẻ học sinh đã có sẵn ở mục "Thành viên lớp" để AI học đặc điểm khuôn mặt từng bạn
-          (chỉ những bạn đã có ảnh thẻ mới nhận diện được).
+          Ảnh thẻ ở mục "Thành viên lớp" chỉ có 1 ảnh/góc mặt cho mỗi em — thêm 2-3 ảnh góc khác nhau
+          (chính diện, nghiêng nhẹ...) ở đây sẽ giúp AI nhận diện chính xác hơn. Không bắt buộc — bỏ
+          qua bước này thì tính năng vẫn hoạt động bằng đúng ảnh thẻ như trước. Tối đa 5 ảnh/học sinh.
+          Chỉ giáo viên upload được, ảnh lưu riêng cho mục đích này, không công khai.
+        </p>
+        <div class="field">
+          <label>Chọn học sinh</label>
+          <select id="ndkmAnhChonHs"></select>
+        </div>
+        <div id="ndkmAnhDsHienTai" style="margin:8px 0;"></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+          <input type="file" id="ndkmAnhInput" accept="image/*" style="display:none;">
+          <button class="btn btn-blue btn-sm" id="ndkmAnhChonBtn">📎 Thêm ảnh cho học sinh này</button>
+        </div>
+        <div id="ndkmAnhMsg" class="msg"></div>
+
+        <div class="section-title" style="margin-top:20px;">Bước 2 — Nạp dữ liệu khuôn mặt học sinh</div>
+        <p class="section-note">
+          Lấy ảnh thẻ học sinh đã có sẵn ở mục "Thành viên lớp" (và ảnh bổ sung ở Bước 1 nếu có) để AI
+          học đặc điểm khuôn mặt từng bạn (chỉ những bạn đã có ít nhất 1 ảnh mới nhận diện được).
         </p>
         <button class="btn btn-primary btn-sm" id="ndkmNapDuLieuBtn">🧠 Nạp dữ liệu khuôn mặt</button>
         <div id="ndkmNapMsg" class="msg"></div>
 
-        <div class="section-title">Bước 2 — Bật camera nhận diện</div>
+        <div class="section-title">Bước 3 — Bật camera nhận diện</div>
         <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
           <button class="btn btn-primary btn-sm" id="ndkmBatCameraBtn" disabled>🎥 Bật camera</button>
           <button class="btn btn-ghost btn-sm" id="ndkmDoiCameraBtn" style="display:none;">🔄 Đổi camera trước/sau</button>
@@ -1779,6 +1803,34 @@ async function xoaAnhBaiTapTrenDrive(anhId){
   if(!kq.ok) throw new Error(kq.loi || 'Không xóa được ảnh cũ trên Drive.');
 }
 
+/* Web App Apps Script RIÊNG cho "Ảnh bổ sung nhận diện khuôn mặt" — lưu vào 1 thư mục Drive
+   RIÊNG BIỆT, tách hẳn khỏi ảnh thẻ/bài tập/minh chứng khác vì đây là dữ liệu nhạy cảm hơn
+   (dùng riêng cho mục đích nhận diện khuôn mặt — xem cảnh báo trên giao diện mục "Camera nhận
+   diện học sinh"). Dùng lại ĐÚNG mẫu Apps Script "Nộp bài tập" (đổi ROOT_FOLDER_ID + MA_BAO_VE
+   sang giá trị mới, triển khai thành Web App riêng), dán URL Web App mới vào đây. Chỉ giáo viên
+   (isAdmin) mới gọi được các hàm dưới đây — không có đường nào cho học sinh tự upload vào đây.*/
+const NDKM_DRIVE_URL = 'https://script.google.com/macros/s/AKfycbwRHcF1S8Js9VDbgr4s070D5Fxffv-PFUr1ROgW_MJbY71S3eqaKKcDDUBYQLaEVRd-/exec';
+const MA_NDKM = 'nhandienkhuonmat-2026'; // phải trùng MA_BAO_VE trong Apps Script ảnh nhận diện khuôn mặt
+const dungNdkmDrive = () => !!NDKM_DRIVE_URL && NDKM_DRIVE_URL.indexOf('DÁN_URL') === -1;
+async function guiAnhNdkmLenDrive(duLieuAnh, tenHocSinh){
+  const res = await fetch(NDKM_DRIVE_URL, {
+    method: 'POST',
+    body: JSON.stringify({ ma: MA_NDKM, hanhDong: 'upload', duLieu: duLieuAnh, ten: tenHocSinh, thuMuc: tenHocSinh })
+  });
+  const kq = await res.json();
+  if(!kq.ok) throw new Error(kq.loi || 'Không tải được ảnh lên Drive.');
+  return { id: kq.id, link: kq.link || anhDriveLon(kq.id), thuMucId: kq.thuMucId || null };
+}
+async function xoaAnhNdkmTrenDrive(anhId){
+  if(!dungNdkmDrive() || !anhId) return;
+  const res = await fetch(NDKM_DRIVE_URL, {
+    method: 'POST',
+    body: JSON.stringify({ ma: MA_NDKM, hanhDong: 'xoa', id: anhId })
+  });
+  const kq = await res.json();
+  if(!kq.ok) throw new Error(kq.loi || 'Không xóa được ảnh trên Drive.');
+}
+
 /* ---------------------------------------------------------------
    CHẤM BÀI BẰNG AI (Gemini) — TỪ GOOGLE PHOTOS
    Client KHÔNG BAO GIỜ gọi Gemini trực tiếp (sẽ lộ khóa API cho ai xem mã nguồn trang).
@@ -1823,6 +1875,7 @@ const clbDinhNghiaRef = db.ref('clbDinhNghia2026'); // định nghĩa CLB (tên/
 const clbDiemRef = db.ref('clbDiem2026');   // điểm uy tín đóng góp — công khai đọc, CHỈ giáo viên ghi được
 const chsRef = db.ref('hosocanhan2026');    // dữ liệu cá nhân học sinh — riêng tư, giống hoso2026
 const thanhVienRef = db.ref('thanhvien2026'); // bản CÔNG KHAI rút gọn (ảnh thẻ, tên, giới tính, ngày sinh) — không có CCCD/thành tích
+const ndkmAnhRef = db.ref('nhanDienAnhBoSung2026'); // ảnh bổ sung nhận diện khuôn mặt — RIÊNG TƯ, chỉ admin đọc/ghi (không công khai như thanhvien2026)
 const totuanRef = db.ref('totuan2026'); // tổng kết tuần theo Tổ — công khai đọc, tổ trưởng/tổ phó (đối chiếu tên) hoặc admin mới ghi được
 const vitriRef = db.ref('vitri2026'); // vị trí nhà + khoảng cách đến trường — công khai đọc, mỗi người tự ghi phần của mình
 const caiDatRef = db.ref('caidat2026'); // cài đặt chung (tọa độ trường...) — công khai đọc, chỉ admin ghi
@@ -2381,8 +2434,10 @@ auth.onAuthStateChanged(async user=>{
     if($('chamAiCard')) $('chamAiCard').style.display = 'block';
     await napChamAiChoDuyet();
     await napChamAiDaDuyet();
+    await napChamAiLoi();
     if($('ndkmChuaDangNhap')) $('ndkmChuaDangNhap').style.display = 'none';
     if($('ndkmCard')) $('ndkmCard').style.display = 'block';
+    await napNdkmAnhTatCa();
     renderAdmin();
   } else if(isThuQuy){
     showMsg($('pageMsg'), '💰 Đã đăng nhập với quyền Thủ quỹ — có thể quản lý mục "Quỹ lớp".', 'ok');
@@ -6832,12 +6887,31 @@ regsRef.on('value', s=>{
 });
 tvRef.on('value', s=>{ tv = s.val()||{}; renderTv(); });
 
-/* Bảng tin: chỉ lấy các bài gần đây nhất, mới nhất hiện lên đầu */
-btRef.limitToLast(BAI_TOI_DA).on('value', s=>{
-  const v = s.val()||{};
-  baiViet = Object.keys(v).map(k=> Object.assign({id:k}, v[k]))
-              .sort((a,b)=> (b.luc||0) - (a.luc||0));
-  renderBaiViet();
+/* Bảng tin: chỉ lấy các bài gần đây nhất, mới nhất hiện lên đầu — tải thêm dần dần bằng nút
+   "Xem thêm bài cũ hơn" thay vì tải hết 1 lần (giữ trang luôn nhẹ dù bảng tin có hàng trăm bài).
+   Cách làm: tăng dần số lượng limitToLast() rồi gắn lại listener — Firebase RTDB không có kiểu
+   "trang tiếp theo" như Firestore nên đây là cách đơn giản, đủ dùng cho quy mô 1 lớp. */
+let btSoLuongDangTai = BAI_TOI_DA;
+function napBangTin(){
+  btRef.off();
+  btRef.limitToLast(btSoLuongDangTai).on('value', s=>{
+    const v = s.val()||{};
+    const soBaiNhanDuoc = Object.keys(v).length;
+    baiViet = Object.keys(v).map(k=> Object.assign({id:k}, v[k]))
+                .sort((a,b)=> (b.luc||0) - (a.luc||0));
+    renderBaiViet();
+    // Nếu Firebase trả về ÍT HƠN số lượng đã xin, nghĩa là đã lấy hết toàn bộ bài viết có sẵn
+    // (không còn bài cũ hơn nữa) — ẩn luôn nút "Xem thêm" trong trường hợp đó.
+    if($('btXemThemBtn')) $('btXemThemBtn').style.display = (soBaiNhanDuoc < btSoLuongDangTai) ? 'none' : 'inline-block';
+  });
+}
+napBangTin();
+$('btXemThemBtn') && ($('btXemThemBtn').onclick = ()=>{
+  const btn = $('btXemThemBtn');
+  btn.disabled = true; const chuCu = btn.textContent; btn.textContent = '⏳ Đang tải...';
+  btSoLuongDangTai += BAI_TOI_DA;
+  napBangTin();
+  setTimeout(()=>{ btn.disabled = false; btn.textContent = chuCu; }, 800);
 });
 
 /* Confession đã duyệt: công khai cho mọi người, không giới hạn số lượng vì nội dung ngắn và ít hình */
@@ -7791,7 +7865,7 @@ function renderChamAiChoDuyet(){
             <div class="field"><label>Điểm (0–10)</label><input type="number" min="0" max="10" step="0.1" value="${x.diem!=null?x.diem:''}" data-cham-ai-diem="${x.id}"></div>
             <div class="field"><label>Nguồn</label><input type="text" value="${x.nguon==='nopweb'?'Nộp qua web':(x.nguon==='link'?'Link ảnh':'Google Photos')}" readonly></div>
           </div>
-          ${x.tenBai ? `<p class="section-note" style="margin:-4px 0 8px;"><b>📚 ${esc(x.tenBai)}</b></p>` : ''}
+          <p class="section-note" style="margin:-4px 0 8px;"><b>📚 ${esc(x.tenBai || (danhSachBaiTapHienTai().find(b=> b.id === (x.baiId||'bai1'))||{}).ten || 'Bài 1')}</b></p>
           <div class="field"><label>Nhận xét của AI</label><textarea data-cham-ai-nhanxet="${x.id}" style="min-height:70px;">${esc(x.nhanXet||'')}</textarea></div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="btn btn-blue btn-sm" data-cham-ai-duyet="${x.id}">✅ Duyệt &amp; công bố</button>
@@ -7866,14 +7940,51 @@ function renderChamAiDaDuyet(){
   let h = `<tr><th>STT</th><th>Họ và tên</th><th>Bài</th><th>Điểm</th><th>Nhận xét</th><th>Nguồn</th><th>Ngày duyệt</th></tr>`;
   if(!ds.length){ h += `<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);">Chưa công bố điểm nào.</td></tr>`; }
   else ds.forEach((x,i)=>{
+    // Vài bài công bố TRƯỚC KHI có trường tenBai (lúc mới thêm tính năng 10 bài) không lưu sẵn
+    // tên bài — suy ra lại tên bài từ baiId (hoặc tách từ chính khóa lưu "ten|baiId" nếu thiếu
+    // luôn cả baiId) rồi tra tên hiện tại trong danh mục bài tập, thay vì hiện dấu gạch ngang.
+    const baiIdSuyRa = x.baiId || (x.khoa && x.khoa.indexOf('|') !== -1 ? x.khoa.split('|')[1] : '') || 'bai1';
+    const tenBaiHienThi = x.tenBai || (danhSachBaiTapHienTai().find(b=> b.id === baiIdSuyRa) || {}).ten || baiIdSuyRa;
     h += `<tr>
-      <td>${i+1}</td><td>${esc(x.hoTen||'')}</td><td>${esc(x.tenBai||'')||'—'}</td><td><b>${x.diem!=null?x.diem:''}</b>/10</td>
+      <td>${i+1}</td><td>${esc(x.hoTen||'')}</td><td>${esc(tenBaiHienThi)}</td><td><b>${x.diem!=null?x.diem:''}</b>/10</td>
       <td>${esc(x.nhanXet||'')}</td><td>${x.nguon==='nopweb'?'Nộp web':(x.nguon==='link'?'Link ảnh':'Google Photos')}</td>
       <td>${x.ngayDuyet ? new Date(x.ngayDuyet).toLocaleString('vi-VN') : ''}</td>
     </tr>`;
   });
   bang.innerHTML = h;
 }
+
+/* ---- Xem các bài bị lỗi khi Apps Script chấm (chamBaiAI2026/loi) ----
+   Trước đây trang KHÔNG có chỗ nào hiển thị nhánh này, nên khi Apps Script chấm lỗi hàng loạt
+   (hết quota Gemini, ảnh hỏng, link sai...) Thầy không biết lý do cụ thể vì sao "Chờ duyệt"
+   không lên đủ số bài đã nộp vào hàng chờ. */
+async function napChamAiLoi(){
+  if(!isAdmin) return;
+  const host = $('chamAiLoiList');
+  if(!host) return;
+  host.innerHTML = '<p class="section-note">Đang tải...</p>';
+  let ds = {};
+  try{ ds = (await chamBaiAIRef.child('loi').once('value')).val() || {}; }
+  catch(e){ host.innerHTML = `<p class="section-note" style="color:#b33;">${esc(baoLoi(e))}</p>`; return; }
+  const items = Object.keys(ds).map(id=> Object.assign({id}, ds[id]));
+  if(!items.length){ host.innerHTML = '<p class="section-note">✅ Không có bài nào bị lỗi.</p>'; return; }
+  host.innerHTML = `<p class="section-note" style="color:#b33;">⚠️ Có ${items.length} bài bị lỗi khi chấm:</p>` +
+    items.map(x=>{
+      const job = x.job || {};
+      return `<div class="card" style="margin-bottom:8px; background:#fff3f0;">
+        <div><b>${esc(job.hoTenGoi || '(chưa rõ tên)')}</b>${job.tenBai ? ' — ' + esc(job.tenBai) : ''}
+          <span class="section-note">(nguồn: ${esc(job.nguon||'?')}, lúc ${x.luc ? new Date(x.luc).toLocaleString('vi-VN') : ''})</span></div>
+        <p style="color:#b33; margin:6px 0 8px;">${esc(x.thongBao || '(không rõ lý do)')}</p>
+        <button class="btn btn-ghost btn-sm" data-cham-ai-xoaloi="${esc(x.id)}">🗑️ Xóa khỏi danh sách lỗi</button>
+      </div>`;
+    }).join('');
+  host.querySelectorAll('[data-cham-ai-xoaloi]').forEach(btn=> btn.onclick = async ()=>{
+    try{ await chamBaiAIRef.child('loi').child(btn.getAttribute('data-cham-ai-xoaloi')).remove(); await napChamAiLoi(); }
+    catch(e){ alert(baoLoi(e)); }
+  });
+}
+$('chamAiLoiLamMoiBtn') && ($('chamAiLoiLamMoiBtn').onclick = napChamAiLoi);
+
 /* Hiện điểm của CHÍNH học sinh đang xem trang (đối chiếu theo họ tên đã gõ ở ô nộp bài) ngay
    trong thẻ "Nộp bài tập chuyên đề Vật lý 10", để không cần mở mục quản trị mới xem được. */
 function renderChamAiKetQuaCuaToi(){
@@ -8252,6 +8363,91 @@ async function ndkmLayAnhChoAI(anhId){
   catch(e){ return await ndkmTaiAnh(anhDriveNho(anhId)); }
 }
 
+/* ---- Bước 1 (tuỳ chọn) — Ảnh khuôn mặt BỔ SUNG cho từng học sinh ----
+   Lưu Ở RIÊNG (nhanDienAnhBoSung2026), tách khỏi thanhvien2026 (ảnh thẻ công khai) vì đây là ảnh
+   thu thập RIÊNG cho mục đích nhận diện khuôn mặt — nhạy cảm hơn nên: chỉ admin đọc/ghi được
+   (không công khai), chỉ admin upload được (không có đường nào cho học sinh tự up), và giới hạn
+   tối đa NDKM_ANH_TOI_DA ảnh/học sinh để hạn chế thu thập dư thừa (tối thiểu hoá dữ liệu). */
+const NDKM_ANH_TOI_DA = 5;
+let ndkmAnhState = {}; // { uid: { anhId: {anhLink, thuMucId, luc} } }
+
+async function napNdkmAnhTatCa(){
+  if(!isAdmin){ ndkmAnhState = {}; return; }
+  try{ ndkmAnhState = (await ndkmAnhRef.once('value')).val() || {}; }
+  catch(e){ ndkmAnhState = {}; }
+  ndkmDienChonHocSinh();
+  renderNdkmAnhDsHienTai();
+}
+
+function ndkmDienChonHocSinh(){
+  const sel = $('ndkmAnhChonHs');
+  if(!sel) return;
+  const giaTriCu = sel.value;
+  const ds = Object.entries(thanhVienState).map(([uid,x])=> ({uid, hoTen: (x&&x.hoTen)||uid}))
+    .sort((a,b)=> a.hoTen.localeCompare(b.hoTen,'vi'));
+  if(!ds.length){ sel.innerHTML = `<option value="">-- Chưa có học sinh nào ở "Thành viên lớp" --</option>`; return; }
+  sel.innerHTML = ds.map(x=>{
+    const soAnh = Object.keys(ndkmAnhState[x.uid]||{}).length;
+    return `<option value="${esc(x.uid)}">${esc(x.hoTen)}${soAnh? ` (${soAnh} ảnh bổ sung)`:''}</option>`;
+  }).join('');
+  if(ds.some(x=> x.uid === giaTriCu)) sel.value = giaTriCu;
+}
+$('ndkmAnhChonHs') && ($('ndkmAnhChonHs').onchange = renderNdkmAnhDsHienTai);
+
+function renderNdkmAnhDsHienTai(){
+  const host = $('ndkmAnhDsHienTai');
+  const sel = $('ndkmAnhChonHs');
+  if(!host || !sel) return;
+  const uid = sel.value;
+  const ds = uid ? Object.entries(ndkmAnhState[uid]||{}) : [];
+  if(!ds.length){ host.innerHTML = `<p class="section-note">Chưa có ảnh bổ sung nào cho học sinh này.</p>`; return; }
+  host.innerHTML = `<div style="display:flex; gap:8px; flex-wrap:wrap;">` + ds.map(([anhId, x])=>
+    `<div style="text-align:center;">
+       <img src="${anhDriveNho(anhId)}" alt="Ảnh bổ sung" style="width:80px;height:100px;object-fit:cover;border-radius:8px;border:2px solid var(--line);display:block;">
+       <button class="btn btn-ghost btn-sm" style="margin-top:4px;" data-ndkm-xoaanh="${esc(anhId)}">🗑️ Xóa</button>
+     </div>`).join('') + `</div>`;
+  host.querySelectorAll('[data-ndkm-xoaanh]').forEach(btn=> btn.onclick = ()=> ndkmXoaAnhBoSung(uid, btn.getAttribute('data-ndkm-xoaanh')));
+}
+
+$('ndkmAnhChonBtn') && ($('ndkmAnhChonBtn').onclick = ()=>{
+  const uid = $('ndkmAnhChonHs').value;
+  if(!uid){ showMsg($('ndkmAnhMsg'), 'Vui lòng chọn học sinh trước.', 'err'); return; }
+  const soAnhHienTai = Object.keys(ndkmAnhState[uid]||{}).length;
+  if(soAnhHienTai >= NDKM_ANH_TOI_DA){ showMsg($('ndkmAnhMsg'), `Học sinh này đã có đủ ${NDKM_ANH_TOI_DA} ảnh bổ sung (tối đa) — xóa bớt ảnh cũ nếu muốn thêm ảnh mới.`, 'err'); return; }
+  $('ndkmAnhInput').click();
+});
+$('ndkmAnhInput') && ($('ndkmAnhInput').onchange = async (e)=>{
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  if(!/^image\//.test(file.type)){ showMsg($('ndkmAnhMsg'), 'Vui lòng chọn đúng tệp ảnh.', 'err'); return; }
+  const uid = $('ndkmAnhChonHs').value;
+  const hoTen = (thanhVienState[uid] && thanhVienState[uid].hoTen) || uid;
+  if(!uid){ showMsg($('ndkmAnhMsg'), 'Vui lòng chọn học sinh trước.', 'err'); return; }
+  if(!dungNdkmDrive()){ showMsg($('ndkmAnhMsg'), 'Chưa cấu hình nơi lưu ảnh (Drive) cho mục này — báo kỹ thuật kiểm tra NDKM_DRIVE_URL.', 'err'); return; }
+  showMsg($('ndkmAnhMsg'), `Đang tải ảnh lên cho "${hoTen}"...`, 'info');
+  try{
+    const anhNen = await nenAnh(file, 1000, 0.85);
+    const kqDrive = await guiAnhNdkmLenDrive(anhNen, hoTen + ' - nhan dien');
+    const banGhi = { anhLink: kqDrive.link, thuMucId: kqDrive.thuMucId, luc: new Date().toISOString() };
+    await ndkmAnhRef.child(uid).child(kqDrive.id).set(banGhi);
+    ndkmAnhState[uid] = Object.assign({}, ndkmAnhState[uid]||{}, { [kqDrive.id]: banGhi });
+    ndkmDienChonHocSinh();
+    renderNdkmAnhDsHienTai();
+    showMsg($('ndkmAnhMsg'), `✅ Đã thêm ảnh cho "${hoTen}".`, 'ok');
+  }catch(err){ showMsg($('ndkmAnhMsg'), baoLoi(err), 'err'); }
+});
+async function ndkmXoaAnhBoSung(uid, anhId){
+  if(!confirm('Xóa ảnh bổ sung này?')) return;
+  try{
+    await ndkmAnhRef.child(uid).child(anhId).remove();
+    if(ndkmAnhState[uid]) delete ndkmAnhState[uid][anhId];
+    xoaAnhNdkmTrenDrive(anhId).catch(()=>{}); // best-effort, không chặn nếu Apps Script chưa có/lỗi
+    ndkmDienChonHocSinh();
+    renderNdkmAnhDsHienTai();
+  }catch(e){ showMsg($('ndkmAnhMsg'), baoLoi(e), 'err'); }
+}
+
 $('ndkmNapDuLieuBtn').onclick = async ()=>{
   const btn = $('ndkmNapDuLieuBtn');
   btn.disabled = true;
@@ -8263,31 +8459,44 @@ $('ndkmNapDuLieuBtn').onclick = async ()=>{
     return;
   }
 
-  const dsHocSinh = Object.entries(thanhVienState).filter(([uid,x])=> x && x.anhTheId);
+  // Học sinh đủ điều kiện nạp = có ảnh thẻ (anhTheId) HOẶC có ít nhất 1 ảnh bổ sung (Bước 1)
+  const dsHocSinh = Object.entries(thanhVienState).filter(([uid,x])=>
+    (x && x.anhTheId) || Object.keys(ndkmAnhState[uid]||{}).length);
   if(!dsHocSinh.length){
-    showMsg($('ndkmNapMsg'), '❌ Chưa có học sinh nào có ảnh thẻ ở mục "Thành viên lớp" để nạp.', 'err');
+    showMsg($('ndkmNapMsg'), '❌ Chưa có học sinh nào có ảnh thẻ (mục "Thành viên lớp") hoặc ảnh bổ sung (Bước 1) để nạp.', 'err');
     btn.disabled = false;
     return;
   }
 
   ndkmLabeledDescriptors = [];
   const dsLoi = [];
+  let tongSoAnhDaNap = 0;
   for(let i=0; i<dsHocSinh.length; i++){
     const [uid, x] = dsHocSinh[i];
-    showMsg($('ndkmNapMsg'), `⏳ Đang nạp ${i+1}/${dsHocSinh.length}: ${x.hoTen || uid}...`, 'info');
-    try{
-      const img = await ndkmLayAnhChoAI(x.anhTheId);
-      const ketQua = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
-        .withFaceLandmarks().withFaceDescriptor();
-      if(!ketQua){ dsLoi.push((x.hoTen||uid) + ' (không thấy khuôn mặt rõ trong ảnh thẻ)'); continue; }
-      ndkmLabeledDescriptors.push(new faceapi.LabeledFaceDescriptors(uid, [ketQua.descriptor]));
-    }catch(e){
-      dsLoi.push((x.hoTen||uid) + ' (không đọc được ảnh — có thể do giới hạn CORS của Google Drive)');
+    // Gộp ảnh thẻ (nếu có) + toàn bộ ảnh bổ sung của đúng học sinh này thành 1 danh sách anhId
+    // để tính NHIỀU descriptor cho cùng 1 nhãn (uid) — theo đúng cách face-api.js hỗ trợ nhận
+    // nhiều ảnh/góc mặt cho 1 người, giúp so khớp chính xác hơn 1 ảnh duy nhất.
+    const dsAnhId = [];
+    if(x && x.anhTheId) dsAnhId.push(x.anhTheId);
+    Object.keys(ndkmAnhState[uid]||{}).forEach(anhId=> dsAnhId.push(anhId));
+
+    showMsg($('ndkmNapMsg'), `⏳ Đang nạp ${i+1}/${dsHocSinh.length}: ${x.hoTen || uid} (${dsAnhId.length} ảnh)...`, 'info');
+    const dsDescriptor = [];
+    for(const anhId of dsAnhId){
+      try{
+        const img = await ndkmLayAnhChoAI(anhId);
+        const ketQua = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+          .withFaceLandmarks().withFaceDescriptor();
+        if(ketQua) dsDescriptor.push(ketQua.descriptor);
+      }catch(e){ /* bỏ qua đúng ảnh lỗi, không chặn các ảnh khác của cùng học sinh */ }
     }
+    if(!dsDescriptor.length){ dsLoi.push((x.hoTen||uid) + ` (không thấy khuôn mặt rõ trong ${dsAnhId.length} ảnh, hoặc không đọc được ảnh)`); continue; }
+    ndkmLabeledDescriptors.push(new faceapi.LabeledFaceDescriptors(uid, dsDescriptor));
+    tongSoAnhDaNap += dsDescriptor.length;
   }
 
   if(!ndkmLabeledDescriptors.length){
-    showMsg($('ndkmNapMsg'), '❌ Không nạp được học sinh nào — kiểm tra lại ảnh thẻ.', 'err');
+    showMsg($('ndkmNapMsg'), '❌ Không nạp được học sinh nào — kiểm tra lại ảnh thẻ/ảnh bổ sung.', 'err');
     $('ndkmBatCameraBtn').disabled = true;
     btn.disabled = false;
     return;
@@ -8296,7 +8505,7 @@ $('ndkmNapDuLieuBtn').onclick = async ()=>{
   ndkmFaceMatcher = new faceapi.FaceMatcher(ndkmLabeledDescriptors, NDKM_NGUONG_KHOP);
   $('ndkmBatCameraBtn').disabled = false;
   btn.disabled = false;
-  const ketQuaChu = `✅ Đã nạp xong ${ndkmLabeledDescriptors.length}/${dsHocSinh.length} học sinh.` +
+  const ketQuaChu = `✅ Đã nạp xong ${ndkmLabeledDescriptors.length}/${dsHocSinh.length} học sinh (tổng ${tongSoAnhDaNap} ảnh).` +
     (dsLoi.length ? ` ⚠️ Bỏ qua ${dsLoi.length}: ${dsLoi.join('; ')}` : '');
   showMsg($('ndkmNapMsg'), ketQuaChu, dsLoi.length ? 'info' : 'ok');
 };
