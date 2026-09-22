@@ -2354,13 +2354,13 @@
 
                             <div style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 15px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
                                 <div style="color: #FF6F00; font-size: 1.1rem; font-weight: 700; margin-bottom: 12px;">
-                                    Đường đến ngôi vua
+                                    Ứng dụng quản lí lớp học Đường đến ngôi vua
                                 </div>
                                 <div style="color: #495057; font-size: 1rem; font-weight: 600; margin-bottom: 10px;">
-                                    Tác giả: Nguyễn Thanh Nhân
+                                    Tác giả: Ngô Thị Mỹ Ngọc
                                 </div>
                                 <div style="color: #495057; font-size: 0.95rem; margin-bottom: 10px;">
-                                    Email: nhanphysics68@gmail.com
+                                    Email: ngongoc231294@gmail.com
                                 </div>
                                 <div style="color: #6c757d; font-size: 0.95rem; font-style: italic;">
                                     Ứng dụng hỗ trợ quản lí lớp học hiệu quả
@@ -5987,6 +5987,7 @@
                                 <input type="number" id="group-amount-${group.id}" value="1" min="1" style="width: 50px; padding: 6px; border-radius: 6px; border: 1px solid #eee; text-align: center; font-size: 0.8rem; order: 2;" onclick="event.stopPropagation();" />
                                 <button class="btn-compact add" onclick="addPointsToGroup(parseInt(document.getElementById('group-amount-${group.id}').value) || 1, ${group.id}); event.stopPropagation();" style="order: 3;">+</button>
                         </div>
+                            <button onclick="ddnvMoThemHocSinhToTo(${group.id}); event.stopPropagation();" style="margin-top:10px; width:100%; background: linear-gradient(45deg, #42A5F5, #64B5F6); color:#fff; border:none; border-radius:8px; padding:8px 10px; font-size:0.85rem; font-weight:600; cursor:pointer;">➕ Thêm học sinh vào tổ</button>
                                         ` : ''}
                                     </div>
                 `;
@@ -6039,6 +6040,14 @@
         let currentGroupId = null;
 
         // Hiển thị học sinh trong nhóm
+        // Mở thẳng modal "Chỉnh sửa nhóm" (có sẵn ô chọn + nút "Thêm học sinh") cho đúng tổ
+        // được bấm, không cần đi qua modal xem danh sách trước. Gán thẳng vào window vì hàm
+        // này được gọi từ onclick trong HTML dựng động, không nằm trong danh sách export gốc.
+        window.ddnvMoThemHocSinhToTo = function(groupId) {
+            currentGroupId = groupId;
+            showEditGroupModal();
+        };
+
         function showGroupStudentsModal(groupId) {
             const group = groups.find(g => g.id === groupId);
             if (!group) return;
