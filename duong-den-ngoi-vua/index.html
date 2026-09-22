@@ -2031,8 +2031,21 @@
         .character-image, .character-image::before,
         .member-avatar, .member-avatar::before,
         [style*="animation:pulse"],
-        [style*="animation:characterFloat"] { animation: none !important; }
+        [style*="animation:characterFloat"],
+        .logo, .header::before, .greeting h1, .stat-value,
+        .stat-icon::before, .progress-fill::before, .feature-icon,
+        [style*="animation: imageGlow"], [style*="animation:imageGlow"] { animation: none !important; }
         .game-particles { display: none !important; }
+        /* Giảm bớt box-shadow/filter tốn kém trên các thẻ lặp lại nhiều lần
+           (thẻ học sinh, thẻ nhóm) — các khối này bị dựng lại toàn bộ mỗi
+           khi cộng/trừ điểm nên càng ít hiệu ứng vẽ lại càng đỡ giật máy. */
+        .student-card, .student-card-compact, .group-card-fixed,
+        .character-image, .member-avatar {
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12) !important;
+            transition: none !important;
+        }
+        .character-image img { filter: none !important; }
+        .character-image::before, .member-avatar::before { display: none !important; }
 
     </style>
 </head>
