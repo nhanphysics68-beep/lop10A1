@@ -1580,12 +1580,50 @@
     <div class="card">
       <h2>👑 Đường đến ngôi vua</h2>
       <p class="section-note">Trò chơi bàn cờ thi đua theo nhóm/lớp — dữ liệu chơi (điểm, lượt) đã được đồng bộ qua Firebase: mở lại ở máy khác hoặc tải lại trang đều thấy đúng dữ liệu mới nhất. Chỉ tài khoản admin (giáo viên) mới lưu/sửa được; học sinh mở ra chỉ xem, không sửa được.</p>
-      <div class="scroll-x">
-        <iframe src="duong-den-ngoi-vua/index.html" title="Đường đến ngôi vua"
+      <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
+        <button type="button" id="ddnvFullscreenBtn" class="btn" onclick="ddnvBatToanManHinh()">⛶ Toàn màn hình</button>
+      </div>
+      <div class="scroll-x" id="ddnvWrap" style="background:#fff;">
+        <iframe id="ddnvIframe" src="duong-den-ngoi-vua/index.html" title="Đường đến ngôi vua"
           style="width:100%; min-height:80vh; border:1px solid var(--line, #ddd); border-radius:10px;"
           loading="lazy"></iframe>
       </div>
     </div>
+    <script>
+      function ddnvBatToanManHinh(){
+        var el = document.getElementById('ddnvWrap');
+        if(!el) return;
+        var dangFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+        if(!dangFullscreen){
+          var yeuCau = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+          if(yeuCau) yeuCau.call(el);
+        } else {
+          var thoat = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+          if(thoat) thoat.call(document);
+        }
+      }
+      (function(){
+        function capNhatKichThuoc(){
+          var el = document.getElementById('ddnvWrap');
+          var frame = document.getElementById('ddnvIframe');
+          if(!el || !frame) return;
+          var dangFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+          if(dangFullscreen === el){
+            el.style.display = 'flex';
+            el.style.alignItems = 'stretch';
+            frame.style.height = '100vh';
+            frame.style.minHeight = '100vh';
+            frame.style.borderRadius = '0';
+          } else {
+            frame.style.height = '';
+            frame.style.minHeight = '80vh';
+            frame.style.borderRadius = '10px';
+          }
+        }
+        document.addEventListener('fullscreenchange', capNhatKichThuoc);
+        document.addEventListener('webkitfullscreenchange', capNhatKichThuoc);
+      })();
+    </script>
   </div>
 
   <!-- ============ KHU VỰC GIÁO VIÊN ============ -->
