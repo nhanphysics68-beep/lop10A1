@@ -2012,7 +2012,28 @@
         #groupStudentsContent > div:hover > div > div:first-child {
             transform: scale(1.05);
         }
-        
+
+        /* ============================================================
+           TỐI ƯU HIỆU NĂNG — giảm giật/treo máy khi mở trò chơi:
+           1) Tắt backdrop-filter (làm mờ nền) trên toàn trang: hiệu ứng
+              này bắt trình duyệt tính lại lớp mờ liên tục mỗi khi có bất
+              kỳ thay đổi nào phía sau, rất tốn CPU/GPU, đặc biệt khi có
+              nhiều khung chồng lên nhau như ở trang này.
+           2) Tắt các animation chạy LẶP VÔ HẠN được gắn cho TỪNG avatar/
+              huy hiệu điểm của học sinh (character-image, member-avatar,
+              badge điểm nhấp nháy). Với lớp đông học sinh, hàng chục đến
+              hàng trăm hiệu ứng này chạy cùng lúc là nguyên nhân chính
+              khiến máy yếu bị treo. Vẫn giữ nguyên hình dạng, màu sắc,
+              chỉ bỏ phần chuyển động lặp lại không cần thiết.
+           3) Ẩn lớp hạt lấp lánh nền (particles) — chỉ là trang trí.
+           ============================================================ */
+        * { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+        .character-image, .character-image::before,
+        .member-avatar, .member-avatar::before,
+        [style*="animation:pulse"],
+        [style*="animation:characterFloat"] { animation: none !important; }
+        .game-particles { display: none !important; }
+
     </style>
 </head>
 <body>
@@ -2357,10 +2378,10 @@
                                     Ứng dụng quản lí lớp học Đường đến ngôi vua
                                 </div>
                                 <div style="color: #495057; font-size: 1rem; font-weight: 600; margin-bottom: 10px;">
-                                    Tác giả: Ngô Thị Mỹ Ngọc
+                                    Tác giả: Nguyễn Thanh Nhân
                                 </div>
                                 <div style="color: #495057; font-size: 0.95rem; margin-bottom: 10px;">
-                                    Email: ngongoc231294@gmail.com
+                                    Email: nhanphysics68@gmail.com
                                 </div>
                                 <div style="color: #6c757d; font-size: 0.95rem; font-style: italic;">
                                     Ứng dụng hỗ trợ quản lí lớp học hiệu quả
