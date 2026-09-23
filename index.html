@@ -1039,6 +1039,31 @@
     <div class="card">
       <h2>📊 Bảng điểm AI đã công bố (cả lớp)</h2>
       <p class="section-note">Điểm do AI chấm và đã được Thầy duyệt — công khai để cả lớp/phụ huynh tự tra cứu, không cần hỏi trực tiếp.</p>
+
+      <details style="margin-bottom:10px;">
+        <summary style="cursor:pointer; font-size:13px; color:var(--ink-soft); font-weight:600;">⚙️ Tùy chỉnh tiêu đề / định dạng khi xuất Excel</summary>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; align-items:end;">
+          <div style="flex:1; min-width:200px;">
+            <label style="font-size:12px; color:var(--ink-soft); display:block; margin-bottom:3px;">Tên trường</label>
+            <input type="text" id="chamAiXuatTruong" value="TRƯỜNG THCS&THPT HÒA THUẬN" style="width:100%; padding:7px 9px; border:1.5px solid var(--line); border-radius:8px; font-size:12.5px; font-family:inherit;">
+          </div>
+          <div style="flex:0 0 130px;">
+            <label style="font-size:12px; color:var(--ink-soft); display:block; margin-bottom:3px;">Tên lớp</label>
+            <input type="text" id="chamAiXuatLop" value="LỚP 10A1" style="width:100%; padding:7px 9px; border:1.5px solid var(--line); border-radius:8px; font-size:12.5px; font-family:inherit;">
+          </div>
+          <div style="flex:2; min-width:260px;">
+            <label style="font-size:12px; color:var(--ink-soft); display:block; margin-bottom:3px;">Tiêu đề bảng điểm</label>
+            <input type="text" id="chamAiXuatTieuDe" value="BẢNG ĐIỂM CHUYÊN ĐỀ BÀI TẬP CHUYÊN ĐỀ VẬT LÝ 10" style="width:100%; padding:7px 9px; border:1.5px solid var(--line); border-radius:8px; font-size:12.5px; font-family:inherit;">
+          </div>
+          <div style="flex:0 0 170px;">
+            <label style="font-size:12px; color:var(--ink-soft); display:block; margin-bottom:3px;">Chỉ xuất 1 bài</label>
+            <select id="chamAiXuatBai" style="width:100%; padding:7px 9px; border:1.5px solid var(--line); border-radius:8px; font-size:12.5px; font-family:inherit;">
+              <option value="">— Tất cả các bài —</option>
+            </select>
+          </div>
+        </div>
+      </details>
+
       <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
         <button type="button" id="chamAiDaDuyetXuatBtn" class="btn btn-ghost btn-sm">⬇️ Xuất danh sách điểm (Excel)</button>
       </div>
@@ -8022,21 +8047,26 @@ async function napChamAiDaDuyet(){
   renderChamAiDaDuyet();
   renderChamAiKetQuaCuaToi();
 }
+let chamAiDaDuyetDsHienThi = []; // cache danh sách đã tính sẵn tenBaiHienThi, dùng chung cho bảng + form xuất Excel
 function renderChamAiDaDuyet(){
   const bang = $('chamAiDaDuyetTable');
   if(!bang) return;
   const ds = Object.keys(chamAiDaDuyet).map(k=> Object.assign({khoa:k}, chamAiDaDuyet[k]))
     .sort((a,b)=> (a.hoTen||'').localeCompare(b.hoTen||'', 'vi'));
+  // Vài bài công bố TRƯỚC KHI có trường tenBai (lúc mới thêm tính năng 10 bài) không lưu sẵn
+  // tên bài — suy ra lại tên bài từ baiId (hoặc tách từ chính khóa lưu "ten|baiId" nếu thiếu
+  // luôn cả baiId) rồi tra tên hiện tại trong danh mục bài tập, thay vì hiện dấu gạch ngang.
+  ds.forEach(x=>{
+    const baiIdSuyRa = x.baiId || (x.khoa && x.khoa.indexOf('|') !== -1 ? x.khoa.split('|')[1] : '') || 'bai1';
+    x._tenBaiHienThi = x.tenBai || (danhSachBaiTapHienTai().find(b=> b.id === baiIdSuyRa) || {}).ten || baiIdSuyRa;
+  });
+  chamAiDaDuyetDsHienThi = ds;
+  capNhatChamAiXuatBaiSelect(ds);
   let h = `<tr><th>STT</th><th>Họ và tên</th><th>Bài</th><th>Điểm</th><th>Nhận xét</th><th>Nguồn</th><th>Ngày duyệt</th></tr>`;
   if(!ds.length){ h += `<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);">Chưa công bố điểm nào.</td></tr>`; }
   else ds.forEach((x,i)=>{
-    // Vài bài công bố TRƯỚC KHI có trường tenBai (lúc mới thêm tính năng 10 bài) không lưu sẵn
-    // tên bài — suy ra lại tên bài từ baiId (hoặc tách từ chính khóa lưu "ten|baiId" nếu thiếu
-    // luôn cả baiId) rồi tra tên hiện tại trong danh mục bài tập, thay vì hiện dấu gạch ngang.
-    const baiIdSuyRa = x.baiId || (x.khoa && x.khoa.indexOf('|') !== -1 ? x.khoa.split('|')[1] : '') || 'bai1';
-    const tenBaiHienThi = x.tenBai || (danhSachBaiTapHienTai().find(b=> b.id === baiIdSuyRa) || {}).ten || baiIdSuyRa;
     h += `<tr>
-      <td>${i+1}</td><td>${esc(x.hoTen||'')}</td><td>${esc(tenBaiHienThi)}</td><td><b>${x.diem!=null?x.diem:''}</b>/10</td>
+      <td>${i+1}</td><td>${esc(x.hoTen||'')}</td><td>${esc(x._tenBaiHienThi)}</td><td><b>${x.diem!=null?x.diem:''}</b>/10</td>
       <td>${esc(x.nhanXet||'')}</td><td>${x.nguon==='nopweb'?'Nộp web':(x.nguon==='link'?'Link ảnh':'Google Photos')}</td>
       <td>${x.ngayDuyet ? new Date(x.ngayDuyet).toLocaleString('vi-VN') : ''}</td>
     </tr>`;
@@ -8044,26 +8074,87 @@ function renderChamAiDaDuyet(){
   bang.innerHTML = h;
 }
 
-// Xuất bảng điểm AI đã công bố ra file Excel (.xlsx) — dùng cùng dữ liệu và cách suy
-// ra tên bài như renderChamAiDaDuyet() ở trên, để số liệu xuất ra luôn khớp với bảng
-// đang hiển thị trên trang.
+// Đổ danh sách "Bài" (duy nhất, theo đúng thứ tự xuất hiện) vào ô chọn của form xuất
+// Excel, để Thầy có thể lọc chỉ xuất riêng 1 bài nếu muốn — giữ nguyên lựa chọn đang
+// chọn (nếu vẫn còn hợp lệ) mỗi khi bảng được tải/làm mới lại.
+function capNhatChamAiXuatBaiSelect(ds){
+  const sel = $('chamAiXuatBai');
+  if(!sel) return;
+  const dangChon = sel.value;
+  const danhSachBai = [...new Set(ds.map(x=> x._tenBaiHienThi).filter(Boolean))];
+  sel.innerHTML = '<option value="">— Tất cả các bài —</option>' +
+    danhSachBai.map(t=> `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+  if(danhSachBai.includes(dangChon)) sel.value = dangChon;
+}
+
+// Xuất bảng điểm AI đã công bố ra file Excel (.xlsx) — dùng lại danh sách đã tính sẵn
+// tenBaiHienThi (chamAiDaDuyetDsHienThi) từ renderChamAiDaDuyet() ở trên, để số liệu
+// xuất ra luôn khớp với bảng đang hiển thị trên trang. Tiêu đề trường/lớp/tên bảng và
+// việc lọc theo 1 bài cụ thể lấy trực tiếp từ form tùy chỉnh phía trên bảng, để Thầy
+// tự đổi mà không cần sửa code mỗi lần. Định dạng (viền bảng, font Times New Roman cỡ
+// 12, căn giữa các cột số...) dùng thư viện xlsx-js-style đã có sẵn trên trang (hỗ trợ
+// đủ font/màu/viền/merge ô — thư viện XLSX gốc miễn phí không hỗ trợ việc này).
 $('chamAiDaDuyetXuatBtn') && ($('chamAiDaDuyetXuatBtn').onclick = ()=>{
-  const ds = Object.keys(chamAiDaDuyet).map(k=> Object.assign({khoa:k}, chamAiDaDuyet[k]))
-    .sort((a,b)=> (a.hoTen||'').localeCompare(b.hoTen||'', 'vi'));
-  if(!ds.length){ alert('Chưa có điểm nào được công bố để xuất.'); return; }
-  const rows = [['STT','Họ và tên','Bài','Điểm','Nhận xét','Nguồn','Ngày duyệt']];
+  const baiDangLoc = ($('chamAiXuatBai') && $('chamAiXuatBai').value) || '';
+  const ds = baiDangLoc
+    ? chamAiDaDuyetDsHienThi.filter(x=> x._tenBaiHienThi === baiDangLoc)
+    : chamAiDaDuyetDsHienThi;
+  if(!ds.length){ alert(baiDangLoc ? `Không có điểm nào đã công bố cho "${baiDangLoc}".` : 'Chưa có điểm nào được công bố để xuất.'); return; }
+
+  const tenTruong = ($('chamAiXuatTruong') && $('chamAiXuatTruong').value.trim()) || 'TRƯỜNG THCS&THPT HÒA THUẬN';
+  const tenLop    = ($('chamAiXuatLop') && $('chamAiXuatLop').value.trim()) || 'LỚP 10A1';
+  const tieuDe    = ($('chamAiXuatTieuDe') && $('chamAiXuatTieuDe').value.trim()) || 'BẢNG ĐIỂM CHUYÊN ĐỀ BÀI TẬP CHUYÊN ĐỀ VẬT LÝ 10';
+
+  const FONT = 'Times New Roman';
+  const VIEN_MONG = { style:'thin', color:{rgb:'000000'} };
+  const VIEN_QUANH = { top:VIEN_MONG, bottom:VIEN_MONG, left:VIEN_MONG, right:VIEN_MONG };
+  const kieuTieuDe   = { font:{name:FONT, sz:12, bold:true}, alignment:{horizontal:'center', vertical:'center'} };
+  const kieuTieuDeCot= { font:{name:FONT, sz:12, bold:true}, alignment:{horizontal:'center', vertical:'center'}, border:VIEN_QUANH };
+  const kieuGiuaVien = { font:{name:FONT, sz:12}, alignment:{horizontal:'center', vertical:'center'}, border:VIEN_QUANH };
+  const kieuTraiVien = { font:{name:FONT, sz:12}, alignment:{horizontal:'left', vertical:'center'}, border:VIEN_QUANH };
+  const kieuBocVien  = { font:{name:FONT, sz:12}, alignment:{horizontal:'left', vertical:'center', wrapText:true}, border:VIEN_QUANH };
+  const kieuNgayVien = { font:{name:FONT, sz:12}, alignment:{horizontal:'center', vertical:'center', wrapText:true}, border:VIEN_QUANH };
+
+  const rows = [
+    [tenTruong,'','','','','',''],
+    [tenLop,'','','','','',''],
+    [tieuDe,'','','','','',''],
+    ['','','','','','',''],
+    ['STT','Họ và tên','Bài','Điểm','Nhận xét','Nguồn','Ngày duyệt'],
+  ];
   ds.forEach((x,i)=>{
-    const baiIdSuyRa = x.baiId || (x.khoa && x.khoa.indexOf('|') !== -1 ? x.khoa.split('|')[1] : '') || 'bai1';
-    const tenBaiHienThi = x.tenBai || (danhSachBaiTapHienTai().find(b=> b.id === baiIdSuyRa) || {}).ten || baiIdSuyRa;
     rows.push([
-      i+1, x.hoTen||'', tenBaiHienThi, x.diem!=null?x.diem:'', x.nhanXet||'',
+      i+1, x.hoTen||'', x._tenBaiHienThi, x.diem!=null?x.diem:'', x.nhanXet||'',
       x.nguon==='nopweb'?'Nộp web':(x.nguon==='link'?'Link ảnh':'Google Photos'),
       x.ngayDuyet ? new Date(x.ngayDuyet).toLocaleString('vi-VN') : ''
     ]);
   });
+
   try{
     const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [{wch:5},{wch:22},{wch:14},{wch:8},{wch:50},{wch:12},{wch:18}];
+    ws['!cols'] = [{wch:6},{wch:23},{wch:8},{wch:8},{wch:56},{wch:10},{wch:14}];
+    ws['!merges'] = [
+      {s:{r:0,c:0}, e:{r:0,c:3}},
+      {s:{r:1,c:0}, e:{r:1,c:3}},
+      {s:{r:2,c:0}, e:{r:2,c:6}},
+    ];
+    const guiKieu = (addr, kieu)=>{ if(ws[addr]) ws[addr].s = kieu; };
+    guiKieu('A1', kieuTieuDe); guiKieu('A2', kieuTieuDe); guiKieu('A3', kieuTieuDe);
+    'ABCDEFG'.split('').forEach(c=> guiKieu(c+'5', kieuTieuDeCot));
+
+    const soDongUocLuong = (chu, soKyTuMoiDong)=> Math.max(1, Math.ceil(String(chu||'').length / soKyTuMoiDong));
+    const hangCaoData = [];
+    ds.forEach((x,i)=>{
+      const hang = 6 + i; // hàng 1-based trong sheet (sau 5 hàng tiêu đề)
+      ['A','C','D','F'].forEach(c=> guiKieu(c+hang, kieuGiuaVien));
+      guiKieu('B'+hang, kieuTraiVien);
+      guiKieu('E'+hang, kieuBocVien);
+      guiKieu('G'+hang, kieuNgayVien);
+      const soDong = soDongUocLuong(x.nhanXet, 78);
+      hangCaoData.push({hpt: Math.max(20, soDong*15 + 6)});
+    });
+    ws['!rows'] = [{hpt:20},{hpt:20},{hpt:22},{hpt:8},{hpt:20}].concat(hangCaoData);
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Bảng điểm');
     XLSX.writeFile(wb, `bang-diem-ai-da-cong-bo-10a1-${new Date().toISOString().slice(0,10)}.xlsx`);
