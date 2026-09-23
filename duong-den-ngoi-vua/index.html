@@ -915,7 +915,7 @@
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 249, 250, 0.9) 100%);
             border-radius: 20px;
             padding: 12px;
-            box-shadow: 
+            box-shadow:
                 0 15px 40px rgba(0, 0, 0, 0.1),
                 inset 0 1px 0 rgba(255, 255, 255, 0.8);
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -923,6 +923,9 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
             overflow: visible;
+            min-width: 0;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         .student-card::before {
@@ -8091,8 +8094,9 @@
             } else {
                 // Chế độ thẻ lớn - 6 học sinh mỗi dòng
                 grid.style.display = 'grid';
-                grid.style.gridTemplateColumns = 'repeat(6, 1fr)';
+                grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(220px, 1fr))';
                 grid.style.gap = '20px';
+                grid.style.width = '100%';
                 grid.innerHTML = '';
                 
                 sortedStudents.forEach(student => {
