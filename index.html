@@ -1039,6 +1039,9 @@
     <div class="card">
       <h2>📊 Bảng điểm AI đã công bố (cả lớp)</h2>
       <p class="section-note">Điểm do AI chấm và đã được Thầy duyệt — công khai để cả lớp/phụ huynh tự tra cứu, không cần hỏi trực tiếp.</p>
+      <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
+        <button type="button" id="chamAiDaDuyetXuatBtn" class="btn btn-ghost btn-sm">⬇️ Xuất danh sách điểm (Excel)</button>
+      </div>
       <div class="scroll-x"><table id="chamAiDaDuyetTable"></table></div>
     </div>
 
@@ -8040,6 +8043,32 @@ function renderChamAiDaDuyet(){
   });
   bang.innerHTML = h;
 }
+
+// Xuất bảng điểm AI đã công bố ra file Excel (.xlsx) — dùng cùng dữ liệu và cách suy
+// ra tên bài như renderChamAiDaDuyet() ở trên, để số liệu xuất ra luôn khớp với bảng
+// đang hiển thị trên trang.
+$('chamAiDaDuyetXuatBtn') && ($('chamAiDaDuyetXuatBtn').onclick = ()=>{
+  const ds = Object.keys(chamAiDaDuyet).map(k=> Object.assign({khoa:k}, chamAiDaDuyet[k]))
+    .sort((a,b)=> (a.hoTen||'').localeCompare(b.hoTen||'', 'vi'));
+  if(!ds.length){ alert('Chưa có điểm nào được công bố để xuất.'); return; }
+  const rows = [['STT','Họ và tên','Bài','Điểm','Nhận xét','Nguồn','Ngày duyệt']];
+  ds.forEach((x,i)=>{
+    const baiIdSuyRa = x.baiId || (x.khoa && x.khoa.indexOf('|') !== -1 ? x.khoa.split('|')[1] : '') || 'bai1';
+    const tenBaiHienThi = x.tenBai || (danhSachBaiTapHienTai().find(b=> b.id === baiIdSuyRa) || {}).ten || baiIdSuyRa;
+    rows.push([
+      i+1, x.hoTen||'', tenBaiHienThi, x.diem!=null?x.diem:'', x.nhanXet||'',
+      x.nguon==='nopweb'?'Nộp web':(x.nguon==='link'?'Link ảnh':'Google Photos'),
+      x.ngayDuyet ? new Date(x.ngayDuyet).toLocaleString('vi-VN') : ''
+    ]);
+  });
+  try{
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:5},{wch:22},{wch:14},{wch:8},{wch:50},{wch:12},{wch:18}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Bảng điểm');
+    XLSX.writeFile(wb, `bang-diem-ai-da-cong-bo-10a1-${new Date().toISOString().slice(0,10)}.xlsx`);
+  }catch(e){ alert(baoLoi(e)); }
+});
 
 /* ---- Xem các bài bị lỗi khi Apps Script chấm (chamBaiAI2026/loi) ----
    Trước đây trang KHÔNG có chỗ nào hiển thị nhánh này, nên khi Apps Script chấm lỗi hàng loạt
