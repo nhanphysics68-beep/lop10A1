@@ -49,6 +49,9 @@
   .tab{flex:1; min-width:150px; background:var(--paper); border:1.5px solid var(--line);
     border-radius:12px; padding:12px 14px; cursor:pointer; font-weight:700; font-size:14px;
     color:var(--ink-soft); text-align:center; transition:.15s; font-family:inherit;}
+  /* Chỉ đổi VỊ TRÍ HIỂN THỊ (order) của 2 mục này lên hàng trên cùng — không đổi thứ tự
+     dữ liệu điều hướng thật (thuTuChinh), nên "Trang chủ" vẫn luôn là mục mở mặc định. */
+  .tab[data-tab="nhiemvu"], .tab[data-tab="quylop"]{ order: -1; }
   .tab:hover{border-color:var(--leaf); color:var(--leaf-dark);}
   .tab.active{background:var(--leaf); border-color:var(--leaf); color:#fff; box-shadow:var(--shadow);}
   .tab .ico{font-size:17px; display:block; margin-bottom:2px;}
@@ -750,6 +753,7 @@
           <input type="text" id="tcSlideChuThich" placeholder="VD: Lớp 10A1 tham gia Ngày hội STEM" maxlength="150">
         </div>
         <button type="button" class="btn btn-primary btn-sm" id="tcSlideThemBtn">Thêm vào slideshow</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="tcSlideHuySuaBtn" style="display:none;">Hủy sửa</button>
         <div id="tcSlideMsg" class="msg"></div>
         <div class="tc-quantri-list" id="tcSlideQuanTriList"></div>
       </details>
@@ -776,6 +780,7 @@
           <input type="text" id="tcTinLink" placeholder="https://..." maxlength="300">
         </div>
         <button type="button" class="btn btn-primary btn-sm" id="tcTinDangBtn">Đăng tin</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="tcTinHuySuaBtn" style="display:none;">Hủy sửa</button>
         <div id="tcTinMsg" class="msg"></div>
         <div class="tc-quantri-list" id="tcTinQuanTriList"></div>
       </details>
@@ -805,6 +810,7 @@
           <img id="tcGalleryXemTruocAnh" style="max-width:120px; max-height:80px; border-radius:8px; object-fit:cover;" alt="Xem trước">
         </div>
         <button type="button" class="btn btn-primary btn-sm" id="tcGalleryThemBtn">Thêm vào thư viện</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="tcGalleryHuySuaBtn" style="display:none;">Hủy sửa</button>
         <div id="tcGalleryMsg" class="msg"></div>
         <div class="tc-quantri-list" id="tcGalleryQuanTriList"></div>
       </details>
@@ -4227,20 +4233,45 @@ function renderTcSlideQuanTriList(){
     <div class="tc-quantri-dong">
       <img src="${sl.anh}" alt="">
       <span class="ten">${esc(sl.chuThich || '(không có chú thích)')}</span>
+      <button type="button" onclick="tcSuaSlide('${sl.id}')" title="Sửa">✏️</button>
       <button type="button" onclick="tcXoaSlide('${sl.id}')" title="Xóa">🗑️</button>
     </div>
   `).join('');
 }
 ganXemTruocDriveLink('tcSlideLinkInput', 'tcSlideXemTruoc', 'tcSlideXemTruocAnh');
+let tcSlideDangSuaId = null;
+window.tcSuaSlide = function(id){
+  const sl = tcSlides.find(s=> s.id===id);
+  if(!sl) return;
+  tcSlideDangSuaId = id;
+  $('tcSlideLinkInput').value = sl.anh || '';
+  $('tcSlideChuThich').value = sl.chuThich || '';
+  if(sl.anh){ $('tcSlideXemTruocAnh').src = sl.anh; $('tcSlideXemTruoc').style.display = 'block'; }
+  $('tcSlideThemBtn').textContent = 'Lưu thay đổi';
+  $('tcSlideHuySuaBtn').style.display = 'inline-block';
+  $('tcSlideLinkInput').scrollIntoView({behavior:'smooth', block:'center'});
+};
+function tcHuySuaSlide(){
+  tcSlideDangSuaId = null;
+  $('tcSlideLinkInput').value = ''; $('tcSlideChuThich').value = ''; $('tcSlideXemTruoc').style.display = 'none';
+  $('tcSlideThemBtn').textContent = 'Thêm vào slideshow';
+  $('tcSlideHuySuaBtn').style.display = 'none';
+}
+$('tcSlideHuySuaBtn').onclick = tcHuySuaSlide;
 $('tcSlideThemBtn').onclick = async ()=>{
   if(!isAdmin) return;
   const anh = chuyenLinkDriveThanhAnh($('tcSlideLinkInput').value);
   if(!anh){ showMsg($('tcSlideMsg'), 'Dán liên kết ảnh trên Google Drive trước đã.', 'err'); return; }
   const chuThich = $('tcSlideChuThich').value.trim();
   try{
-    await tcSlideRef.push({ anh, chuThich, luc: Date.now() });
-    $('tcSlideLinkInput').value = ''; $('tcSlideChuThich').value = ''; $('tcSlideXemTruoc').style.display = 'none';
-    showMsg($('tcSlideMsg'), '✅ Đã thêm ảnh slideshow.', 'ok');
+    if(tcSlideDangSuaId){
+      await tcSlideRef.child(tcSlideDangSuaId).update({ anh, chuThich });
+      showMsg($('tcSlideMsg'), '✅ Đã lưu thay đổi.', 'ok');
+    }else{
+      await tcSlideRef.push({ anh, chuThich, luc: Date.now() });
+      showMsg($('tcSlideMsg'), '✅ Đã thêm ảnh slideshow.', 'ok');
+    }
+    tcHuySuaSlide();
   }catch(err){ showMsg($('tcSlideMsg'), baoLoi(err), 'err'); }
 };
 window.tcXoaSlide = async function(id){
@@ -4282,11 +4313,35 @@ function renderTcTinQuanTriList(){
     <div class="tc-quantri-dong">
       ${t.anhNho ? `<img src="${t.anhNho}" alt="">` : ''}
       <span class="ten">${esc(t.tieuDe || '')}</span>
+      <button type="button" onclick="tcSuaTin('${t.id}')" title="Sửa">✏️</button>
       <button type="button" onclick="tcXoaTin('${t.id}')" title="Xóa">🗑️</button>
     </div>
   `).join('');
 }
 ganXemTruocDriveLink('tcTinAnhLink', 'tcTinXemTruoc', 'tcTinXemTruocAnh');
+let tcTinDangSuaId = null;
+window.tcSuaTin = function(id){
+  const t = tcTin.find(x=> x.id===id);
+  if(!t) return;
+  tcTinDangSuaId = id;
+  $('tcTinTieuDe').value = t.tieuDe || '';
+  $('tcTinTomTat').value = t.tomTat || '';
+  $('tcTinLink').value = t.link || '';
+  $('tcTinAnhLink').value = t.anhNho || '';
+  if(t.anhNho){ $('tcTinXemTruocAnh').src = t.anhNho; $('tcTinXemTruoc').style.display = 'block'; }
+  else{ $('tcTinXemTruoc').style.display = 'none'; }
+  $('tcTinDangBtn').textContent = 'Lưu thay đổi';
+  $('tcTinHuySuaBtn').style.display = 'inline-block';
+  $('tcTinTieuDe').scrollIntoView({behavior:'smooth', block:'center'});
+};
+function tcHuySuaTin(){
+  tcTinDangSuaId = null;
+  $('tcTinTieuDe').value = ''; $('tcTinTomTat').value = ''; $('tcTinLink').value = '';
+  $('tcTinAnhLink').value = ''; $('tcTinXemTruoc').style.display = 'none';
+  $('tcTinDangBtn').textContent = 'Đăng tin';
+  $('tcTinHuySuaBtn').style.display = 'none';
+}
+$('tcTinHuySuaBtn').onclick = tcHuySuaTin;
 $('tcTinDangBtn').onclick = async ()=>{
   if(!isAdmin) return;
   const tieuDe = $('tcTinTieuDe').value.trim();
@@ -4295,10 +4350,14 @@ $('tcTinDangBtn').onclick = async ()=>{
   const link = $('tcTinLink').value.trim();
   const anhNho = chuyenLinkDriveThanhAnh($('tcTinAnhLink').value);
   try{
-    await tcTinRef.push({ tieuDe, tomTat, link, anhNho, luc: Date.now() });
-    $('tcTinTieuDe').value = ''; $('tcTinTomTat').value = ''; $('tcTinLink').value = '';
-    $('tcTinAnhLink').value = ''; $('tcTinXemTruoc').style.display = 'none';
-    showMsg($('tcTinMsg'), '✅ Đã đăng tin.', 'ok');
+    if(tcTinDangSuaId){
+      await tcTinRef.child(tcTinDangSuaId).update({ tieuDe, tomTat, link, anhNho });
+      showMsg($('tcTinMsg'), '✅ Đã lưu thay đổi.', 'ok');
+    }else{
+      await tcTinRef.push({ tieuDe, tomTat, link, anhNho, luc: Date.now() });
+      showMsg($('tcTinMsg'), '✅ Đã đăng tin.', 'ok');
+    }
+    tcHuySuaTin();
   }catch(err){ showMsg($('tcTinMsg'), baoLoi(err), 'err'); }
 };
 window.tcXoaTin = async function(id){
@@ -4378,19 +4437,43 @@ function renderTcGalleryQuanTriList(){
     <div class="tc-quantri-dong">
       <img src="${g.anh}" alt="">
       <span class="ten">Ảnh #${esc(g.id.slice(-5))}</span>
+      <button type="button" onclick="tcSuaGallery('${g.id}')" title="Sửa">✏️</button>
       <button type="button" onclick="tcXoaGallery('${g.id}')" title="Xóa">🗑️</button>
     </div>
   `).join('');
 }
 ganXemTruocDriveLink('tcGalleryLinkInput', 'tcGalleryXemTruoc', 'tcGalleryXemTruocAnh');
+let tcGalleryDangSuaId = null;
+window.tcSuaGallery = function(id){
+  const g = tcGallery.find(x=> x.id===id);
+  if(!g) return;
+  tcGalleryDangSuaId = id;
+  $('tcGalleryLinkInput').value = g.anh || '';
+  if(g.anh){ $('tcGalleryXemTruocAnh').src = g.anh; $('tcGalleryXemTruoc').style.display = 'block'; }
+  $('tcGalleryThemBtn').textContent = 'Lưu thay đổi';
+  $('tcGalleryHuySuaBtn').style.display = 'inline-block';
+  $('tcGalleryLinkInput').scrollIntoView({behavior:'smooth', block:'center'});
+};
+function tcHuySuaGallery(){
+  tcGalleryDangSuaId = null;
+  $('tcGalleryLinkInput').value = ''; $('tcGalleryXemTruoc').style.display = 'none';
+  $('tcGalleryThemBtn').textContent = 'Thêm vào thư viện';
+  $('tcGalleryHuySuaBtn').style.display = 'none';
+}
+$('tcGalleryHuySuaBtn').onclick = tcHuySuaGallery;
 $('tcGalleryThemBtn').onclick = async ()=>{
   if(!isAdmin) return;
   const anh = chuyenLinkDriveThanhAnh($('tcGalleryLinkInput').value);
   if(!anh){ showMsg($('tcGalleryMsg'), 'Dán liên kết ảnh trên Google Drive trước đã.', 'err'); return; }
   try{
-    await tcGalleryRef.push({ anh, luc: Date.now() });
-    $('tcGalleryLinkInput').value = ''; $('tcGalleryXemTruoc').style.display = 'none';
-    showMsg($('tcGalleryMsg'), '✅ Đã thêm ảnh vào thư viện.', 'ok');
+    if(tcGalleryDangSuaId){
+      await tcGalleryRef.child(tcGalleryDangSuaId).update({ anh });
+      showMsg($('tcGalleryMsg'), '✅ Đã lưu thay đổi.', 'ok');
+    }else{
+      await tcGalleryRef.push({ anh, luc: Date.now() });
+      showMsg($('tcGalleryMsg'), '✅ Đã thêm ảnh vào thư viện.', 'ok');
+    }
+    tcHuySuaGallery();
   }catch(err){ showMsg($('tcGalleryMsg'), baoLoi(err), 'err'); }
 };
 window.tcXoaGallery = async function(id){
