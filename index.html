@@ -1399,6 +1399,18 @@
     </div>
 
     <div class="card">
+      <h2>Hình CCCD (VNEID)</h2>
+      <div class="rieng-tu">
+        🔒 <b>Giấy tờ tùy thân — chỉ mình em và thầy chủ nhiệm xem được</b>, không hiển thị công khai
+        ở bất kỳ đâu trên trang. Chụp/chọn ảnh mặt trước CCCD hoặc màn hình VNEID rõ nét, không mờ, không chói sáng.
+      </div>
+      <div id="cccdAnhXemTruoc" class="chs-anh-xemtruoc">Chưa có ảnh CCCD.</div>
+      <input type="file" id="cccdAnhInput" accept="image/*" style="display:none;">
+      <button type="button" class="btn btn-blue btn-sm" id="cccdChonAnhBtn">📷 Chọn / Đổi ảnh CCCD</button>
+      <div id="cccdAnhMsg" class="msg"></div>
+    </div>
+
+    <div class="card">
       <form id="hsForm">
         <div class="field">
           <label for="hs_hoten">Họ và tên học sinh <span class="req">*</span></label>
@@ -2109,6 +2121,35 @@ async function xoaAnhNdkmTrenDrive(anhId){
   });
   const kq = await res.json();
   if(!kq.ok) throw new Error(kq.loi || 'Không xóa được ảnh trên Drive.');
+}
+
+/* Web App Apps Script RIÊNG cho "Hình CCCD (VNEID)" — lưu thẳng vào thư mục Drive RIÊNG
+   https://drive.google.com/drive/folders/1auEUag8uiR3-OZa7fwyB4kiwPExn6oGu (khác hẳn thư mục
+   ảnh thẻ/bài tập/nhận diện khuôn mặt ở trên), vì đây là ẢNH GIẤY TỜ TÙY THÂN — dữ liệu nhạy
+   cảm nhất trong toàn bộ trang. Chỉ chính học sinh (tự nộp ảnh của mình) và giáo viên chủ
+   nhiệm (qua Firebase Rules "hosocanhan2026") mới đọc được id ảnh; ảnh KHÔNG được đồng bộ ra
+   bất kỳ mục công khai nào (khác với "Ảnh thẻ" — xem dongBoThanhVienCongKhai không đụng tới
+   cccdAnhId). Dùng lại ĐÚNG mẫu Apps Script "Nộp bài tập" (đổi ROOT_FOLDER_ID thành ID thư mục
+   CCCD ở trên + đổi MA_BAO_VE sang giá trị mới), triển khai thành Web App riêng, rồi dán URL
+   Web App vào đây. Tên tệp ảnh được Apps Script đặt theo đúng họ tên học sinh (tham số "ten"). */
+const CCCD_DRIVE_URL = 'DÁN_URL_WEB_APP_CCCD_VÀO_ĐÂY';
+const MA_CCCD = 'cccd-vneid-2026'; // phải trùng MA_BAO_VE trong Apps Script ảnh CCCD
+const dungCccdDrive = () => !!CCCD_DRIVE_URL && CCCD_DRIVE_URL.indexOf('DÁN_URL') === -1;
+async function guiAnhCccdLenDrive(duLieuAnh, tenHocSinh){
+  const res = await fetch(CCCD_DRIVE_URL, {
+    method: 'POST',
+    body: JSON.stringify({ ma: MA_CCCD, hanhDong: 'upload', duLieu: duLieuAnh, ten: tenHocSinh, thuMuc: '' })
+  });
+  const kq = await res.json();
+  if(!kq.ok) throw new Error(kq.loi || 'Không tải được ảnh CCCD lên Drive.');
+  return { id: kq.id, link: kq.link || anhDriveLon(kq.id) };
+}
+async function xoaAnhCccdTrenDrive(anhId){
+  if(!dungCccdDrive() || !anhId) return;
+  try{
+    await fetch(CCCD_DRIVE_URL, { method:'POST',
+      body: JSON.stringify({ ma: MA_CCCD, hanhDong: 'xoa', id: anhId }) });
+  }catch(e){ /* xóa ảnh cũ thất bại thì bỏ qua, không chặn việc nộp ảnh mới */ }
 }
 
 /* ---------------------------------------------------------------
@@ -5432,11 +5473,18 @@ async function napDuLieuCaNhanCuaToi(){
 function dienDuLieuCaNhanHS(data){
   $('chsThanhTich').value = (data && data.thanhTich) || '';
   hienThiAnhThe($('chsAnhXemTruoc'), data && data.anhTheId);
+  hienThiAnhCccd($('cccdAnhXemTruoc'), data && data.cccdAnhId);
 }
 function hienThiAnhThe(host, anhId){
   host.innerHTML = anhId
     ? `<img src="${anhDriveNho(anhId)}" alt="Ảnh thẻ">`
     : 'Chưa có ảnh thẻ.';
+}
+function hienThiAnhCccd(host, anhId){
+  if(!host) return;
+  host.innerHTML = anhId
+    ? `<img src="${anhDriveNho(anhId)}" alt="Ảnh CCCD">`
+    : 'Chưa có ảnh CCCD.';
 }
 
 /* -------------------- THÀNH VIÊN LỚP 10A1 (dạng thẻ học sinh, công khai) -------------------- */
@@ -5682,6 +5730,33 @@ $('chsAnhInput').onchange = async e=>{
   }catch(err){ showMsg($('chsAnhMsg'), baoLoi(err), 'err'); }
 };
 
+$('cccdChonAnhBtn').onclick = ()=> $('cccdAnhInput').click();
+$('cccdAnhInput').onchange = async e=>{
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  if(!/^image\//.test(file.type)){ showMsg($('cccdAnhMsg'), 'Vui lòng chọn đúng tệp ảnh.', 'err'); return; }
+  if(!myUid){ showMsg($('cccdAnhMsg'), 'Đang kết nối, thử lại sau vài giây.', 'info'); return; }
+  if(!dungCccdDrive()){ showMsg($('cccdAnhMsg'), 'Chưa cấu hình nơi lưu ảnh CCCD (Drive), báo thầy kiểm tra.', 'err'); return; }
+
+  showMsg($('cccdAnhMsg'), 'Đang xử lý và tải ảnh lên...', 'info');
+  try{
+    const anhNen = await nenAnh(file, 1600, 0.85); // ảnh giấy tờ cần rõ số/chữ hơn ảnh thẻ chân dung
+    const ten = $('hs_hoten').value.trim() || 'HocSinh';
+    const cuTruoc = (await chsRef.child(myUid).once('value')).val() || {};
+    const kq = await guiAnhCccdLenDrive(anhNen, ten);
+    const moi = Object.assign({}, cuTruoc, {
+      hoTen: cuTruoc.hoTen || ten,
+      cccdAnhId: kq.id,
+      cccdSavedAt: new Date().toISOString()
+    });
+    await chsRef.child(myUid).set(moi);
+    if(cuTruoc.cccdAnhId && cuTruoc.cccdAnhId !== kq.id) xoaAnhCccdTrenDrive(cuTruoc.cccdAnhId);
+    hienThiAnhCccd($('cccdAnhXemTruoc'), kq.id);
+    showMsg($('cccdAnhMsg'), '✅ Đã tải ảnh CCCD lên.', 'ok');
+  }catch(err){ showMsg($('cccdAnhMsg'), baoLoi(err), 'err'); }
+};
+
 /* Đồng bộ ra bản CÔNG KHAI rút gọn cho mục "Thành viên lớp 10A1" — chỉ đúng 4 trường
    không nhạy cảm (họ tên, ngày sinh, giới tính, ảnh thẻ), KHÔNG bao giờ đưa CCCD hay
    thành tích ra công khai. */
@@ -5720,6 +5795,7 @@ function renderChsAdmin(){
         <b>${esc(x.hoTen || '(chưa có tên)')}</b> — ${esc(x.gioiTinh||'')}, ${esc(x.danToc||'')}
         ${!x.cccd ? '<span class="chs-admin-thieu"> · thiếu CCCD</span>' : ''}
         ${!x.anhTheId ? '<span class="chs-admin-thieu"> · thiếu ảnh thẻ</span>' : ''}
+        ${!x.cccdAnhId ? '<span class="chs-admin-thieu"> · thiếu ảnh CCCD</span>' : ''}
       </div>
       <button class="btn btn-ghost btn-sm" data-chs-xoa="${x.uid}">Xóa</button>
     </div>`).join('');
@@ -5756,6 +5832,7 @@ function taoTrangHoSo(hs){
     [hs.thanhTich || '(chưa cập nhật)', '', '', ''],
     ['', '', '', ''],
     ['Ảnh thẻ', hs.anhTheId ? 'Xem ảnh trên Drive' : '(chưa có ảnh)', '', ''],
+    ['Ảnh CCCD (VNEID)', hs.cccdAnhId ? 'Xem ảnh trên Drive' : '(chưa có ảnh)', '', ''],
     ['Cập nhật lúc', hs.savedAt ? new Date(hs.savedAt).toLocaleString('vi-VN') : '', '', ''],
   ];
   const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -5766,16 +5843,18 @@ function taoTrangHoSo(hs){
     {s:{r:6,c:0}, e:{r:6,c:3}},
     {s:{r:7,c:0}, e:{r:7,c:3}},
   ];
-  ws['!rows'] = [{hpt:26},{hpt:6},{hpt:20},{hpt:20},{hpt:20},{hpt:6},{hpt:20},{hpt:60},{hpt:6},{hpt:20},{hpt:20}];
+  ws['!rows'] = [{hpt:26},{hpt:6},{hpt:20},{hpt:20},{hpt:20},{hpt:6},{hpt:20},{hpt:60},{hpt:6},{hpt:20},{hpt:20},{hpt:20}];
 
   const guiKieu = (addr, kieu)=>{ if(ws[addr]) ws[addr].s = kieu; };
   guiKieu('A1', KIEU_TIEU_DE);
-  ['A3','A4','C4','A5','C5','A10','A11'].forEach(a=> guiKieu(a, KIEU_NHAN));
-  ['B3','B4','D4','B5','D5','B11'].forEach(a=> guiKieu(a, KIEU_GIATRI));
+  ['A3','A4','C4','A5','C5','A10','A11','A12'].forEach(a=> guiKieu(a, KIEU_NHAN));
+  ['B3','B4','D4','B5','D5','B12'].forEach(a=> guiKieu(a, KIEU_GIATRI));
   guiKieu('A7', KIEU_PHU_DE);
   guiKieu('A8', KIEU_THANH_TICH);
   guiKieu('B10', KIEU_LINK);
+  guiKieu('B11', KIEU_LINK);
   if(hs.anhTheId && ws['B10']) ws['B10'].l = { Target: anhDriveLon(hs.anhTheId) };
+  if(hs.cccdAnhId && ws['B11']) ws['B11'].l = { Target: anhDriveLon(hs.cccdAnhId) };
   return ws;
 }
 
