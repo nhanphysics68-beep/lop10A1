@@ -2589,12 +2589,14 @@ let thuTuChinh = THU_TU_CHINH_MAC_DINH.slice();
 let thuTuCon = {};
 Object.keys(NHOM_TAB).forEach(groupId=>{ thuTuCon[groupId] = NHOM_TAB[groupId].slice(); });
 
-/* 2 mục "Nhiệm vụ học tập" và "Quỹ lớp" luôn được XẾP RIÊNG THÀNH HÀNG TRÊN CÙNG, và các mục
-   còn lại luôn xuống hàng dưới — dùng một "ô ngăn dòng" ẩn (flex-basis:100%) chèn giữa 2 nhóm để
-   ép xuống dòng THẬT SỰ, không phụ thuộc bề rộng màn hình (khác với chỉ dùng CSS order, vốn chỉ
-   tự xuống dòng khi hết chỗ nên trên màn hình rộng có thể gộp chung 1 hàng không như ý muốn).
-   Thứ tự dữ liệu điều hướng thật (thuTuChinh) KHÔNG đổi, nên "Trang chủ" vẫn luôn mở mặc định. */
-const TC_NHOM_HANG_TREN = ['nhiemvu', 'quylop'];
+/* 2 MỤC ĐẦU TIÊN trong thứ tự (thuTuChinh) luôn được xếp riêng thành HÀNG TRÊN (khung to),
+   các mục còn lại luôn xuống HÀNG DƯỚI — dùng một "ô ngăn dòng" ẩn (flex-basis:100%) chèn giữa
+   2 nhóm để ép xuống dòng THẬT SỰ, không phụ thuộc bề rộng màn hình. Vì mục nào ở hàng trên hay
+   hàng dưới chỉ phụ thuộc VỊ TRÍ trong danh sách, nên giáo viên dùng nút ▲▼ ở "Sắp xếp menu điều
+   hướng" là đổi được TỰ DO cả 9 mục cho nhau, kể cả đổi mục nào thuộc hàng trên/hàng dưới.
+   Trang mặc định khi mở web KHÔNG lấy theo mục đầu tiên nữa (xem TRANG_MAC_DINH bên dưới), nên
+   thầy đổi thứ tự thoải mái mà không sợ ảnh hưởng trang mở đầu tiên. */
+const TC_SO_MUC_HANG_TREN = 2;
 function renderTabsChinh(){
   const host = $('tabsChinh');
   if(!host) return;
@@ -2604,12 +2606,16 @@ function renderTabsChinh(){
     const thuocTinhMau = mau ? ` data-mau="1" style="--mau:${esc(mau)}"` : '';
     return `<button class="tab" data-tab="${id}"${thuocTinhMau}><span class="ico">${d.icon}</span>${esc(tenHienThi(id, TAB_DINH_NGHIA))}</button>`;
   };
-  const hangTren = TC_NHOM_HANG_TREN.filter(id=> thuTuChinh.includes(id));
-  const hangDuoi = thuTuChinh.filter(id=> !hangTren.includes(id));
-  const nganDong = hangTren.length ? '<div class="tc-tabs-ngan-dong" aria-hidden="true"></div>' : '';
+  const hangTren = thuTuChinh.slice(0, TC_SO_MUC_HANG_TREN);
+  const hangDuoi = thuTuChinh.slice(TC_SO_MUC_HANG_TREN);
+  const nganDong = (hangTren.length && hangDuoi.length) ? '<div class="tc-tabs-ngan-dong" aria-hidden="true"></div>' : '';
   host.innerHTML = hangTren.map(veHtml).join('') + nganDong + hangDuoi.map(veHtml).join('');
   host.querySelectorAll('.tab').forEach(t=> t.onclick = ()=> moTab(t.dataset.tab));
 }
+/* Trang mở mặc định khi vào web — cố định là "Trang chủ", tách riêng khỏi thứ tự hiển thị
+   thuTuChinh để giáo viên đổi thứ tự tab thoải mái mà không làm đổi trang mở đầu tiên. */
+const TRANG_MAC_DINH = 'trangchu';
+function tabMacDinh(){ return thuTuChinh.includes(TRANG_MAC_DINH) ? TRANG_MAC_DINH : thuTuChinh[0]; }
 function renderSubtabsNhom(groupId){
   const host = $('subtabs-' + groupId);
   if(!host) return;
@@ -2674,7 +2680,7 @@ renderToanBoDieuHuong();
   if(mNhom){ moTab(mNhom[1], mNhom[2]); return; }
 
   if(document.querySelector(`.tab[data-tab="${h}"]`)){ moTab(h); return; }
-  moTab(thuTuChinh[0]); // mặc định: mở đúng mục đầu tiên theo thứ tự hiện tại
+  moTab(tabMacDinh()); // mặc định: luôn mở "Trang chủ", không phụ thuộc thứ tự hiển thị
 })();
 
 /* -------------------- MODAL -------------------- */
@@ -7603,7 +7609,7 @@ dieuHuongRef.on('value', s=>{
   tenTuyChinhState = v.tenTuyChinh || {};
   mauTuyChinhState = v.mauTuyChinh || {};
   renderToanBoDieuHuong();
-  if(tabDangMo) moTab(tabDangMo, subDangMo); else moTab(thuTuChinh[0]);
+  if(tabDangMo) moTab(tabDangMo, subDangMo); else moTab(tabMacDinh());
   if(isAdmin) renderSapXepMenu();
 });
 
