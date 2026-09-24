@@ -290,6 +290,62 @@
     padding:12px 16px; font-size:13px; color:var(--ink-soft); margin-bottom:18px; line-height:1.7;}
   .guide b{color:var(--leaf-dark);}
 
+  /* ---------- Trang chủ: slideshow + tin tức + thông báo ---------- */
+  .tc-luoi{display:grid; grid-template-columns: 1.6fr 1fr; gap:16px; align-items:start; min-width:0;}
+  @media (max-width:860px){ .tc-luoi{grid-template-columns: 1fr;} }
+
+  .tc-slide-khung{position:relative; width:100%; aspect-ratio:16/9; border-radius:14px; overflow:hidden;
+    background:#eee; box-shadow:var(--shadow); min-width:0;}
+  .tc-slide-anh{position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+    opacity:0; transition:opacity .6s ease; }
+  .tc-slide-anh.hien{opacity:1; z-index:1;}
+  .tc-slide-chuthich{position:absolute; left:0; right:0; bottom:0; z-index:2;
+    background:linear-gradient(0deg, rgba(0,0,0,.72), rgba(0,0,0,0));
+    color:#fff; padding:26px 18px 12px; font-weight:700; font-size:15px; line-height:1.4;}
+  .tc-slide-nut{position:absolute; top:50%; transform:translateY(-50%); z-index:3;
+    background:rgba(0,0,0,.35); color:#fff; border:none; width:34px; height:34px; border-radius:50%;
+    cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center;}
+  .tc-slide-nut:hover{background:rgba(0,0,0,.6);}
+  .tc-slide-nut.trai{left:10px;} .tc-slide-nut.phai{right:10px;}
+  .tc-slide-cham{position:absolute; bottom:8px; left:0; right:0; z-index:3; display:flex; justify-content:center; gap:6px;}
+  .tc-slide-cham span{width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,.55); cursor:pointer;}
+  .tc-slide-cham span.hien{background:#fff;}
+  .tc-slide-rong{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    color:var(--ink-soft); font-size:13px; text-align:center; padding:20px;}
+
+  .tc-hop{background:var(--paper); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow);
+    padding:14px 16px; margin-bottom:16px; min-width:0;}
+  .tc-hop-tieude{background:var(--red); color:#fff; font-weight:700; font-size:14px; padding:8px 12px;
+    border-radius:8px; margin:-14px -16px 12px; }
+  .tc-tin-dong{display:flex; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); cursor:pointer;}
+  .tc-tin-dong:last-child{border-bottom:none;}
+  .tc-tin-anh{width:56px; height:56px; border-radius:8px; object-fit:cover; flex-shrink:0; background:#eee;}
+  .tc-tin-noidung{min-width:0; flex:1;}
+  .tc-tin-tieude{font-size:13.5px; font-weight:700; color:var(--ink); line-height:1.35;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+  .tc-tin-tomtat{font-size:12px; color:var(--ink-soft); margin-top:3px;
+    display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden;}
+  .tc-tb-dong{display:flex; gap:8px; align-items:flex-start; padding:7px 0; border-bottom:1px dashed var(--line); font-size:13px;}
+  .tc-tb-dong:last-child{border-bottom:none;}
+  .tc-tb-dong a, .tc-tb-dong span.tc-tb-ten{color:var(--red); font-weight:600; text-decoration:none;}
+  .tc-tb-dong a:hover{text-decoration:underline;}
+  .tc-rong{font-size:13px; color:var(--ink-soft); padding:6px 0;}
+
+  .tc-tab-nut{display:flex; gap:6px; margin-bottom:10px;}
+  .tc-tab-nut button{flex:1; padding:7px 0; border-radius:8px; border:1.5px solid var(--line);
+    background:#fff; cursor:pointer; font-weight:600; font-size:13px; color:var(--ink-soft);}
+  .tc-tab-nut button.active{background:var(--red); border-color:var(--red); color:#fff;}
+  .tc-gallery-anh{width:100%; border-radius:10px; object-fit:cover; aspect-ratio:4/3; background:#eee;}
+
+  .tc-quantri{border:1.5px dashed var(--clay); border-radius:12px; padding:14px 16px; margin-bottom:18px; background:#fffaf0;}
+  .tc-quantri h3{margin:0 0 10px; font-size:14.5px; color:var(--clay);}
+  .tc-quantri .field{margin-bottom:10px;}
+  .tc-quantri-list{margin-top:10px;}
+  .tc-quantri-dong{display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--line); font-size:13px;}
+  .tc-quantri-dong img{width:40px; height:40px; object-fit:cover; border-radius:6px; flex-shrink:0;}
+  .tc-quantri-dong .ten{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .tc-quantri-dong button{border:none; background:none; cursor:pointer; font-size:15px; padding:2px 6px;}
+
   /* ---------- Sơ đồ lớp ---------- */
   .front-zone{display:grid; grid-template-columns:1fr 1.6fr 1fr; gap:10px; margin-bottom:22px;}
   .front-box{border-radius:10px; padding:12px 10px; text-align:center; font-size:12.5px; font-weight:700;
@@ -670,8 +726,126 @@
   <div class="subtabs" id="subtabs-nhiemvu" data-group="nhiemvu"></div>
   <div class="subtabs" id="subtabs-games" data-group="games"></div>
 
+  <!-- ============ TRANG CHỦ: SLIDESHOW + TIN TỨC + THÔNG BÁO ============ -->
+  <div class="panel active" id="panel-trangchu">
+    <div id="tcQuanTriBox" class="tc-quantri" style="display:none;">
+      <h3>⚙️ Quản trị Trang chủ (chỉ thầy nhìn thấy mục này)</h3>
+
+      <details>
+        <summary style="cursor:pointer; font-weight:700; color:var(--ink); margin-bottom:8px;">🖼️ Ảnh slideshow (banner tự chạy)</summary>
+        <p class="section-note" style="margin:0 0 10px;">
+          Ảnh lưu trên Google Drive (không lưu vào Firebase) để đỡ tốn dung lượng. Các bước:
+          1) Tải ảnh lên Drive → 2) Bấm chuột phải chọn <b>Chia sẻ</b> → đặt quyền
+          <b>"Bất kỳ ai có đường liên kết" → Người xem</b> → 3) Sao chép liên kết rồi dán vào ô bên dưới.
+        </p>
+        <div class="field">
+          <label for="tcSlideLinkInput">Liên kết ảnh trên Google Drive</label>
+          <input type="text" id="tcSlideLinkInput" placeholder="https://drive.google.com/file/d/xxxxx/view">
+        </div>
+        <div id="tcSlideXemTruoc" style="display:none; margin-bottom:8px;">
+          <img id="tcSlideXemTruocAnh" style="max-width:160px; max-height:100px; border-radius:8px; object-fit:cover;" alt="Xem trước">
+        </div>
+        <div class="field">
+          <label for="tcSlideChuThich">Chú thích hiện trên ảnh (không bắt buộc)</label>
+          <input type="text" id="tcSlideChuThich" placeholder="VD: Lớp 10A1 tham gia Ngày hội STEM" maxlength="150">
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="tcSlideThemBtn">Thêm vào slideshow</button>
+        <div id="tcSlideMsg" class="msg"></div>
+        <div class="tc-quantri-list" id="tcSlideQuanTriList"></div>
+      </details>
+
+      <details style="margin-top:14px;">
+        <summary style="cursor:pointer; font-weight:700; color:var(--ink); margin-bottom:8px;">📰 Tin mới nhất</summary>
+        <div class="field">
+          <label for="tcTinTieuDe">Tiêu đề</label>
+          <input type="text" id="tcTinTieuDe" placeholder="VD: Lễ khai giảng năm học 2026-2027" maxlength="150">
+        </div>
+        <div class="field">
+          <label for="tcTinTomTat">Tóm tắt ngắn</label>
+          <input type="text" id="tcTinTomTat" placeholder="Mô tả ngắn gọn nội dung tin" maxlength="200">
+        </div>
+        <div class="field">
+          <label for="tcTinAnhLink">Liên kết ảnh minh họa trên Google Drive (không bắt buộc)</label>
+          <input type="text" id="tcTinAnhLink" placeholder="https://drive.google.com/file/d/xxxxx/view">
+        </div>
+        <div id="tcTinXemTruoc" style="display:none; margin-bottom:8px;">
+          <img id="tcTinXemTruocAnh" style="max-width:120px; max-height:80px; border-radius:8px; object-fit:cover;" alt="Xem trước">
+        </div>
+        <div class="field">
+          <label for="tcTinLink">Liên kết chi tiết (không bắt buộc)</label>
+          <input type="text" id="tcTinLink" placeholder="https://..." maxlength="300">
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="tcTinDangBtn">Đăng tin</button>
+        <div id="tcTinMsg" class="msg"></div>
+        <div class="tc-quantri-list" id="tcTinQuanTriList"></div>
+      </details>
+
+      <details style="margin-top:14px;">
+        <summary style="cursor:pointer; font-weight:700; color:var(--ink); margin-bottom:8px;">📌 Thông báo mới</summary>
+        <div class="field">
+          <label for="tcTbTieuDe">Tiêu đề thông báo</label>
+          <input type="text" id="tcTbTieuDe" placeholder="VD: Lịch họp phụ huynh đầu năm" maxlength="150">
+        </div>
+        <div class="field">
+          <label for="tcTbLink">Liên kết tệp đính kèm (không bắt buộc)</label>
+          <input type="text" id="tcTbLink" placeholder="https://..." maxlength="300">
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="tcTbDangBtn">Đăng thông báo</button>
+        <div id="tcTbMsg" class="msg"></div>
+        <div class="tc-quantri-list" id="tcTbQuanTriList"></div>
+      </details>
+
+      <details style="margin-top:14px;">
+        <summary style="cursor:pointer; font-weight:700; color:var(--ink); margin-bottom:8px;">🖼️ Thư viện ảnh</summary>
+        <div class="field">
+          <label for="tcGalleryLinkInput">Liên kết ảnh trên Google Drive</label>
+          <input type="text" id="tcGalleryLinkInput" placeholder="https://drive.google.com/file/d/xxxxx/view">
+        </div>
+        <div id="tcGalleryXemTruoc" style="display:none; margin-bottom:8px;">
+          <img id="tcGalleryXemTruocAnh" style="max-width:120px; max-height:80px; border-radius:8px; object-fit:cover;" alt="Xem trước">
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="tcGalleryThemBtn">Thêm vào thư viện</button>
+        <div id="tcGalleryMsg" class="msg"></div>
+        <div class="tc-quantri-list" id="tcGalleryQuanTriList"></div>
+      </details>
+    </div>
+
+    <div class="tc-luoi">
+      <div>
+        <div class="tc-slide-khung" id="tcSlideKhung">
+          <div class="tc-slide-rong" id="tcSlideRong">Chưa có ảnh slideshow. Thầy vào mục quản trị phía trên để thêm ảnh.</div>
+          <button type="button" class="tc-slide-nut trai" id="tcSlideTruoc" style="display:none;">‹</button>
+          <button type="button" class="tc-slide-nut phai" id="tcSlideSau" style="display:none;">›</button>
+          <div class="tc-slide-cham" id="tcSlideCham"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="tc-hop">
+          <div class="tc-hop-tieude">📰 Tin mới nhất</div>
+          <div id="tcTinList"></div>
+          <div class="tc-rong" id="tcTinRong" style="display:none;">Chưa có tin nào.</div>
+        </div>
+
+        <div class="tc-hop">
+          <div class="tc-hop-tieude">📌 Thông báo mới</div>
+          <div id="tcTbList"></div>
+          <div class="tc-rong" id="tcTbRong" style="display:none;">Chưa có thông báo nào.</div>
+        </div>
+
+        <div class="tc-hop">
+          <div class="tc-tab-nut">
+            <button type="button" id="tcTabAnhBtn" class="active">🖼️ Ảnh</button>
+          </div>
+          <div id="tcGalleryList" style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;"></div>
+          <div class="tc-rong" id="tcGalleryRong" style="display:none;">Chưa có ảnh trong thư viện.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ THẺ 1: SƠ ĐỒ LỚP ============ -->
-  <div class="panel active" id="panel-sodo" data-group="thongtin">
+  <div class="panel" id="panel-sodo" data-group="thongtin">
     <div class="card">
       <div class="guide">
         🌱 <b>Cách dùng:</b> Chạm vào ô trống → nhập tên → xong. Chỗ đó tự động thuộc về em,
@@ -1970,6 +2144,10 @@ const cfBinhLuanRef = db.ref('confession2026/binhluan');
 const bcsRef = db.ref('lop10a1/bancansu');  // ban cán sự lớp — công khai đọc, chỉ giáo viên ghi
 const tkbRef = db.ref('tkb2026');           // thời khóa biểu — công khai đọc, chỉ giáo viên ghi
 const dieuHuongRef = db.ref('dieuHuong2026'); // thứ tự menu điều hướng — công khai đọc, chỉ giáo viên ghi
+const tcSlideRef = db.ref('trangChu2026/slides');   // ảnh slideshow trang chủ — công khai đọc, chỉ giáo viên ghi
+const tcTinRef   = db.ref('trangChu2026/tinTuc');   // tin mới nhất — công khai đọc, chỉ giáo viên ghi
+const tcTbRef    = db.ref('trangChu2026/thongBao'); // thông báo mới — công khai đọc, chỉ giáo viên ghi
+const tcGalleryRef = db.ref('trangChu2026/gallery');// thư viện ảnh — công khai đọc, chỉ giáo viên ghi
 const clbRef = db.ref('clb2026');           // các câu lạc bộ — công khai đọc, mỗi người tự ghi đúng phần của mình
 const clbDinhNghiaRef = db.ref('clbDinhNghia2026'); // định nghĩa CLB (tên/icon/mô tả) — công khai đọc, chỉ giáo viên ghi
 const clbDiemRef = db.ref('clbDiem2026');   // điểm uy tín đóng góp — công khai đọc, CHỈ giáo viên ghi được
@@ -2354,6 +2532,7 @@ function myRegId(){ const r = regs.find(x=> x.uid===myUid); return r? r.id : nul
 /* Định nghĩa CỐ ĐỊNH: icon/tên/thành viên mỗi nhóm không đổi — chỉ THỨ TỰ hiển thị là
    có thể tùy chỉnh (lưu trên Firebase, xem dieuHuong2026 phía dưới). */
 const TAB_DINH_NGHIA = {
+  trangchu:   {icon:'🏠', ten:'Trang chủ'},
   thongtin:   {icon:'🏫', ten:'Thông tin lớp 10A1'},
   quylop:     {icon:'🐷', ten:'Quỹ lớp'},
   hoatdong:   {icon:'🙋', ten:'Các hoạt động của lớp'},
@@ -2363,7 +2542,7 @@ const TAB_DINH_NGHIA = {
   confession: {icon:'🎭', ten:'Confession'},
   games:      {icon:'🎮', ten:'Công cụ học tập'},
 };
-const THU_TU_CHINH_MAC_DINH = ['thongtin', 'quylop', 'hoatdong', 'hoatdongto', 'nhiemvu', 'bangtin', 'confession', 'games'];
+const THU_TU_CHINH_MAC_DINH = ['trangchu', 'thongtin', 'quylop', 'hoatdong', 'hoatdongto', 'nhiemvu', 'bangtin', 'confession', 'games'];
 
 const SUBTAB_DINH_NGHIA = {
   sodo:      {icon:'📍', ten:'Sơ đồ lớp'},
@@ -2511,6 +2690,7 @@ auth.onAuthStateChanged(async user=>{
   isAdmin = (user.uid === ADMIN_UID);
   isThuQuy = !isAdmin && THU_QUY_UIDS.includes(user.uid);
   if(typeof capNhatGhiChuDdnv === 'function') capNhatGhiChuDdnv();
+  if(typeof capNhatQuanTriTrangChu === 'function') capNhatQuanTriTrangChu();
   // Thủ quỹ: đăng nhập thành công nên ẩn form đăng nhập, nhưng KHÔNG mở khu vực quản trị đầy
   // đủ (dữ liệu riêng tư khác của học sinh) — chỉ mục Quỹ lớp mở khóa cho họ (xem renderQuyLop).
   $('adminLocked').style.display = (isAdmin || isThuQuy) ? 'none' : 'block';
@@ -3945,6 +4125,283 @@ async function chiaSeKieuMay(baiId){
   pickerChiaSeMo = null;
   renderBaiViet();
 }
+
+/* ================================================================
+   TRANG CHỦ — SLIDESHOW + TIN TỨC + THÔNG BÁO + THƯ VIỆN ẢNH
+   Chỉ giáo viên (isAdmin) đăng/sửa/xóa được; cả lớp chỉ xem.
+   Ảnh được nén ngay trên máy (dùng lại hàm nenAnh() ở Bảng tin) rồi lưu
+   dạng chuỗi base64 trong Firebase — không cần Firebase Storage.
+   ================================================================ */
+let tcSlides = [], tcTin = [], tcThongBao = [], tcGallery = [];
+let tcSlideDangHien = 0, tcSlideHenGio = null;
+
+/* Chuyển link chia sẻ Google Drive (dạng .../file/d/<ID>/view hoặc ?id=<ID>) thành link ảnh
+   xem trực tiếp được (dùng làm src cho <img>). File phải đặt quyền chia sẻ "Bất kỳ ai có
+   đường liên kết — Người xem" thì ảnh mới hiện ra được cho người khác.
+   Lưu link thay vì lưu cả tấm ảnh (base64) vào Firebase để đỡ tốn dung lượng + băng thông. */
+function chuyenLinkDriveThanhAnh(link){
+  if(!link) return '';
+  link = link.trim();
+  const m = link.match(/\/d\/([a-zA-Z0-9_-]{15,})/) || link.match(/[?&]id=([a-zA-Z0-9_-]{15,})/);
+  if(m && m[1]) return `https://drive.google.com/thumbnail?id=${m[1]}&sz=w1600`;
+  return link; // không nhận diện được dạng link Drive — dùng nguyên link (có thể là link ảnh trực tiếp từ nơi khác)
+}
+/* Gắn xem trước ảnh ngay khi thầy dán link, để phát hiện sớm nếu link/quyền chia sẻ sai
+   (ảnh vỡ ngay tại đây thay vì phải ra ngoài trang chủ mới biết). */
+function ganXemTruocDriveLink(inputId, khungId, imgId){
+  const input = $(inputId), khung = $(khungId), img = $(imgId);
+  if(!input || !khung || !img) return;
+  input.oninput = ()=>{
+    const url = chuyenLinkDriveThanhAnh(input.value);
+    if(url){ img.src = url; khung.style.display = 'block'; }
+    else{ khung.style.display = 'none'; }
+  };
+}
+
+function capNhatQuanTriTrangChu(){
+  const box = $('tcQuanTriBox');
+  if(box) box.style.display = isAdmin ? 'block' : 'none';
+}
+
+/* ---------- Slideshow ---------- */
+function renderTcSlideshow(){
+  const khung = $('tcSlideKhung');
+  const rong = $('tcSlideRong');
+  const cham = $('tcSlideCham');
+  const nutTruoc = $('tcSlideTruoc');
+  const nutSau = $('tcSlideSau');
+  if(!khung) return;
+
+  khung.querySelectorAll('.tc-slide-anh, .tc-slide-chuthich').forEach(x=> x.remove());
+
+  if(!tcSlides.length){
+    rong.style.display = 'flex';
+    cham.innerHTML = '';
+    nutTruoc.style.display = 'none';
+    nutSau.style.display = 'none';
+    if(tcSlideHenGio){ clearInterval(tcSlideHenGio); tcSlideHenGio = null; }
+    return;
+  }
+  rong.style.display = 'none';
+  nutTruoc.style.display = tcSlides.length > 1 ? 'flex' : 'none';
+  nutSau.style.display = tcSlides.length > 1 ? 'flex' : 'none';
+
+  tcSlides.forEach((sl, i)=>{
+    const img = document.createElement('img');
+    img.className = 'tc-slide-anh' + (i === tcSlideDangHien ? ' hien' : '');
+    img.src = sl.anh;
+    img.alt = sl.chuThich || 'Ảnh lớp 10A1';
+    khung.insertBefore(img, cham);
+    if(sl.chuThich){
+      const chuThich = document.createElement('div');
+      chuThich.className = 'tc-slide-chuthich';
+      chuThich.style.opacity = i === tcSlideDangHien ? '1' : '0';
+      chuThich.style.position = 'absolute';
+      chuThich.style.zIndex = '2';
+      chuThich.style.display = i === tcSlideDangHien ? 'block' : 'none';
+      chuThich.textContent = sl.chuThich;
+      khung.insertBefore(chuThich, cham);
+    }
+  });
+
+  cham.innerHTML = tcSlides.map((_, i)=> `<span data-i="${i}" class="${i===tcSlideDangHien?'hien':''}"></span>`).join('');
+  cham.querySelectorAll('span').forEach(s=> s.onclick = ()=> tcChuyenSlide(parseInt(s.dataset.i)));
+
+  if(tcSlideHenGio) clearInterval(tcSlideHenGio);
+  if(tcSlides.length > 1){
+    tcSlideHenGio = setInterval(()=> tcChuyenSlide((tcSlideDangHien + 1) % tcSlides.length), 5000);
+  }
+}
+function tcChuyenSlide(i){
+  tcSlideDangHien = ((i % tcSlides.length) + tcSlides.length) % tcSlides.length;
+  renderTcSlideshow();
+}
+$('tcSlideTruoc').onclick = ()=> tcChuyenSlide(tcSlideDangHien - 1);
+$('tcSlideSau').onclick   = ()=> tcChuyenSlide(tcSlideDangHien + 1);
+
+function renderTcSlideQuanTriList(){
+  const host = $('tcSlideQuanTriList');
+  if(!host) return;
+  if(!tcSlides.length){ host.innerHTML = '<div class="tc-rong">Chưa có ảnh nào.</div>'; return; }
+  host.innerHTML = tcSlides.map(sl=> `
+    <div class="tc-quantri-dong">
+      <img src="${sl.anh}" alt="">
+      <span class="ten">${esc(sl.chuThich || '(không có chú thích)')}</span>
+      <button type="button" onclick="tcXoaSlide('${sl.id}')" title="Xóa">🗑️</button>
+    </div>
+  `).join('');
+}
+ganXemTruocDriveLink('tcSlideLinkInput', 'tcSlideXemTruoc', 'tcSlideXemTruocAnh');
+$('tcSlideThemBtn').onclick = async ()=>{
+  if(!isAdmin) return;
+  const anh = chuyenLinkDriveThanhAnh($('tcSlideLinkInput').value);
+  if(!anh){ showMsg($('tcSlideMsg'), 'Dán liên kết ảnh trên Google Drive trước đã.', 'err'); return; }
+  const chuThich = $('tcSlideChuThich').value.trim();
+  try{
+    await tcSlideRef.push({ anh, chuThich, luc: Date.now() });
+    $('tcSlideLinkInput').value = ''; $('tcSlideChuThich').value = ''; $('tcSlideXemTruoc').style.display = 'none';
+    showMsg($('tcSlideMsg'), '✅ Đã thêm ảnh slideshow.', 'ok');
+  }catch(err){ showMsg($('tcSlideMsg'), baoLoi(err), 'err'); }
+};
+window.tcXoaSlide = async function(id){
+  if(!isAdmin || !confirm('Xóa ảnh này khỏi slideshow?')) return;
+  try{ await tcSlideRef.child(id).remove(); }catch(err){ showMsg($('tcSlideMsg'), baoLoi(err), 'err'); }
+};
+tcSlideRef.on('value', snap=>{
+  const obj = snap.val() || {};
+  tcSlides = Object.keys(obj).map(id=> ({ id, ...obj[id] })).sort((a,b)=> (a.luc||0) - (b.luc||0));
+  if(tcSlideDangHien >= tcSlides.length) tcSlideDangHien = 0;
+  renderTcSlideshow();
+  renderTcSlideQuanTriList();
+});
+
+/* ---------- Tin mới nhất ---------- */
+function renderTcTin(){
+  const list = $('tcTinList');
+  const rong = $('tcTinRong');
+  if(!list) return;
+  const sapXep = [...tcTin].sort((a,b)=> (b.luc||0) - (a.luc||0)).slice(0, 6);
+  rong.style.display = sapXep.length ? 'none' : 'block';
+  list.innerHTML = sapXep.map(t=> `
+    <div class="tc-tin-dong" ${t.link ? `onclick="window.open('${esc(t.link)}','_blank')"` : ''}>
+      ${t.anhNho ? `<img class="tc-tin-anh" src="${t.anhNho}" alt="">` : ''}
+      <div class="tc-tin-noidung">
+        <div class="tc-tin-tieude">${esc(t.tieuDe || '')}</div>
+        ${t.tomTat ? `<div class="tc-tin-tomtat">${esc(t.tomTat)}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+  renderTcTinQuanTriList();
+}
+function renderTcTinQuanTriList(){
+  const host = $('tcTinQuanTriList');
+  if(!host) return;
+  const sapXep = [...tcTin].sort((a,b)=> (b.luc||0) - (a.luc||0));
+  if(!sapXep.length){ host.innerHTML = '<div class="tc-rong">Chưa có tin nào.</div>'; return; }
+  host.innerHTML = sapXep.map(t=> `
+    <div class="tc-quantri-dong">
+      ${t.anhNho ? `<img src="${t.anhNho}" alt="">` : ''}
+      <span class="ten">${esc(t.tieuDe || '')}</span>
+      <button type="button" onclick="tcXoaTin('${t.id}')" title="Xóa">🗑️</button>
+    </div>
+  `).join('');
+}
+ganXemTruocDriveLink('tcTinAnhLink', 'tcTinXemTruoc', 'tcTinXemTruocAnh');
+$('tcTinDangBtn').onclick = async ()=>{
+  if(!isAdmin) return;
+  const tieuDe = $('tcTinTieuDe').value.trim();
+  if(!tieuDe){ showMsg($('tcTinMsg'), 'Nhập tiêu đề tin.', 'err'); return; }
+  const tomTat = $('tcTinTomTat').value.trim();
+  const link = $('tcTinLink').value.trim();
+  const anhNho = chuyenLinkDriveThanhAnh($('tcTinAnhLink').value);
+  try{
+    await tcTinRef.push({ tieuDe, tomTat, link, anhNho, luc: Date.now() });
+    $('tcTinTieuDe').value = ''; $('tcTinTomTat').value = ''; $('tcTinLink').value = '';
+    $('tcTinAnhLink').value = ''; $('tcTinXemTruoc').style.display = 'none';
+    showMsg($('tcTinMsg'), '✅ Đã đăng tin.', 'ok');
+  }catch(err){ showMsg($('tcTinMsg'), baoLoi(err), 'err'); }
+};
+window.tcXoaTin = async function(id){
+  if(!isAdmin || !confirm('Xóa tin này?')) return;
+  try{ await tcTinRef.child(id).remove(); }catch(err){ showMsg($('tcTinMsg'), baoLoi(err), 'err'); }
+};
+tcTinRef.on('value', snap=>{
+  const obj = snap.val() || {};
+  tcTin = Object.keys(obj).map(id=> ({ id, ...obj[id] }));
+  renderTcTin();
+});
+
+/* ---------- Thông báo mới ---------- */
+function renderTcThongBao(){
+  const list = $('tcTbList');
+  const rong = $('tcTbRong');
+  if(!list) return;
+  const sapXep = [...tcThongBao].sort((a,b)=> (b.luc||0) - (a.luc||0)).slice(0, 6);
+  rong.style.display = sapXep.length ? 'none' : 'block';
+  list.innerHTML = sapXep.map(t=> `
+    <div class="tc-tb-dong">
+      <span>📌</span>
+      ${t.link ? `<a href="${esc(t.link)}" target="_blank" rel="noopener">${esc(t.tieuDe || '')}</a>` : `<span class="tc-tb-ten">${esc(t.tieuDe || '')}</span>`}
+    </div>
+  `).join('');
+  renderTcTbQuanTriList();
+}
+function renderTcTbQuanTriList(){
+  const host = $('tcTbQuanTriList');
+  if(!host) return;
+  const sapXep = [...tcThongBao].sort((a,b)=> (b.luc||0) - (a.luc||0));
+  if(!sapXep.length){ host.innerHTML = '<div class="tc-rong">Chưa có thông báo nào.</div>'; return; }
+  host.innerHTML = sapXep.map(t=> `
+    <div class="tc-quantri-dong">
+      <span class="ten">${esc(t.tieuDe || '')}</span>
+      <button type="button" onclick="tcXoaTb('${t.id}')" title="Xóa">🗑️</button>
+    </div>
+  `).join('');
+}
+$('tcTbDangBtn').onclick = async ()=>{
+  if(!isAdmin) return;
+  const tieuDe = $('tcTbTieuDe').value.trim();
+  if(!tieuDe){ showMsg($('tcTbMsg'), 'Nhập tiêu đề thông báo.', 'err'); return; }
+  const link = $('tcTbLink').value.trim();
+  try{
+    await tcTbRef.push({ tieuDe, link, luc: Date.now() });
+    $('tcTbTieuDe').value = ''; $('tcTbLink').value = '';
+    showMsg($('tcTbMsg'), '✅ Đã đăng thông báo.', 'ok');
+  }catch(err){ showMsg($('tcTbMsg'), baoLoi(err), 'err'); }
+};
+window.tcXoaTb = async function(id){
+  if(!isAdmin || !confirm('Xóa thông báo này?')) return;
+  try{ await tcTbRef.child(id).remove(); }catch(err){ showMsg($('tcTbMsg'), baoLoi(err), 'err'); }
+};
+tcTbRef.on('value', snap=>{
+  const obj = snap.val() || {};
+  tcThongBao = Object.keys(obj).map(id=> ({ id, ...obj[id] }));
+  renderTcThongBao();
+});
+
+/* ---------- Thư viện ảnh ---------- */
+function renderTcGallery(){
+  const list = $('tcGalleryList');
+  const rong = $('tcGalleryRong');
+  if(!list) return;
+  const sapXep = [...tcGallery].sort((a,b)=> (b.luc||0) - (a.luc||0));
+  rong.style.display = sapXep.length ? 'none' : 'block';
+  list.innerHTML = sapXep.map(g=> `<img class="tc-gallery-anh" src="${g.anh}" alt="">`).join('');
+  renderTcGalleryQuanTriList();
+}
+function renderTcGalleryQuanTriList(){
+  const host = $('tcGalleryQuanTriList');
+  if(!host) return;
+  const sapXep = [...tcGallery].sort((a,b)=> (b.luc||0) - (a.luc||0));
+  if(!sapXep.length){ host.innerHTML = '<div class="tc-rong">Thư viện chưa có ảnh.</div>'; return; }
+  host.innerHTML = sapXep.map(g=> `
+    <div class="tc-quantri-dong">
+      <img src="${g.anh}" alt="">
+      <span class="ten">Ảnh #${esc(g.id.slice(-5))}</span>
+      <button type="button" onclick="tcXoaGallery('${g.id}')" title="Xóa">🗑️</button>
+    </div>
+  `).join('');
+}
+ganXemTruocDriveLink('tcGalleryLinkInput', 'tcGalleryXemTruoc', 'tcGalleryXemTruocAnh');
+$('tcGalleryThemBtn').onclick = async ()=>{
+  if(!isAdmin) return;
+  const anh = chuyenLinkDriveThanhAnh($('tcGalleryLinkInput').value);
+  if(!anh){ showMsg($('tcGalleryMsg'), 'Dán liên kết ảnh trên Google Drive trước đã.', 'err'); return; }
+  try{
+    await tcGalleryRef.push({ anh, luc: Date.now() });
+    $('tcGalleryLinkInput').value = ''; $('tcGalleryXemTruoc').style.display = 'none';
+    showMsg($('tcGalleryMsg'), '✅ Đã thêm ảnh vào thư viện.', 'ok');
+  }catch(err){ showMsg($('tcGalleryMsg'), baoLoi(err), 'err'); }
+};
+window.tcXoaGallery = async function(id){
+  if(!isAdmin || !confirm('Xóa ảnh này khỏi thư viện?')) return;
+  try{ await tcGalleryRef.child(id).remove(); }catch(err){ showMsg($('tcGalleryMsg'), baoLoi(err), 'err'); }
+};
+tcGalleryRef.on('value', snap=>{
+  const obj = snap.val() || {};
+  tcGallery = Object.keys(obj).map(id=> ({ id, ...obj[id] }));
+  renderTcGallery();
+});
 
 /* ================================================================
    THẺ 6 — HỒ SƠ HỌC SINH ĐẦU NĂM
