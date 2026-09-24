@@ -49,9 +49,9 @@
   .tab{flex:1; min-width:150px; background:var(--paper); border:1.5px solid var(--line);
     border-radius:12px; padding:12px 14px; cursor:pointer; font-weight:700; font-size:14px;
     color:var(--ink-soft); text-align:center; transition:.15s; font-family:inherit;}
-  /* Chỉ đổi VỊ TRÍ HIỂN THỊ (order) của 2 mục này lên hàng trên cùng — không đổi thứ tự
-     dữ liệu điều hướng thật (thuTuChinh), nên "Trang chủ" vẫn luôn là mục mở mặc định. */
-  .tab[data-tab="nhiemvu"], .tab[data-tab="quylop"]{ order: -1; }
+  /* Ô ngăn dòng vô hình — ép "Nhiệm vụ học tập"/"Quỹ lớp" luôn xuống dòng riêng thành hàng trên,
+     bất kể màn hình rộng hay hẹp (xem renderTabsChinh()). */
+  .tc-tabs-ngan-dong{ flex-basis:100%; width:0; height:0; margin:0; padding:0; }
   .tab:hover{border-color:var(--leaf); color:var(--leaf-dark);}
   .tab.active{background:var(--leaf); border-color:var(--leaf); color:#fff; box-shadow:var(--shadow);}
   .tab .ico{font-size:17px; display:block; margin-bottom:2px;}
@@ -2589,15 +2589,25 @@ let thuTuChinh = THU_TU_CHINH_MAC_DINH.slice();
 let thuTuCon = {};
 Object.keys(NHOM_TAB).forEach(groupId=>{ thuTuCon[groupId] = NHOM_TAB[groupId].slice(); });
 
+/* 2 mục "Nhiệm vụ học tập" và "Quỹ lớp" luôn được XẾP RIÊNG THÀNH HÀNG TRÊN CÙNG, và các mục
+   còn lại luôn xuống hàng dưới — dùng một "ô ngăn dòng" ẩn (flex-basis:100%) chèn giữa 2 nhóm để
+   ép xuống dòng THẬT SỰ, không phụ thuộc bề rộng màn hình (khác với chỉ dùng CSS order, vốn chỉ
+   tự xuống dòng khi hết chỗ nên trên màn hình rộng có thể gộp chung 1 hàng không như ý muốn).
+   Thứ tự dữ liệu điều hướng thật (thuTuChinh) KHÔNG đổi, nên "Trang chủ" vẫn luôn mở mặc định. */
+const TC_NHOM_HANG_TREN = ['nhiemvu', 'quylop'];
 function renderTabsChinh(){
   const host = $('tabsChinh');
   if(!host) return;
-  host.innerHTML = thuTuChinh.map(id=>{
+  const veHtml = id=>{
     const d = TAB_DINH_NGHIA[id];
     const mau = mauTuyChinhState[id];
     const thuocTinhMau = mau ? ` data-mau="1" style="--mau:${esc(mau)}"` : '';
     return `<button class="tab" data-tab="${id}"${thuocTinhMau}><span class="ico">${d.icon}</span>${esc(tenHienThi(id, TAB_DINH_NGHIA))}</button>`;
-  }).join('');
+  };
+  const hangTren = TC_NHOM_HANG_TREN.filter(id=> thuTuChinh.includes(id));
+  const hangDuoi = thuTuChinh.filter(id=> !hangTren.includes(id));
+  const nganDong = hangTren.length ? '<div class="tc-tabs-ngan-dong" aria-hidden="true"></div>' : '';
+  host.innerHTML = hangTren.map(veHtml).join('') + nganDong + hangDuoi.map(veHtml).join('');
   host.querySelectorAll('.tab').forEach(t=> t.onclick = ()=> moTab(t.dataset.tab));
 }
 function renderSubtabsNhom(groupId){
