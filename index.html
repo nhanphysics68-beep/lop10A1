@@ -171,6 +171,14 @@
     font-size:13px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; color:var(--ink-soft);}
   .btn-xoa-mau:hover{border-color:var(--clay); color:var(--clay); background:#fff7ea;}
 
+  /* ---------- Quản trị mục nhập "Hồ sơ đầu năm" (bắt buộc / ẩn) ---------- */
+  .hsch-nhom{margin-bottom:14px;}
+  .hsch-tieude{font-weight:800; color:var(--leaf-dark); font-size:12.5px; margin-bottom:6px;}
+  .hsch-dong{display:flex; align-items:center; gap:14px; background:#fff; border:1px solid var(--line);
+    border-radius:8px; padding:6px 10px; margin-bottom:5px; font-size:13px; flex-wrap:wrap;}
+  .hsch-nhan{flex:1; min-width:180px;}
+  .hsch-tuychon{display:flex; align-items:center; gap:5px; font-size:12.5px; white-space:nowrap; cursor:pointer;}
+
   /* ---------- Trò chơi: Quay chọn tên (đua chó / vòng quay) ---------- */
   .qt-dieukhien{display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; margin-bottom:18px;}
   .qt-dieukhien select, .qt-dieukhien input{padding:9px 12px; border:1.5px solid var(--line); border-radius:8px; font-family:inherit; font-size:13.5px;}
@@ -1928,6 +1936,13 @@
       </p>
       <div id="sapXepMenuBox"></div>
 
+      <div class="section-title">⚙️ Quản trị các mục trong "Hồ sơ đầu năm"</div>
+      <p class="section-note" style="margin:0 0 8px;">
+        Chọn mỗi mục là <b>Bắt buộc</b> (học sinh phải nhập mới nộp được) hay <b>Ẩn</b> (không hiện trên form nữa) —
+        áp dụng ngay cho tất cả học sinh, không cần bấm Lưu. Họ tên/Ngày sinh/Giới tính luôn bắt buộc, không cấu hình được.
+      </p>
+      <div id="hsCauHinhBox"></div>
+
       <div class="section-title">👤 Dữ liệu cá nhân học sinh (riêng tư) <span class="count-badge" id="chsCountBadge">0</span></div>
       <p class="section-note" style="margin:0 0 6px;">
         CCCD và ảnh thẻ chỉ hiện ở đây, không công khai. Bấm Xuất Excel để có file dạng hồ sơ từng trang.
@@ -2215,6 +2230,7 @@ const baiTapDanhSachRef = db.ref('caidat2026/baiTapDanhSach'); // danh sách tê
 const taiKhoanHocSinhRef = db.ref('taiKhoanHocSinh2026'); // sổ ghi lại tài khoản đăng nhập đã cấp cho học sinh (email nội bộ, KHÔNG chứa mật khẩu) — chỉ giáo viên (admin) đọc/ghi được
 const phongTraoRef = db.ref('phongtrao2026'); // phong trào của lớp — công khai đọc/ghi, giống Bảng tin/Đăng ký lao động
 const hosoRef   = db.ref('hoso2026/hoso');         // riêng tư: khóa theo uid, giống hotro2026
+const hsCauHinhRef = db.ref('hsCauHinh2026'); // cấu hình mục nào bắt buộc / ẩn trong form "Hồ sơ đầu năm" — công khai đọc (để mọi học sinh render đúng form), CHỈ giáo viên (admin) ghi được
 
 const LANES     = [ {id:1,desks:7}, {id:2,desks:6}, {id:3,desks:6}, {id:4,desks:6} ];
 
@@ -2754,6 +2770,7 @@ auth.onAuthStateChanged(async user=>{
   isThuQuy = !isAdmin && THU_QUY_UIDS.includes(user.uid);
   if(typeof capNhatGhiChuDdnv === 'function') capNhatGhiChuDdnv();
   if(typeof capNhatQuanTriTrangChu === 'function') capNhatQuanTriTrangChu();
+  if(typeof renderHsCauHinhAdmin === 'function') renderHsCauHinhAdmin();
   // Thủ quỹ: đăng nhập thành công nên ẩn form đăng nhập, nhưng KHÔNG mở khu vực quản trị đầy
   // đủ (dữ liệu riêng tư khác của học sinh) — chỉ mục Quỹ lớp mở khóa cho họ (xem renderQuyLop).
   $('adminLocked').style.display = (isAdmin || isThuQuy) ? 'none' : 'block';
@@ -4633,6 +4650,67 @@ const HS_SECTIONS = [
   {title:"Người giám hộ (nếu có)", cols:[66,67,68,69]},
 ];
 
+/* ---------------------------------------------------------------
+   CẤU HÌNH MỤC "BẮT BUỘC" / "ẨN" cho form Hồ sơ đầu năm — giáo viên tự bật/tắt trực tiếp
+   trên web (mục "⚙️ Quản trị các mục trong Hồ sơ đầu năm" trong Khu vực giáo viên), KHÔNG cần
+   sửa mã nguồn. Lưu trên Firebase (hsCauHinh2026/{cột}: {batBuoc, an}) — công khai đọc để mọi
+   học sinh render đúng form giống nhau, chỉ giáo viên ghi được. Không cho thêm/xóa hẳn 1 loại
+   mục mới (chỉ bật/tắt các mục đã có sẵn) — xem ghi chú trong HS_FIELDS ở trên nếu cần thêm mục
+   mới thật sự (vẫn phải sửa mã nguồn, thêm cột mới vào HS_FIELDS + HS_SECTIONS).
+   3 mục lõi (Họ tên, Ngày sinh, Giới tính) không nằm trong HS_FIELDS nên luôn bắt buộc, không
+   cấu hình được — tránh trường hợp giáo viên lỡ tắt bắt buộc mất tên/ngày sinh học sinh. */
+const HS_MAC_DINH_BAT_BUOC = new Set([6, 12, 15]); // Trạng thái, Dân tộc, Tỉnh/Thành (thường trú) — bắt buộc theo mặc định khi chưa cấu hình gì
+let hsCauHinh = {}; // nạp từ hsCauHinh2026, dạng { [col]: {batBuoc, an} }
+function hsBatBuoc(col){
+  const cfg = hsCauHinh[col];
+  if(cfg && typeof cfg.batBuoc === 'boolean') return cfg.batBuoc;
+  return HS_MAC_DINH_BAT_BUOC.has(col);
+}
+function hsAn(col){
+  const cfg = hsCauHinh[col];
+  return !!(cfg && cfg.an);
+}
+function hsApCauHinhVaoForm(){
+  Object.keys(HS_FIELDS).map(Number).forEach(col=>{
+    const dau = $('reqmark_hs_'+col);
+    if(dau) dau.style.display = hsBatBuoc(col) ? '' : 'none';
+  });
+  if(typeof hsCapNhatHienThi === 'function') hsCapNhatHienThi();
+}
+function renderHsCauHinhAdmin(){
+  const host = $('hsCauHinhBox');
+  if(!host) return;
+  if(!isAdmin){ host.innerHTML = ''; return; }
+  host.innerHTML = HS_SECTIONS.map(sec=>{
+    const dong = sec.cols.map(col=>{
+      const def = HS_FIELDS[col];
+      const batBuoc = hsBatBuoc(col), an = hsAn(col);
+      return `<div class="hsch-dong">
+        <div class="hsch-nhan">${esc(def.label)}</div>
+        <label class="hsch-tuychon"><input type="checkbox" data-hsch-batbuoc="${col}" ${batBuoc?'checked':''} ${an?'disabled':''}> Bắt buộc</label>
+        <label class="hsch-tuychon"><input type="checkbox" data-hsch-an="${col}" ${an?'checked':''}> Ẩn khỏi form</label>
+      </div>`;
+    }).join('');
+    return `<div class="hsch-nhom"><div class="hsch-tieude">${esc(sec.title)}</div>${dong}</div>`;
+  }).join('');
+
+  host.querySelectorAll('[data-hsch-batbuoc]').forEach(cb=> cb.onchange = async ()=>{
+    const col = Number(cb.getAttribute('data-hsch-batbuoc'));
+    try{ await hsCauHinhRef.child(col).child('batBuoc').set(cb.checked); }
+    catch(e){ alert(baoLoi(e)); cb.checked = !cb.checked; }
+  });
+  host.querySelectorAll('[data-hsch-an]').forEach(cb=> cb.onchange = async ()=>{
+    const col = Number(cb.getAttribute('data-hsch-an'));
+    try{ await hsCauHinhRef.child(col).child('an').set(cb.checked); }
+    catch(e){ alert(baoLoi(e)); cb.checked = !cb.checked; }
+  });
+}
+hsCauHinhRef.on('value', s=>{
+  hsCauHinh = s.val() || {};
+  hsApCauHinhVaoForm();
+  renderHsCauHinhAdmin();
+});
+
 /* Firebase RTDB tự ý chuyển object có toàn key số nguyên liền nhau thành MẢNG khi lưu.
    Để tránh lệch dữ liệu, luôn lưu dưới dạng key chuỗi "c0","c1"... rồi quy đổi lại khi đọc. */
 function hsRaDangFirebase(d){
@@ -4680,7 +4758,7 @@ function hsIsoToNgay(s){
       else if(def.type==='tel') inner = `<input type="tel" id="${id}" inputmode="numeric">`;
       else if(def.type==='number') inner = `<input type="number" id="${id}" min="1930" max="2015">`;
       else inner = `<input type="text" id="${id}" maxlength="120">`;
-      return `<div class="field" id="wrap_${id}"><label>${esc(def.label)}</label>${inner}</div>`;
+      return `<div class="field" id="wrap_${id}"><label>${esc(def.label)} <span class="req" id="reqmark_${id}" style="display:none">*</span></label>${inner}</div>`;
     }).join('');
     return `<div class="section-title">${esc(sec.title)}</div>${fields}`;
   }).join('');
@@ -4694,6 +4772,7 @@ function hsIsoToNgay(s){
   });
   [9,15,19].forEach(hsCapNhatXa);
   hsCapNhatHienThi();
+  hsApCauHinhVaoForm();
 })();
 
 function hsCapNhatXa(colTinh){
@@ -4711,16 +4790,27 @@ function hsThayDoiTruong(col){
   if([9,15,19].includes(col)) hsCapNhatXa(col);
   if(col===6 || col===48 || col===52) hsCapNhatHienThi();
 }
-function hsHienAn(col, hien){ const w=$('wrap_hs_'+col); if(w) w.style.display = hien? '':'none'; }
+/* "hienDieuKien" = có nên hiện theo LOGIC PHỤ THUỘC (vd: chỉ hiện "Ngày nhập trạng thái" khi đã
+   chọn Trạng thái phù hợp). Mục chỉ thật sự hiện khi vừa thỏa điều kiện phụ thuộc, VỪA không bị
+   giáo viên ẩn hẳn qua "⚙️ Quản trị các mục" (hsAn) — ẩn theo cấu hình luôn được ưu tiên. */
+function hsHienAn(col, hienDieuKien){
+  const w = $('wrap_hs_'+col);
+  if(w) w.style.display = (hsAn(col) || !hienDieuKien) ? 'none' : '';
+}
 function hsCapNhatHienThi(){
   const tt = $('hs_6').value;
-  hsHienAn(7, tt && !HS_KHONG_CAN_NGAY.includes(tt));
-  hsHienAn(8, /Chuyển đi/.test(tt));
-  hsHienAn(9, /Chuyển đến/.test(tt));
-  hsHienAn(10, /Chuyển đến/.test(tt));
-  hsHienAn(11, tt==='Thôi học kỳ 1' || tt==='Thôi học kỳ 2');
-  hsHienAn(49, $('hs_48').value==='Có');
-  hsHienAn(53, $('hs_52').value==='Có');
+  const dieuKien = {
+    7: tt && !HS_KHONG_CAN_NGAY.includes(tt),
+    8: /Chuyển đi/.test(tt),
+    9: /Chuyển đến/.test(tt),
+    10: /Chuyển đến/.test(tt),
+    11: tt==='Thôi học kỳ 1' || tt==='Thôi học kỳ 2',
+    49: $('hs_48').value==='Có',
+    53: $('hs_52').value==='Có',
+  };
+  Object.keys(HS_FIELDS).map(Number).forEach(col=>{
+    hsHienAn(col, (col in dieuKien) ? dieuKien[col] : true);
+  });
 }
 
 function hsDienGiaTri(data){
@@ -4769,11 +4859,21 @@ $('hsForm').onsubmit = async e=>{
   if(!hoten){ showMsg($('hsMsg'),'Vui lòng nhập họ tên.','err'); return; }
   if(!ngaysinh){ showMsg($('hsMsg'),'Vui lòng nhập ngày sinh.','err'); return; }
   if(!gioitinh){ showMsg($('hsMsg'),'Vui lòng chọn giới tính.','err'); return; }
-  const tt = $('hs_6').value;
-  if(!tt){ showMsg($('hsMsg'),'Vui lòng chọn Trạng thái học sinh.','err'); return; }
-  if(!$('hs_12').value){ showMsg($('hsMsg'),'Vui lòng chọn Dân tộc.','err'); return; }
-  if(!$('hs_15').value){ showMsg($('hsMsg'),'Vui lòng chọn Tỉnh/Thành phố (thường trú).','err'); return; }
-  if(tt && !HS_KHONG_CAN_NGAY.includes(tt) && !$('hs_7').value){ showMsg($('hsMsg'),"Trạng thái này cần nhập Ngày nhập trạng thái.",'err'); return; }
+  /* Các mục còn lại: bắt buộc hay không do giáo viên tự cấu hình ở "⚙️ Quản trị các mục" (hsBatBuoc) —
+     chỉ kiểm tra mục nào ĐANG HIỂN THỊ trên form (không kiểm tra mục đã bị ẩn hẳn hoặc đang ẩn do
+     chưa thỏa điều kiện phụ thuộc, ví dụ chưa chọn Trạng thái phù hợp để hiện "Ngày nhập trạng thái"). */
+  hsCapNhatHienThi();
+  for(const col of Object.keys(HS_FIELDS).map(Number)){
+    if(!hsBatBuoc(col)) continue;
+    const w = $('wrap_hs_'+col);
+    if(w && w.style.display === 'none') continue;
+    const el = $('hs_'+col);
+    if(el && !el.value){
+      showMsg($('hsMsg'), `Vui lòng nhập/chọn: ${HS_FIELDS[col].label}`, 'err');
+      el.scrollIntoView({behavior:'smooth', block:'center'});
+      return;
+    }
+  }
 
   const data = hsLayGiaTri();
   data[1] = "10A1";
