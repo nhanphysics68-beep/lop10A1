@@ -2249,7 +2249,7 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <h3 style="color: #4a5568; font-size: 1.1rem; margin: 0;">Danh sách học sinh</h3>
                         <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                            <input type="text" id="studentSearchInput" placeholder="🔍 Tìm học sinh..." oninput="onStudentSearchInput(this.value)" style="padding: 8px 14px; border-radius: 12px; border: 1px solid #e2e8f0; font-size: 0.9rem; min-width: 160px;">
+                            <input type="text" id="studentSearchInput" placeholder="🔍 Tìm học sinh..." autocomplete="off" oninput="onStudentSearchInput(this.value)" style="padding: 8px 14px; border-radius: 12px; border: 1px solid #e2e8f0; font-size: 0.9rem; min-width: 160px;">
                             <!-- Toggle View Switch -->
                             <div style="display: flex; align-items: center; gap: 8px; background: #f8f9fa; padding: 4px; border-radius: 12px;">
                                 <span style="font-size: 0.9rem; color: #666; font-weight: 500;">Giao diện:</span>
@@ -9007,6 +9007,8 @@
   try{ window.toggleSelectMultiple = toggleSelectMultiple; }catch(e){}
   try{ window.toggleStudentForPoints = toggleStudentForPoints; }catch(e){}
   try{ window.toggleStudentView = toggleStudentView; }catch(e){}
+  try{ window.onStudentSearchInput = onStudentSearchInput; }catch(e){}
+  try{ window.boDauTiengViet = boDauTiengViet; }catch(e){}
   try{ window.undo = undo; }catch(e){}
   try{ window.updateAddStudentDropdown = updateAddStudentDropdown; }catch(e){}
   try{ window.updateCalledStudentsInfo = updateCalledStudentsInfo; }catch(e){}
