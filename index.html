@@ -1640,12 +1640,21 @@
     <div class="card">
       <h2>🐕 Quay chọn tên</h2>
       <p class="section-note">Chọn theo 1 Tổ để đua chó xem ai "về đích" trước, hoặc quay vòng quay lớn để bốc thăm cả lớp.</p>
+      <p class="section-note" id="qtLuotDaChonInfo" style="display:none;"></p>
+      <button type="button" class="btn btn-ghost btn-sm" id="qtResetLuotBtn" style="display:none; margin-bottom:10px;">🔄 Reset lượt đã chọn</button>
       <div class="qt-dieukhien">
         <div class="field">
           <label>Cách chọn</label>
           <select id="qtCheDo">
             <option value="to">🐕 Đua</option>
             <option value="ca_lop">🎡 Vòng quay cả lớp</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Kiểu chọn</label>
+          <select id="qtCheDoLap">
+            <option value="lap">🔁 Ngẫu nhiên, có thể lặp lại</option>
+            <option value="khong_lap">🚫 Ngẫu nhiên, không lặp lại (đến khi hết Tổ/lớp)</option>
           </select>
         </div>
         <div class="field" id="qtChonToBox">
@@ -7322,6 +7331,32 @@ function chonNgauNhien(mang, soLuong){
 }
 const ANH_CON_CHO = 'mohamed_hassan-dog-7011.gif';
 
+/* "Kiểu chọn": mặc định NGẪU NHIÊN CÓ THỂ LẶP LẠI (mỗi lần đua/quay đều chọn lại từ đầu, như cũ).
+   Khi chọn KHÔNG LẶP LẠI, những người đã được chọn (về đích / trúng vòng quay) sẽ tạm "nghỉ",
+   không bị chọn lại nữa cho tới khi CẢ TỔ (chế độ đua) hoặc CẢ LỚP (chế độ vòng quay) đều đã
+   được chọn đủ 1 lượt — lúc đó tự động bắt đầu vòng mới (reset danh sách đã chọn) để không bao
+   giờ bị "kẹt" vì hết người. Lưu tạm trên trình duyệt (không cần đồng bộ Firebase, chỉ có ý
+   nghĩa trong 1 buổi dùng ngay tại lớp). */
+let qtDaChonTheoTo = {1:[], 2:[], 3:[], 4:[]}; // tên đã "về đích" trong chế độ đua, theo từng Tổ
+let qtDaChonCaLop = []; // tên đã trúng vòng quay cả lớp
+
+function qtDangKhongLap(){ return $('qtCheDoLap').value === 'khong_lap'; }
+
+function qtCapNhatThongTinLuot(){
+  const box = $('qtLuotDaChonInfo');
+  if(!qtDangKhongLap()){ box.style.display = 'none'; return; }
+  box.style.display = '';
+  if($('qtCheDo').value === 'to'){
+    const toChon = +$('qtChonTo').value;
+    const tong = (layHocSinhTheoTo()[toChon] || []).length;
+    const daChon = (qtDaChonTheoTo[toChon] || []).length;
+    box.textContent = `📋 Tổ ${toChon}: đã chọn ${daChon}/${tong} học sinh trong lượt này.`;
+  } else {
+    const tong = layTatCaHocSinhDaXep().length;
+    box.textContent = `📋 Cả lớp: đã chọn ${qtDaChonCaLop.length}/${tong} học sinh trong lượt này.`;
+  }
+}
+
 /* Bật/tắt hiện đúng khối theo chế độ đã chọn */
 function capNhatGiaoDienQuayTen(){
   const cheDo = $('qtCheDo').value;
@@ -7330,12 +7365,25 @@ function capNhatGiaoDienQuayTen(){
   $('qtDuaChoBox').style.display = (cheDo === 'to') ? '' : 'none';
   $('qtVongQuayBox').style.display = (cheDo === 'ca_lop') ? '' : 'none';
   $('qtKetQua').innerHTML = '';
+  qtCapNhatThongTinLuot();
 }
 $('qtCheDo').onchange = ()=>{
   capNhatGiaoDienQuayTen();
   if($('qtCheDo').value === 'ca_lop') chuanBiVongQuay();
 };
 $('qtSoLuong').onchange = ()=>{
+  if($('qtCheDo').value === 'ca_lop') chuanBiVongQuay();
+};
+$('qtChonTo').onchange = qtCapNhatThongTinLuot;
+$('qtCheDoLap').onchange = ()=>{
+  $('qtResetLuotBtn').style.display = qtDangKhongLap() ? '' : 'none';
+  qtCapNhatThongTinLuot();
+  if($('qtCheDo').value === 'ca_lop') chuanBiVongQuay();
+};
+$('qtResetLuotBtn').onclick = ()=>{
+  qtDaChonTheoTo = {1:[], 2:[], 3:[], 4:[]};
+  qtDaChonCaLop = [];
+  qtCapNhatThongTinLuot();
   if($('qtCheDo').value === 'ca_lop') chuanBiVongQuay();
 };
 
@@ -7348,11 +7396,27 @@ $('qtBatDauBtn').onclick = ()=>{
   ketQuaBox.innerHTML = '';
 
   const to = layHocSinhTheoTo();
-  const dsHocSinh = to[toChon];
-  if(!dsHocSinh.length){
+  const dsHocSinhCaTo = to[toChon];
+  if(!dsHocSinhCaTo.length){
     san.innerHTML = '';
     ketQuaBox.innerHTML = `<p class="section-note">Tổ ${toChon} chưa có học sinh nào trong Sơ đồ lớp.</p>`;
     return;
+  }
+
+  // "Không lặp lại": chỉ cho những bạn CHƯA về đích lượt này tham gia đua tiếp — khi không còn
+  // đủ người, tự động reset (coi như cả Tổ đã được chọn đủ 1 vòng) rồi đua lại từ đầu cả Tổ.
+  let dsHocSinh = dsHocSinhCaTo;
+  let vuaResetLuot = false;
+  if(qtDangKhongLap()){
+    const daChon = qtDaChonTheoTo[toChon] || [];
+    const conLai = dsHocSinhCaTo.filter(t=> !daChon.includes(t));
+    if(conLai.length < Math.min(soLuong, dsHocSinhCaTo.length)){
+      qtDaChonTheoTo[toChon] = [];
+      vuaResetLuot = true;
+      dsHocSinh = dsHocSinhCaTo;
+    } else {
+      dsHocSinh = conLai;
+    }
   }
 
   // Xác định trước thứ tự về đích (ngẫu nhiên) — số lượng cần chọn về đích nhanh nhất
@@ -7388,7 +7452,13 @@ $('qtBatDauBtn').onclick = ()=>{
   setTimeout(()=>{
     const ketQua = thuTuVeDich.slice(0, soVeDich);
     ketQua.forEach(ten=> san.querySelector(`.qt-lan[data-ten="${CSS.escape(ten)}"]`).classList.add('thang'));
-    ketQuaBox.innerHTML = `<p style="font-weight:800; color:#b45309; margin-bottom:8px;">🏆 Tổ ${toChon} về đích!</p>`
+    if(qtDangKhongLap()){
+      qtDaChonTheoTo[toChon] = (qtDaChonTheoTo[toChon] || []).concat(ketQua);
+      qtCapNhatThongTinLuot();
+    }
+    const ghiChuReset = vuaResetLuot ? `<p class="section-note" style="margin-bottom:6px;">🔄 Tổ ${toChon} đã được chọn đủ 1 vòng — bắt đầu vòng mới!</p>` : '';
+    ketQuaBox.innerHTML = ghiChuReset
+      + `<p style="font-weight:800; color:#b45309; margin-bottom:8px;">🏆 Tổ ${toChon} về đích!</p>`
       + ketQua.map((ten,i)=> `<span class="qt-the-hocsinh">${i+1}. ${esc(ten)}</span>`).join('');
   }, tongThoiGianCho * 1000);
 };
@@ -7423,25 +7493,43 @@ function taoSvgVongQuay(danhSach){
 }
 function escXml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
-function chuanBiVongQuay(){
+/* "Không lặp lại": loại các bạn đã trúng vòng quay lượt này khỏi vòng quay tiếp theo — khi không
+   còn đủ người cho số lượng cần chọn, tự động reset (coi như cả lớp đã được chọn đủ 1 vòng) rồi
+   quay lại từ đầu với đầy đủ cả lớp. Trả về {ds, vuaResetLuot}. */
+function qtLayDanhSachVongQuay(){
+  const tatCa = layTatCaHocSinhDaXep();
+  if(!qtDangKhongLap()) return {ds: tatCa, vuaResetLuot:false};
+  const soLuong = parseInt($('qtSoLuong').value, 10) || 1;
+  const conLai = tatCa.filter(t=> !qtDaChonCaLop.includes(t));
+  if(conLai.length < Math.min(soLuong, tatCa.length)){
+    qtDaChonCaLop = [];
+    return {ds: tatCa, vuaResetLuot: tatCa.length>0};
+  }
+  return {ds: conLai, vuaResetLuot:false};
+}
+/* xoaKetQua=false: dùng khi cập nhật lại vòng quay ngay sau khi vừa quay xong — giữ nguyên
+   kết quả vừa hiển thị, không xóa. */
+function chuanBiVongQuay(xoaKetQua){
   const soLuong = parseInt($('qtSoLuong').value, 10);
   $('qtKimTrai').style.display = '';
   $('qtKimPhai').style.display = (soLuong >= 2) ? '' : 'none';
   $('qtKimTren').style.display = (soLuong >= 3) ? '' : 'none';
 
-  const ds = layTatCaHocSinhDaXep();
+  const {ds, vuaResetLuot} = qtLayDanhSachVongQuay();
   const ketQuaBox = $('qtKetQua');
-  ketQuaBox.innerHTML = '';
+  if(xoaKetQua !== false) ketQuaBox.innerHTML = '';
   qtDsVongQuay = ds;
+  qtCapNhatThongTinLuot();
   if(ds.length < 2){
     $('qtVongQuaySvgHost').innerHTML = '';
-    ketQuaBox.innerHTML = `<p class="section-note">Cần ít nhất 2 học sinh đã có chỗ ngồi trong Sơ đồ lớp để quay.</p>`;
-    return;
+    if(xoaKetQua !== false) ketQuaBox.innerHTML = `<p class="section-note">Cần ít nhất 2 học sinh đã có chỗ ngồi trong Sơ đồ lớp để quay.</p>`;
+    return vuaResetLuot;
   }
   qtGocHienTai = 0;
   const svgHost = $('qtVongQuaySvgHost');
   svgHost.innerHTML = taoSvgVongQuay(ds);
   svgHost.querySelector('svg').style.transform = 'rotate(0deg)';
+  return vuaResetLuot;
 }
 
 $('qtQuayBtn').onclick = ()=>{
@@ -7473,11 +7561,19 @@ $('qtQuayBtn').onclick = ()=>{
     });
 
     const ketQua = chiSoDaChon.map(i=> ds[i]);
-    $('qtKetQua').innerHTML = '🎉 ' + ketQua.map(ten=> `<span class="qt-the-hocsinh">${esc(ten)}</span>`).join('');
+    let ghiChuReset = '';
+    if(qtDangKhongLap()){
+      qtDaChonCaLop = qtDaChonCaLop.concat(ketQua);
+      // Cập nhật lại pool cho lần quay tiếp theo — giữ nguyên kết quả vừa hiển thị (xoaKetQua=false).
+      const vuaReset = chuanBiVongQuay(false);
+      if(vuaReset) ghiChuReset = `<p class="section-note" style="margin-bottom:6px;">🔄 Cả lớp đã được chọn đủ 1 vòng — bắt đầu vòng mới!</p>`;
+    }
+    $('qtKetQua').innerHTML = ghiChuReset + '🎉 ' + ketQua.map(ten=> `<span class="qt-the-hocsinh">${esc(ten)}</span>`).join('');
   }, 8200);
 };
 
 capNhatGiaoDienQuayTen();
+$('qtResetLuotBtn').style.display = qtDangKhongLap() ? '' : 'none';
 
 /* ================================================================
    KHU VỰC GIÁO VIÊN
