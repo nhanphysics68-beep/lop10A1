@@ -2248,7 +2248,8 @@
                 <div class="devices-section">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <h3 style="color: #4a5568; font-size: 1.1rem; margin: 0;">Danh sách học sinh</h3>
-                        <div style="display: flex; gap: 10px; align-items: center;">
+                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                            <input type="text" id="studentSearchInput" placeholder="🔍 Tìm học sinh..." oninput="onStudentSearchInput(this.value)" style="padding: 8px 14px; border-radius: 12px; border: 1px solid #e2e8f0; font-size: 0.9rem; min-width: 160px;">
                             <!-- Toggle View Switch -->
                             <div style="display: flex; align-items: center; gap: 8px; background: #f8f9fa; padding: 4px; border-radius: 12px;">
                                 <span style="font-size: 0.9rem; color: #666; font-weight: 500;">Giao diện:</span>
@@ -8023,6 +8024,19 @@
         // Biến để theo dõi chế độ hiển thị học sinh
         let isCompactView = false;
 
+        // Từ khóa tìm kiếm học sinh (theo tên) — gõ không dấu vẫn tìm được
+        let studentSearchQuery = '';
+        function boDauTiengViet(str) {
+            return String(str || '')
+                .normalize('NFD').replace(/[̀-ͯ]/g, '')
+                .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+                .toLowerCase();
+        }
+        function onStudentSearchInput(value) {
+            studentSearchQuery = value;
+            renderStudents();
+        }
+
         // Hàm chuyển đổi giao diện học sinh
         function toggleStudentView() {
             isCompactView = !isCompactView;
@@ -8044,9 +8058,19 @@
             const grid = document.getElementById('studentGrid');
             if (!grid) return;
             
-            // Sắp xếp theo alphabet
-            const sortedStudents = [...students].sort((a, b) => a.name.localeCompare(b.name, 'vi'));
-            
+            // Sắp xếp theo alphabet, sau đó lọc theo từ khóa tìm kiếm (nếu có) — gõ không dấu vẫn tìm được
+            const tuKhoa = boDauTiengViet(studentSearchQuery.trim());
+            const sortedStudents = [...students]
+                .sort((a, b) => a.name.localeCompare(b.name, 'vi'))
+                .filter(s => !tuKhoa || boDauTiengViet(s.name).includes(tuKhoa));
+
+            if (tuKhoa && sortedStudents.length === 0) {
+                grid.innerHTML = `<div style="grid-column: 1 / -1; text-align:center; color:#888; padding: 24px 0;">
+                    Không tìm thấy học sinh nào khớp với "${studentSearchQuery.trim()}".
+                </div>`;
+                return;
+            }
+
             if (isCompactView) {
                 // Chế độ compact - nhiều học sinh trên một dòng
                 grid.className = 'student-grid-compact';
