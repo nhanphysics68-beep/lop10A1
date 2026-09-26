@@ -1818,9 +1818,13 @@
         <p class="section-note">
           Lấy ảnh thẻ học sinh đã có sẵn ở mục "Thành viên lớp" (và ảnh bổ sung ở Bước 1 nếu có), cộng
           với ảnh của những người bất kỳ đã thêm ở Bước 1b (nếu có), để AI học đặc điểm khuôn mặt từng
-          người (chỉ những ai đã có ít nhất 1 ảnh mới nhận diện được).
+          người (chỉ những ai đã có ít nhất 1 ảnh mới nhận diện được). Có thể nạp riêng từng phần —
+          nạp phần nào thì camera nhận diện được phần đó, không cần nạp đủ cả hai mới bật camera được.
         </p>
-        <button class="btn btn-primary btn-sm" id="ndkmNapDuLieuBtn">🧠 Nạp dữ liệu khuôn mặt</button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" id="ndkmNapDuLieuBtn">🧠 Nạp học sinh + người Bước 1b (tất cả)</button>
+          <button class="btn btn-blue btn-sm" id="ndkmNapDuLieuNguoiKhacBtn">🧠 Chỉ nạp người ở Bước 1b</button>
+        </div>
         <div id="ndkmNapMsg" class="msg"></div>
 
         <div class="section-title">Bước 3 — Bật camera nhận diện</div>
@@ -9701,6 +9705,41 @@ $('ndkmNguoiKhacXoaBtn') && ($('ndkmNguoiKhacXoaBtn').onclick = async ()=>{
   }catch(e){ showMsg($('ndkmNguoiKhacMsg'), baoLoi(e), 'err'); }
 });
 
+// Hai "kho" descriptor riêng biệt — nạp học sinh và nạp người Bước 1b có thể chạy ĐỘC LẬP với
+// nhau (không cái nào xóa mất kết quả đã nạp của cái kia). ndkmDungLaiFaceMatcher() gộp cả hai
+// kho lại thành 1 FaceMatcher duy nhất và bật nút camera nếu có ít nhất 1 người đã nạp được.
+let ndkmDescriptorsHocSinh = [];   // [faceapi.LabeledFaceDescriptors] — nhãn = uid học sinh
+let ndkmDescriptorsNguoiKhac = []; // [faceapi.LabeledFaceDescriptors] — nhãn = "oth_<id>"
+
+async function ndkmTinhDsDescriptor(dsAnhId){
+  // Tính descriptor khuôn mặt cho từng ảnh trong danh sách anhId, bỏ qua (không chặn cả danh
+  // sách) những ảnh lỗi hoặc không thấy khuôn mặt rõ.
+  const dsDescriptor = [];
+  for(const anhId of dsAnhId){
+    try{
+      const img = await ndkmLayAnhChoAI(anhId);
+      const ketQua = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+        .withFaceLandmarks().withFaceDescriptor();
+      if(ketQua) dsDescriptor.push(ketQua.descriptor);
+    }catch(e){ /* bỏ qua đúng ảnh lỗi */ }
+  }
+  return dsDescriptor;
+}
+
+function ndkmDungLaiFaceMatcher(){
+  // Gộp 2 kho descriptor (học sinh + người Bước 1b) thành 1 FaceMatcher duy nhất dùng khi quét
+  // camera. Chỉ cần MỘT trong hai kho có dữ liệu là đã bật được camera — không bắt buộc phải
+  // nạp đủ cả hai mới dùng được.
+  ndkmLabeledDescriptors = ndkmDescriptorsHocSinh.concat(ndkmDescriptorsNguoiKhac);
+  if(!ndkmLabeledDescriptors.length){
+    ndkmFaceMatcher = null;
+    $('ndkmBatCameraBtn').disabled = true;
+    return;
+  }
+  ndkmFaceMatcher = new faceapi.FaceMatcher(ndkmLabeledDescriptors, NDKM_NGUONG_KHOP);
+  $('ndkmBatCameraBtn').disabled = false;
+}
+
 $('ndkmNapDuLieuBtn').onclick = async ()=>{
   const btn = $('ndkmNapDuLieuBtn');
   btn.disabled = true;
@@ -9723,7 +9762,7 @@ $('ndkmNapDuLieuBtn').onclick = async ()=>{
     return;
   }
 
-  ndkmLabeledDescriptors = [];
+  ndkmDescriptorsHocSinh = [];
   ndkmTenNguoiKhacTheoNhan = {};
   const dsLoi = [];
   let tongSoAnhDaNap = 0;
@@ -9737,59 +9776,92 @@ $('ndkmNapDuLieuBtn').onclick = async ()=>{
     Object.keys(ndkmAnhState[uid]||{}).forEach(anhId=> dsAnhId.push(anhId));
 
     showMsg($('ndkmNapMsg'), `⏳ Đang nạp học sinh ${i+1}/${dsHocSinh.length}: ${x.hoTen || uid} (${dsAnhId.length} ảnh)...`, 'info');
-    const dsDescriptor = [];
-    for(const anhId of dsAnhId){
-      try{
-        const img = await ndkmLayAnhChoAI(anhId);
-        const ketQua = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
-          .withFaceLandmarks().withFaceDescriptor();
-        if(ketQua) dsDescriptor.push(ketQua.descriptor);
-      }catch(e){ /* bỏ qua đúng ảnh lỗi, không chặn các ảnh khác của cùng học sinh */ }
-    }
+    const dsDescriptor = await ndkmTinhDsDescriptor(dsAnhId);
     if(!dsDescriptor.length){ dsLoi.push((x.hoTen||uid) + ` (không thấy khuôn mặt rõ trong ${dsAnhId.length} ảnh, hoặc không đọc được ảnh)`); continue; }
-    ndkmLabeledDescriptors.push(new faceapi.LabeledFaceDescriptors(uid, dsDescriptor));
+    ndkmDescriptorsHocSinh.push(new faceapi.LabeledFaceDescriptors(uid, dsDescriptor));
     tongSoAnhDaNap += dsDescriptor.length;
   }
 
   // Nạp thêm những người bất kỳ ở Bước 1b — dùng nhãn riêng "oth_<id>" (khác hẳn không gian uid
   // học sinh) để không bao giờ trùng, và ghi nhớ tên hiển thị tương ứng cho lúc nhận diện.
+  ndkmDescriptorsNguoiKhac = [];
   let soNguoiKhacDaNap = 0;
   for(let i=0; i<dsNguoiKhac.length; i++){
     const [id, x] = dsNguoiKhac[i];
     const ten = (x && x.ten) || 'Người khác';
     const dsAnhId = Object.keys((x && x.anh) || {});
     showMsg($('ndkmNapMsg'), `⏳ Đang nạp người khác ${i+1}/${dsNguoiKhac.length}: ${ten} (${dsAnhId.length} ảnh)...`, 'info');
-    const dsDescriptor = [];
-    for(const anhId of dsAnhId){
-      try{
-        const img = await ndkmLayAnhChoAI(anhId);
-        const ketQua = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
-          .withFaceLandmarks().withFaceDescriptor();
-        if(ketQua) dsDescriptor.push(ketQua.descriptor);
-      }catch(e){ /* bỏ qua đúng ảnh lỗi */ }
-    }
+    const dsDescriptor = await ndkmTinhDsDescriptor(dsAnhId);
     if(!dsDescriptor.length){ dsLoi.push(ten + ` (không thấy khuôn mặt rõ trong ${dsAnhId.length} ảnh, hoặc không đọc được ảnh)`); continue; }
     const nhan = 'oth_' + id;
-    ndkmLabeledDescriptors.push(new faceapi.LabeledFaceDescriptors(nhan, dsDescriptor));
+    ndkmDescriptorsNguoiKhac.push(new faceapi.LabeledFaceDescriptors(nhan, dsDescriptor));
     ndkmTenNguoiKhacTheoNhan[nhan] = ten;
     tongSoAnhDaNap += dsDescriptor.length;
     soNguoiKhacDaNap++;
   }
 
+  ndkmDungLaiFaceMatcher();
+  btn.disabled = false;
   if(!ndkmLabeledDescriptors.length){
     showMsg($('ndkmNapMsg'), '❌ Không nạp được ai — kiểm tra lại ảnh thẻ/ảnh bổ sung.', 'err');
-    $('ndkmBatCameraBtn').disabled = true;
+    return;
+  }
+  const ketQuaChu = `✅ Đã nạp xong ${ndkmDescriptorsHocSinh.length}/${dsHocSinh.length} học sinh`
+    + (dsNguoiKhac.length ? ` và ${soNguoiKhacDaNap}/${dsNguoiKhac.length} người khác` : '')
+    + ` (tổng ${tongSoAnhDaNap} ảnh).`
+    + (dsLoi.length ? ` ⚠️ Bỏ qua ${dsLoi.length}: ${dsLoi.join('; ')}` : '');
+  showMsg($('ndkmNapMsg'), ketQuaChu, dsLoi.length ? 'info' : 'ok');
+};
+
+$('ndkmNapDuLieuNguoiKhacBtn').onclick = async ()=>{
+  // Chỉ nạp riêng những người thêm ở Bước 1b — KHÔNG đụng tới dữ liệu học sinh đã nạp trước đó
+  // (nếu có), và không cần chờ nạp cả lớp mới bật được camera. Dùng khi chỉ cần kiểm tra nhanh
+  // 1-2 người ngoài lớp (vd. vừa thêm xong 1 ảnh cho bảo vệ, GV bộ môn).
+  const btn = $('ndkmNapDuLieuNguoiKhacBtn');
+  btn.disabled = true;
+  showMsg($('ndkmNapMsg'), '⏳ Đang tải mô hình AI (chỉ cần 1 lần mỗi phiên, có thể mất chút thời gian)...', 'info');
+  try{ await ndkmTaiModelNeuChua(); }
+  catch(e){
+    showMsg($('ndkmNapMsg'), '❌ Không tải được mô hình AI — kiểm tra kết nối mạng rồi thử lại.', 'err');
     btn.disabled = false;
     return;
   }
 
-  ndkmFaceMatcher = new faceapi.FaceMatcher(ndkmLabeledDescriptors, NDKM_NGUONG_KHOP);
-  $('ndkmBatCameraBtn').disabled = false;
+  const dsNguoiKhac = Object.entries(ndkmNguoiKhacState).filter(([id,x])=> Object.keys((x&&x.anh)||{}).length);
+  if(!dsNguoiKhac.length){
+    showMsg($('ndkmNapMsg'), '❌ Chưa có người nào ở Bước 1b có ảnh để nạp — hãy thêm người và thêm ảnh ở Bước 1b trước.', 'err');
+    btn.disabled = false;
+    return;
+  }
+
+  ndkmDescriptorsNguoiKhac = [];
+  // Xóa các nhãn "oth_*" cũ khỏi bảng tra tên trước khi nạp lại, tránh còn sót tên của người đã
+  // bị xóa hoặc đổi ảnh.
+  Object.keys(ndkmTenNguoiKhacTheoNhan).forEach(k=> delete ndkmTenNguoiKhacTheoNhan[k]);
+  const dsLoi = [];
+  let tongSoAnhDaNap = 0, soNguoiKhacDaNap = 0;
+  for(let i=0; i<dsNguoiKhac.length; i++){
+    const [id, x] = dsNguoiKhac[i];
+    const ten = (x && x.ten) || 'Người khác';
+    const dsAnhId = Object.keys((x && x.anh) || {});
+    showMsg($('ndkmNapMsg'), `⏳ Đang nạp người ở Bước 1b ${i+1}/${dsNguoiKhac.length}: ${ten} (${dsAnhId.length} ảnh)...`, 'info');
+    const dsDescriptor = await ndkmTinhDsDescriptor(dsAnhId);
+    if(!dsDescriptor.length){ dsLoi.push(ten + ` (không thấy khuôn mặt rõ trong ${dsAnhId.length} ảnh, hoặc không đọc được ảnh)`); continue; }
+    const nhan = 'oth_' + id;
+    ndkmDescriptorsNguoiKhac.push(new faceapi.LabeledFaceDescriptors(nhan, dsDescriptor));
+    ndkmTenNguoiKhacTheoNhan[nhan] = ten;
+    tongSoAnhDaNap += dsDescriptor.length;
+    soNguoiKhacDaNap++;
+  }
+
+  ndkmDungLaiFaceMatcher();
   btn.disabled = false;
-  const soHocSinhDaNap = ndkmLabeledDescriptors.length - soNguoiKhacDaNap;
-  const ketQuaChu = `✅ Đã nạp xong ${soHocSinhDaNap}/${dsHocSinh.length} học sinh`
-    + (dsNguoiKhac.length ? ` và ${soNguoiKhacDaNap}/${dsNguoiKhac.length} người khác` : '')
-    + ` (tổng ${tongSoAnhDaNap} ảnh).`
+  if(!soNguoiKhacDaNap){
+    showMsg($('ndkmNapMsg'), '❌ Không nạp được người nào ở Bước 1b — kiểm tra lại ảnh đã thêm (ảnh cần thấy rõ khuôn mặt).', 'err');
+    return;
+  }
+  const ketQuaChu = `✅ Đã nạp xong ${soNguoiKhacDaNap}/${dsNguoiKhac.length} người ở Bước 1b (${tongSoAnhDaNap} ảnh).`
+    + (ndkmDescriptorsHocSinh.length ? ` Dữ liệu học sinh đã nạp trước đó (nếu có) vẫn được giữ nguyên.` : '')
     + (dsLoi.length ? ` ⚠️ Bỏ qua ${dsLoi.length}: ${dsLoi.join('; ')}` : '');
   showMsg($('ndkmNapMsg'), ketQuaChu, dsLoi.length ? 'info' : 'ok');
 };
