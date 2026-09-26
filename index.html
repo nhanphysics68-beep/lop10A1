@@ -1788,10 +1788,37 @@
         </div>
         <div id="ndkmAnhMsg" class="msg"></div>
 
-        <div class="section-title" style="margin-top:20px;">Bước 2 — Nạp dữ liệu khuôn mặt học sinh</div>
+        <div class="section-title" style="margin-top:20px;">Bước 1b — (Tuỳ chọn) Thêm ảnh cho người bất kỳ (không phải học sinh lớp)</div>
         <p class="section-note">
-          Lấy ảnh thẻ học sinh đã có sẵn ở mục "Thành viên lớp" (và ảnh bổ sung ở Bước 1 nếu có) để AI
-          học đặc điểm khuôn mặt từng bạn (chỉ những bạn đã có ít nhất 1 ảnh mới nhận diện được).
+          Dùng khi cần AI nhận ra thêm người KHÔNG phải học sinh của lớp — ví dụ giáo viên bộ môn,
+          bảo vệ, phụ huynh thường xuyên vào lớp... Đây vẫn là <b>dữ liệu sinh trắc học nhạy cảm</b> —
+          chỉ thêm ảnh khi người đó đã đồng ý. Tối đa 5 ảnh/người. Chỉ giáo viên upload được, ảnh
+          lưu riêng cho mục đích này, không công khai.
+        </p>
+        <div class="field">
+          <label>Chọn người đã thêm</label>
+          <select id="ndkmNguoiKhacChon"><option value="">-- Chưa có người nào --</option></select>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-bottom:10px;">
+          <div class="field" style="flex:1; min-width:200px; margin-bottom:0;">
+            <label>Hoặc thêm người mới</label>
+            <input type="text" id="ndkmNguoiKhacTenMoi" maxlength="60" placeholder="Nhập tên người mới...">
+          </div>
+          <button class="btn btn-blue btn-sm" id="ndkmNguoiKhacThemBtn">➕ Thêm người mới</button>
+        </div>
+        <div id="ndkmNguoiKhacDsHienTai" style="margin:8px 0;"></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+          <input type="file" id="ndkmNguoiKhacAnhInput" accept="image/*" style="display:none;">
+          <button class="btn btn-blue btn-sm" id="ndkmNguoiKhacAnhChonBtn">📎 Thêm ảnh cho người này</button>
+          <button class="btn btn-ghost btn-sm" id="ndkmNguoiKhacXoaBtn">🗑️ Xóa hẳn người này</button>
+        </div>
+        <div id="ndkmNguoiKhacMsg" class="msg"></div>
+
+        <div class="section-title" style="margin-top:20px;">Bước 2 — Nạp dữ liệu khuôn mặt</div>
+        <p class="section-note">
+          Lấy ảnh thẻ học sinh đã có sẵn ở mục "Thành viên lớp" (và ảnh bổ sung ở Bước 1 nếu có), cộng
+          với ảnh của những người bất kỳ đã thêm ở Bước 1b (nếu có), để AI học đặc điểm khuôn mặt từng
+          người (chỉ những ai đã có ít nhất 1 ảnh mới nhận diện được).
         </p>
         <button class="btn btn-primary btn-sm" id="ndkmNapDuLieuBtn">🧠 Nạp dữ liệu khuôn mặt</button>
         <div id="ndkmNapMsg" class="msg"></div>
@@ -2225,6 +2252,7 @@ const clbDiemRef = db.ref('clbDiem2026');   // điểm uy tín đóng góp — c
 const chsRef = db.ref('hosocanhan2026');    // dữ liệu cá nhân học sinh — riêng tư, giống hoso2026
 const thanhVienRef = db.ref('thanhvien2026'); // bản CÔNG KHAI rút gọn (ảnh thẻ, tên, giới tính, ngày sinh) — không có CCCD/thành tích
 const ndkmAnhRef = db.ref('nhanDienAnhBoSung2026'); // ảnh bổ sung nhận diện khuôn mặt — RIÊNG TƯ, chỉ admin đọc/ghi (không công khai như thanhvien2026)
+const ndkmNguoiKhacRef = db.ref('nhanDienNguoiKhac2026'); // ảnh nhận diện khuôn mặt cho NGƯỜI BẤT KỲ ngoài học sinh lớp (vd. GV bộ môn, bảo vệ...) — RIÊNG TƯ, chỉ admin đọc/ghi, cùng mức bảo mật như nhanDienAnhBoSung2026
 const totuanRef = db.ref('totuan2026'); // tổng kết tuần theo Tổ — công khai đọc, tổ trưởng/tổ phó (đối chiếu tên) hoặc admin mới ghi được
 const vitriRef = db.ref('vitri2026'); // vị trí nhà + khoảng cách đến trường — công khai đọc, mỗi người tự ghi phần của mình
 const caiDatRef = db.ref('caidat2026'); // cài đặt chung (tọa độ trường...) — công khai đọc, chỉ admin ghi
@@ -2809,6 +2837,7 @@ auth.onAuthStateChanged(async user=>{
     if($('ndkmChuaDangNhap')) $('ndkmChuaDangNhap').style.display = 'none';
     if($('ndkmCard')) $('ndkmCard').style.display = 'block';
     await napNdkmAnhTatCa();
+    await napNdkmNguoiKhacTatCa();
     renderAdmin();
   } else if(isThuQuy){
     showMsg($('pageMsg'), '💰 Đã đăng nhập với quyền Thủ quỹ — có thể quản lý mục "Quỹ lớp".', 'ok');
@@ -9429,7 +9458,8 @@ window.addEventListener('beforeunload', dungDoOn); // đảm bảo tắt micro k
    niên — xem lưu ý bắt buộc ngay trên giao diện trước khi dùng thật trong lớp.
    ================================================================ */
 let ndkmModelsDaTai = false;
-let ndkmLabeledDescriptors = [];   // [faceapi.LabeledFaceDescriptors] — label = uid (không dùng tên để tránh trùng)
+let ndkmLabeledDescriptors = [];   // [faceapi.LabeledFaceDescriptors] — label = uid học sinh, hoặc "oth_<id>" cho người bất kỳ (Bước 1b)
+let ndkmTenNguoiKhacTheoNhan = {}; // { "oth_<id>": "Tên hiển thị" } — tra tên cho nhãn người bất kỳ lúc nhận diện
 let ndkmFaceMatcher = null;
 let ndkmStream = null, ndkmDangChay = false, ndkmHenGioNhanDien = null;
 let ndkmFacingMode = 'environment';
@@ -9548,6 +9578,121 @@ async function ndkmXoaAnhBoSung(uid, anhId){
   }catch(e){ showMsg($('ndkmAnhMsg'), baoLoi(e), 'err'); }
 }
 
+/* ---- Bước 1b (tuỳ chọn) — Ảnh khuôn mặt cho NGƯỜI BẤT KỲ, không phải học sinh của lớp ----
+   Lưu ở nhánh riêng (nhanDienNguoiKhac2026), cùng mức bảo mật admin-only như ảnh bổ sung của học
+   sinh (nhanDienAnhBoSung2026). Mỗi người là 1 bản ghi {ten, anh:{anhId:{anhLink,thuMucId,luc}}}
+   dưới 1 key tự sinh (push key) — KHÔNG dùng uid vì đây không phải tài khoản học sinh có sẵn. */
+let ndkmNguoiKhacState = {}; // { id: { ten, anh: { anhId: {anhLink, thuMucId, luc} } } }
+
+async function napNdkmNguoiKhacTatCa(){
+  if(!isAdmin){ ndkmNguoiKhacState = {}; return; }
+  try{ ndkmNguoiKhacState = (await ndkmNguoiKhacRef.once('value')).val() || {}; }
+  catch(e){ ndkmNguoiKhacState = {}; }
+  ndkmDienChonNguoiKhac();
+  renderNdkmNguoiKhacDsHienTai();
+}
+
+function ndkmDienChonNguoiKhac(){
+  const sel = $('ndkmNguoiKhacChon');
+  if(!sel) return;
+  const giaTriCu = sel.value;
+  const ds = Object.entries(ndkmNguoiKhacState).map(([id,x])=> ({id, ten:(x&&x.ten)||'(chưa đặt tên)'}))
+    .sort((a,b)=> a.ten.localeCompare(b.ten,'vi'));
+  if(!ds.length){ sel.innerHTML = `<option value="">-- Chưa có người nào --</option>`; return; }
+  sel.innerHTML = ds.map(x=>{
+    const soAnh = Object.keys((ndkmNguoiKhacState[x.id]||{}).anh||{}).length;
+    return `<option value="${esc(x.id)}">${esc(x.ten)}${soAnh? ` (${soAnh} ảnh)`:''}</option>`;
+  }).join('');
+  if(ds.some(x=> x.id === giaTriCu)) sel.value = giaTriCu;
+}
+$('ndkmNguoiKhacChon') && ($('ndkmNguoiKhacChon').onchange = renderNdkmNguoiKhacDsHienTai);
+
+function renderNdkmNguoiKhacDsHienTai(){
+  const host = $('ndkmNguoiKhacDsHienTai');
+  const sel = $('ndkmNguoiKhacChon');
+  if(!host || !sel) return;
+  const id = sel.value;
+  const ds = id ? Object.entries((ndkmNguoiKhacState[id]||{}).anh||{}) : [];
+  if(!id){ host.innerHTML = `<p class="section-note">Chọn 1 người ở trên (hoặc thêm người mới) để xem/thêm ảnh.</p>`; return; }
+  if(!ds.length){ host.innerHTML = `<p class="section-note">Chưa có ảnh nào cho người này.</p>`; return; }
+  host.innerHTML = `<div style="display:flex; gap:8px; flex-wrap:wrap;">` + ds.map(([anhId, x])=>
+    `<div style="text-align:center;">
+       <img src="${anhDriveNho(anhId)}" alt="Ảnh" style="width:80px;height:100px;object-fit:cover;border-radius:8px;border:2px solid var(--line);display:block;">
+       <button class="btn btn-ghost btn-sm" style="margin-top:4px;" data-ndkmnk-xoaanh="${esc(anhId)}">🗑️ Xóa</button>
+     </div>`).join('') + `</div>`;
+  host.querySelectorAll('[data-ndkmnk-xoaanh]').forEach(btn=> btn.onclick = ()=> ndkmNguoiKhacXoaAnh(id, btn.getAttribute('data-ndkmnk-xoaanh')));
+}
+
+$('ndkmNguoiKhacThemBtn') && ($('ndkmNguoiKhacThemBtn').onclick = async ()=>{
+  const ten = $('ndkmNguoiKhacTenMoi').value.trim();
+  if(!ten){ showMsg($('ndkmNguoiKhacMsg'), 'Vui lòng nhập tên người mới.', 'err'); return; }
+  try{
+    const bienBanMoi = ndkmNguoiKhacRef.push();
+    await bienBanMoi.set({ ten, taoLuc: new Date().toISOString() });
+    ndkmNguoiKhacState[bienBanMoi.key] = { ten };
+    $('ndkmNguoiKhacTenMoi').value = '';
+    ndkmDienChonNguoiKhac();
+    $('ndkmNguoiKhacChon').value = bienBanMoi.key;
+    renderNdkmNguoiKhacDsHienTai();
+    showMsg($('ndkmNguoiKhacMsg'), `✅ Đã thêm "${ten}" — giờ có thể thêm ảnh cho người này bên dưới.`, 'ok');
+  }catch(e){ showMsg($('ndkmNguoiKhacMsg'), baoLoi(e), 'err'); }
+});
+
+$('ndkmNguoiKhacAnhChonBtn') && ($('ndkmNguoiKhacAnhChonBtn').onclick = ()=>{
+  const id = $('ndkmNguoiKhacChon').value;
+  if(!id){ showMsg($('ndkmNguoiKhacMsg'), 'Vui lòng chọn hoặc thêm người trước.', 'err'); return; }
+  const soAnhHienTai = Object.keys((ndkmNguoiKhacState[id]||{}).anh||{}).length;
+  if(soAnhHienTai >= NDKM_ANH_TOI_DA){ showMsg($('ndkmNguoiKhacMsg'), `Người này đã có đủ ${NDKM_ANH_TOI_DA} ảnh (tối đa) — xóa bớt ảnh cũ nếu muốn thêm ảnh mới.`, 'err'); return; }
+  $('ndkmNguoiKhacAnhInput').click();
+});
+$('ndkmNguoiKhacAnhInput') && ($('ndkmNguoiKhacAnhInput').onchange = async (e)=>{
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  if(!/^image\//.test(file.type)){ showMsg($('ndkmNguoiKhacMsg'), 'Vui lòng chọn đúng tệp ảnh.', 'err'); return; }
+  const id = $('ndkmNguoiKhacChon').value;
+  if(!id){ showMsg($('ndkmNguoiKhacMsg'), 'Vui lòng chọn hoặc thêm người trước.', 'err'); return; }
+  const ten = (ndkmNguoiKhacState[id] && ndkmNguoiKhacState[id].ten) || 'Người khác';
+  if(!dungNdkmDrive()){ showMsg($('ndkmNguoiKhacMsg'), 'Chưa cấu hình nơi lưu ảnh (Drive) cho mục này — báo kỹ thuật kiểm tra NDKM_DRIVE_URL.', 'err'); return; }
+  showMsg($('ndkmNguoiKhacMsg'), `Đang tải ảnh lên cho "${ten}"...`, 'info');
+  try{
+    const anhNen = await nenAnh(file, 1000, 0.85);
+    const kqDrive = await guiAnhNdkmLenDrive(anhNen, ten + ' - nhan dien khac');
+    const banGhi = { anhLink: kqDrive.link, thuMucId: kqDrive.thuMucId, luc: new Date().toISOString() };
+    await ndkmNguoiKhacRef.child(id).child('anh').child(kqDrive.id).set(banGhi);
+    ndkmNguoiKhacState[id] = ndkmNguoiKhacState[id] || {ten};
+    ndkmNguoiKhacState[id].anh = Object.assign({}, ndkmNguoiKhacState[id].anh||{}, { [kqDrive.id]: banGhi });
+    ndkmDienChonNguoiKhac();
+    renderNdkmNguoiKhacDsHienTai();
+    showMsg($('ndkmNguoiKhacMsg'), `✅ Đã thêm ảnh cho "${ten}".`, 'ok');
+  }catch(err){ showMsg($('ndkmNguoiKhacMsg'), baoLoi(err), 'err'); }
+});
+async function ndkmNguoiKhacXoaAnh(id, anhId){
+  if(!confirm('Xóa ảnh này?')) return;
+  try{
+    await ndkmNguoiKhacRef.child(id).child('anh').child(anhId).remove();
+    if(ndkmNguoiKhacState[id] && ndkmNguoiKhacState[id].anh) delete ndkmNguoiKhacState[id].anh[anhId];
+    xoaAnhNdkmTrenDrive(anhId).catch(()=>{}); // best-effort, không chặn nếu Apps Script chưa có/lỗi
+    ndkmDienChonNguoiKhac();
+    renderNdkmNguoiKhacDsHienTai();
+  }catch(e){ showMsg($('ndkmNguoiKhacMsg'), baoLoi(e), 'err'); }
+}
+$('ndkmNguoiKhacXoaBtn') && ($('ndkmNguoiKhacXoaBtn').onclick = async ()=>{
+  const id = $('ndkmNguoiKhacChon').value;
+  if(!id){ showMsg($('ndkmNguoiKhacMsg'), 'Vui lòng chọn người cần xóa.', 'err'); return; }
+  const ten = (ndkmNguoiKhacState[id] && ndkmNguoiKhacState[id].ten) || 'người này';
+  if(!confirm(`Xóa hẳn "${ten}" và toàn bộ ảnh của người này? Không thể hoàn tác.`)) return;
+  try{
+    const cacAnhId = Object.keys((ndkmNguoiKhacState[id]||{}).anh||{});
+    await ndkmNguoiKhacRef.child(id).remove();
+    delete ndkmNguoiKhacState[id];
+    cacAnhId.forEach(anhId=> xoaAnhNdkmTrenDrive(anhId).catch(()=>{})); // best-effort
+    ndkmDienChonNguoiKhac();
+    renderNdkmNguoiKhacDsHienTai();
+    showMsg($('ndkmNguoiKhacMsg'), `Đã xóa "${ten}".`, 'ok');
+  }catch(e){ showMsg($('ndkmNguoiKhacMsg'), baoLoi(e), 'err'); }
+});
+
 $('ndkmNapDuLieuBtn').onclick = async ()=>{
   const btn = $('ndkmNapDuLieuBtn');
   btn.disabled = true;
@@ -9562,13 +9707,16 @@ $('ndkmNapDuLieuBtn').onclick = async ()=>{
   // Học sinh đủ điều kiện nạp = có ảnh thẻ (anhTheId) HOẶC có ít nhất 1 ảnh bổ sung (Bước 1)
   const dsHocSinh = Object.entries(thanhVienState).filter(([uid,x])=>
     (x && x.anhTheId) || Object.keys(ndkmAnhState[uid]||{}).length);
-  if(!dsHocSinh.length){
-    showMsg($('ndkmNapMsg'), '❌ Chưa có học sinh nào có ảnh thẻ (mục "Thành viên lớp") hoặc ảnh bổ sung (Bước 1) để nạp.', 'err');
+  // Người bất kỳ (Bước 1b) đủ điều kiện nạp = có ít nhất 1 ảnh
+  const dsNguoiKhac = Object.entries(ndkmNguoiKhacState).filter(([id,x])=> Object.keys((x&&x.anh)||{}).length);
+  if(!dsHocSinh.length && !dsNguoiKhac.length){
+    showMsg($('ndkmNapMsg'), '❌ Chưa có học sinh nào có ảnh thẻ/ảnh bổ sung (Bước 1), cũng chưa có người nào ở Bước 1b để nạp.', 'err');
     btn.disabled = false;
     return;
   }
 
   ndkmLabeledDescriptors = [];
+  ndkmTenNguoiKhacTheoNhan = {};
   const dsLoi = [];
   let tongSoAnhDaNap = 0;
   for(let i=0; i<dsHocSinh.length; i++){
@@ -9580,7 +9728,7 @@ $('ndkmNapDuLieuBtn').onclick = async ()=>{
     if(x && x.anhTheId) dsAnhId.push(x.anhTheId);
     Object.keys(ndkmAnhState[uid]||{}).forEach(anhId=> dsAnhId.push(anhId));
 
-    showMsg($('ndkmNapMsg'), `⏳ Đang nạp ${i+1}/${dsHocSinh.length}: ${x.hoTen || uid} (${dsAnhId.length} ảnh)...`, 'info');
+    showMsg($('ndkmNapMsg'), `⏳ Đang nạp học sinh ${i+1}/${dsHocSinh.length}: ${x.hoTen || uid} (${dsAnhId.length} ảnh)...`, 'info');
     const dsDescriptor = [];
     for(const anhId of dsAnhId){
       try{
@@ -9595,8 +9743,33 @@ $('ndkmNapDuLieuBtn').onclick = async ()=>{
     tongSoAnhDaNap += dsDescriptor.length;
   }
 
+  // Nạp thêm những người bất kỳ ở Bước 1b — dùng nhãn riêng "oth_<id>" (khác hẳn không gian uid
+  // học sinh) để không bao giờ trùng, và ghi nhớ tên hiển thị tương ứng cho lúc nhận diện.
+  let soNguoiKhacDaNap = 0;
+  for(let i=0; i<dsNguoiKhac.length; i++){
+    const [id, x] = dsNguoiKhac[i];
+    const ten = (x && x.ten) || 'Người khác';
+    const dsAnhId = Object.keys((x && x.anh) || {});
+    showMsg($('ndkmNapMsg'), `⏳ Đang nạp người khác ${i+1}/${dsNguoiKhac.length}: ${ten} (${dsAnhId.length} ảnh)...`, 'info');
+    const dsDescriptor = [];
+    for(const anhId of dsAnhId){
+      try{
+        const img = await ndkmLayAnhChoAI(anhId);
+        const ketQua = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+          .withFaceLandmarks().withFaceDescriptor();
+        if(ketQua) dsDescriptor.push(ketQua.descriptor);
+      }catch(e){ /* bỏ qua đúng ảnh lỗi */ }
+    }
+    if(!dsDescriptor.length){ dsLoi.push(ten + ` (không thấy khuôn mặt rõ trong ${dsAnhId.length} ảnh, hoặc không đọc được ảnh)`); continue; }
+    const nhan = 'oth_' + id;
+    ndkmLabeledDescriptors.push(new faceapi.LabeledFaceDescriptors(nhan, dsDescriptor));
+    ndkmTenNguoiKhacTheoNhan[nhan] = ten;
+    tongSoAnhDaNap += dsDescriptor.length;
+    soNguoiKhacDaNap++;
+  }
+
   if(!ndkmLabeledDescriptors.length){
-    showMsg($('ndkmNapMsg'), '❌ Không nạp được học sinh nào — kiểm tra lại ảnh thẻ/ảnh bổ sung.', 'err');
+    showMsg($('ndkmNapMsg'), '❌ Không nạp được ai — kiểm tra lại ảnh thẻ/ảnh bổ sung.', 'err');
     $('ndkmBatCameraBtn').disabled = true;
     btn.disabled = false;
     return;
@@ -9605,8 +9778,11 @@ $('ndkmNapDuLieuBtn').onclick = async ()=>{
   ndkmFaceMatcher = new faceapi.FaceMatcher(ndkmLabeledDescriptors, NDKM_NGUONG_KHOP);
   $('ndkmBatCameraBtn').disabled = false;
   btn.disabled = false;
-  const ketQuaChu = `✅ Đã nạp xong ${ndkmLabeledDescriptors.length}/${dsHocSinh.length} học sinh (tổng ${tongSoAnhDaNap} ảnh).` +
-    (dsLoi.length ? ` ⚠️ Bỏ qua ${dsLoi.length}: ${dsLoi.join('; ')}` : '');
+  const soHocSinhDaNap = ndkmLabeledDescriptors.length - soNguoiKhacDaNap;
+  const ketQuaChu = `✅ Đã nạp xong ${soHocSinhDaNap}/${dsHocSinh.length} học sinh`
+    + (dsNguoiKhac.length ? ` và ${soNguoiKhacDaNap}/${dsNguoiKhac.length} người khác` : '')
+    + ` (tổng ${tongSoAnhDaNap} ảnh).`
+    + (dsLoi.length ? ` ⚠️ Bỏ qua ${dsLoi.length}: ${dsLoi.join('; ')}` : '');
   showMsg($('ndkmNapMsg'), ketQuaChu, dsLoi.length ? 'info' : 'ok');
 };
 
@@ -9665,8 +9841,16 @@ async function ndkmVongLapNhanDien(){
       if(ndkmFaceMatcher){
         const khop = ndkmFaceMatcher.findBestMatch(kq.descriptor);
         if(khop.label !== 'unknown'){
-          ten = (thanhVienState[khop.label] && thanhVienState[khop.label].hoTen) || khop.label;
-          maMau = '#22c55e';
+          if(thanhVienState[khop.label]){
+            ten = thanhVienState[khop.label].hoTen || khop.label;
+            maMau = '#22c55e'; // xanh lá: học sinh của lớp
+          } else if(ndkmTenNguoiKhacTheoNhan[khop.label]){
+            ten = ndkmTenNguoiKhacTheoNhan[khop.label];
+            maMau = '#2b6cb0'; // xanh dương: người bất kỳ (Bước 1b) — phân biệt với học sinh
+          } else {
+            ten = khop.label;
+            maMau = '#22c55e';
+          }
         }
       }
       ctx.strokeStyle = maMau;
