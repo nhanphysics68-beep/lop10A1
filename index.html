@@ -1824,6 +1824,13 @@
         <div id="ndkmNapMsg" class="msg"></div>
 
         <div class="section-title">Bước 3 — Bật camera nhận diện</div>
+        <div class="field" style="max-width:420px;">
+          <label>Chế độ quét</label>
+          <select id="ndkmCheDoQuetChon">
+            <option value="tatca">Tất cả (học sinh lớp + người ở Bước 1b)</option>
+            <option value="ngoailop">Chỉ người ở Bước 1b (bỏ qua học sinh lớp)</option>
+          </select>
+        </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
           <button class="btn btn-primary btn-sm" id="ndkmBatCameraBtn" disabled>🎥 Bật camera</button>
           <button class="btn btn-ghost btn-sm" id="ndkmDoiCameraBtn" style="display:none;">🔄 Đổi camera trước/sau</button>
@@ -9460,6 +9467,7 @@ window.addEventListener('beforeunload', dungDoOn); // đảm bảo tắt micro k
 let ndkmModelsDaTai = false;
 let ndkmLabeledDescriptors = [];   // [faceapi.LabeledFaceDescriptors] — label = uid học sinh, hoặc "oth_<id>" cho người bất kỳ (Bước 1b)
 let ndkmTenNguoiKhacTheoNhan = {}; // { "oth_<id>": "Tên hiển thị" } — tra tên cho nhãn người bất kỳ lúc nhận diện
+let ndkmCheDoQuet = 'tatca'; // 'tatca' = nhận diện cả học sinh lẫn người Bước 1b | 'ngoailop' = CHỈ nhận diện người Bước 1b (bỏ qua học sinh lớp)
 let ndkmFaceMatcher = null;
 let ndkmStream = null, ndkmDangChay = false, ndkmHenGioNhanDien = null;
 let ndkmFacingMode = 'environment';
@@ -9786,6 +9794,8 @@ $('ndkmNapDuLieuBtn').onclick = async ()=>{
   showMsg($('ndkmNapMsg'), ketQuaChu, dsLoi.length ? 'info' : 'ok');
 };
 
+$('ndkmCheDoQuetChon').onchange = (e)=>{ ndkmCheDoQuet = e.target.value; };
+
 $('ndkmBatCameraBtn').onclick = ()=> ndkmBatCamera();
 $('ndkmDoiCameraBtn').onclick = ()=>{
   ndkmFacingMode = (ndkmFacingMode === 'environment') ? 'user' : 'environment';
@@ -9838,21 +9848,27 @@ async function ndkmVongLapNhanDien(){
     cacKetQua.forEach(kq=>{
       const hop = kq.detection.box;
       let ten = 'Chưa rõ', maMau = '#94a3b8';
+      let laNguoiNgoaiLop = false; // true nếu khuôn mặt này khớp với người thêm ở Bước 1b (nhãn dạng "oth_...")
       if(ndkmFaceMatcher){
         const khop = ndkmFaceMatcher.findBestMatch(kq.descriptor);
         if(khop.label !== 'unknown'){
-          if(thanhVienState[khop.label]){
-            ten = thanhVienState[khop.label].hoTen || khop.label;
-            maMau = '#22c55e'; // xanh lá: học sinh của lớp
-          } else if(ndkmTenNguoiKhacTheoNhan[khop.label]){
+          if(ndkmTenNguoiKhacTheoNhan[khop.label]){
             ten = ndkmTenNguoiKhacTheoNhan[khop.label];
             maMau = '#2b6cb0'; // xanh dương: người bất kỳ (Bước 1b) — phân biệt với học sinh
+            laNguoiNgoaiLop = true;
+          } else if(thanhVienState[khop.label]){
+            ten = thanhVienState[khop.label].hoTen || khop.label;
+            maMau = '#22c55e'; // xanh lá: học sinh của lớp
           } else {
             ten = khop.label;
             maMau = '#22c55e';
           }
         }
       }
+      // Chế độ "Chỉ người ở Bước 1b": bỏ qua hoàn toàn học sinh lớp và khuôn mặt chưa rõ,
+      // chỉ vẽ khung cho những ai khớp với người đã thêm ở Bước 1b — dùng khi chỉ cần kiểm tra
+      // nhanh một người ngoài lớp (vd. bảo vệ, GV bộ môn) mà không muốn bị rối bởi khung học sinh.
+      if(ndkmCheDoQuet === 'ngoailop' && !laNguoiNgoaiLop) return;
       ctx.strokeStyle = maMau;
       ctx.lineWidth = 3;
       ctx.strokeRect(hop.x, hop.y, hop.width, hop.height);
