@@ -1306,6 +1306,10 @@
         Thầy vẫn tự cuộn/tìm ảnh như bình thường bên trong cửa sổ đó. Khoảng ngày chọn dưới đây chỉ
         có tác dụng ở phía trang web: SAU KHI Thầy chọn ảnh xong, hệ thống sẽ tự bỏ qua (không đưa
         vào chấm) những ảnh có ngày chụp nằm ngoài khoảng đã chọn — để tránh chấm nhầm ảnh chọn sót.</p>
+      <div class="field" style="max-width:260px;">
+        <label>Ảnh sắp chọn là bài nào?</label>
+        <select id="chamAiPhotosBai"></select>
+      </div>
       <div class="grid2">
         <div class="field"><label>Chỉ lấy ảnh chụp từ ngày</label><input type="date" id="chamAiTuNgay"></div>
         <div class="field"><label>đến ngày</label><input type="date" id="chamAiDenNgay"></div>
@@ -1318,6 +1322,10 @@
         chế độ xem toàn màn hình, bấm chuột phải → "Sao chép địa chỉ hình ảnh"/"Copy image address",
         KHÔNG phải link "Chia sẻ" của cả album). Mỗi dòng 1 link, dán nhiều dòng để thêm nhiều ảnh
         cùng lúc. Cách này không cần đăng nhập Google Photos qua cửa sổ chọn ảnh như mục 2.</p>
+      <div class="field" style="max-width:260px;">
+        <label>Các link dưới đây là bài nào?</label>
+        <select id="chamAiLinkBai"></select>
+      </div>
       <div class="field">
         <label>Link ảnh (mỗi dòng 1 link)</label>
         <textarea id="chamAiLinkTextarea" style="min-height:90px;" placeholder="https://lh3.googleusercontent.com/...&#10;https://lh3.googleusercontent.com/..."></textarea>
@@ -8395,6 +8403,24 @@ async function napBaiTapDanhSach(){
   }catch(e){ /* giữ mặc định nếu chưa đọc được */ }
   renderBtvlBaiTapCuaToi();
   renderBtvlQuanLy();
+  capNhatChamAiBaiSelects();
+}
+
+// Đổ danh sách "Bài 1..Bài 10" (theo đúng danh mục hiện tại) vào 2 ô chọn "Ảnh sắp chọn là bài
+// nào?" / "Các link dưới đây là bài nào?" ở mục Chấm bài AI — BẮT BUỘC phải chọn đúng bài TRƯỚC
+// khi đưa ảnh/link vào hàng chờ, vì nguồn Google Photos/dán link không tự biết ảnh là bài nào
+// (khác nguồn "Nộp qua web" đã tự gắn sẵn baiId theo đúng ô nộp bài của học sinh). Thiếu bước
+// này thì lúc duyệt sẽ mặc định tính là "Bài 1", có thể ghi đè nhầm lên điểm Bài 1 đã có.
+function capNhatChamAiBaiSelects(){
+  const ds = danhSachBaiTapHienTai();
+  const oiSelect = ['chamAiPhotosBai', 'chamAiLinkBai'];
+  oiSelect.forEach(id=>{
+    const sel = $(id);
+    if(!sel) return;
+    const dangChon = sel.value;
+    sel.innerHTML = ds.map(b=> `<option value="${esc(b.id)}">${esc(b.ten)}</option>`).join('');
+    if(ds.some(b=> b.id === dangChon)) sel.value = dangChon;
+  });
 }
 function renderBtvlQuanLy(){
   const card = $('btvlQuanLyCard'), khung = $('btvlQuanLyDs');
@@ -8715,6 +8741,10 @@ $('chamAiPhotosBtn') && ($('chamAiPhotosBtn').onclick = async ()=>{
       nut.disabled = false; return;
     }
 
+    // Ảnh Google Photos KHÔNG tự biết là bài nào — bắt buộc lấy đúng bài Thầy đã chọn ở ô
+    // "Ảnh sắp chọn là bài nào?" phía trên, gắn sẵn vào mỗi ảnh đưa vào hàng chờ. Thiếu bước này
+    // lúc duyệt sẽ mặc định tính là Bài 1, có thể ghi đè nhầm điểm Bài 1 đã công bố trước đó.
+    const baiDaChonAnh = danhSachBaiTapHienTai().find(b=> b.id === ($('chamAiPhotosBai') && $('chamAiPhotosBai').value)) || danhSachBaiTapHienTai()[0];
     let daXong = 0;
     for(const mi of items){
       try{
@@ -8725,6 +8755,7 @@ $('chamAiPhotosBtn') && ($('chamAiPhotosBtn').onclick = async ()=>{
         const kqDrive = await guiAnhBaiTapLenDrive(anhNen, 'cham-ai-google-photos');
         await chamBaiAIRef.child('hangCho').push({
           nguon: 'googlephotos', hoTenGoi: '', anhId: kqDrive.id, anhLink: kqDrive.link || '',
+          baiId: baiDaChonAnh.id, tenBai: baiDaChonAnh.ten,
           luc: Date.now(), trangThai: 'cho_xu_ly'
         });
         daXong++;
@@ -8750,10 +8781,14 @@ $('chamAiLinkBtn') && ($('chamAiLinkBtn').onclick = async ()=>{
   const linkDs = dongDs.filter(s=> /^https?:\/\//i.test(s));
   if(!linkDs.length){ showMsg($('chamAiLinkMsg'), 'Chưa dán link nào hợp lệ (mỗi dòng phải bắt đầu bằng http:// hoặc https://).', 'err'); return; }
   const nut = $('chamAiLinkBtn'); nut.disabled = true;
+  // Link dán vào cũng KHÔNG tự biết là bài nào — lấy đúng bài Thầy đã chọn ở ô "Các link dưới
+  // đây là bài nào?" phía trên, gắn sẵn vào từng link (cùng lý do như mục Google Photos ở trên).
+  const baiDaChonLink = danhSachBaiTapHienTai().find(b=> b.id === ($('chamAiLinkBai') && $('chamAiLinkBai').value)) || danhSachBaiTapHienTai()[0];
   try{
     for(const link of linkDs){
       await chamBaiAIRef.child('hangCho').push({
         nguon: 'link', hoTenGoi: '', linkAnh: link.slice(0, 500),
+        baiId: baiDaChonLink.id, tenBai: baiDaChonLink.ten,
         luc: Date.now(), trangThai: 'cho_xu_ly'
       });
     }
@@ -8797,14 +8832,18 @@ $('chamAiDuyetTatCaBtn') && ($('chamAiDuyetTatCaBtn').onclick = async ()=>{
     const nhanXetInput = host.querySelector(`[data-cham-ai-nhanxet="${id}"]`);
     const diem = Math.max(0, Math.min(10, parseFloat(diemInput ? diemInput.value : x.diem)));
     if(!hoTen || isNaN(diem)){ soBoQua++; continue; } // thiếu tên hoặc điểm không hợp lệ -> bỏ qua, duyệt tay riêng
-    const baiId = x.baiId || 'bai1';
+    // Lấy đúng bài theo ô "Bài" đang hiển thị trên thẻ (không mặc định "bai1" nữa) — như ở nút
+    // duyệt từng bài riêng lẻ, tránh ghi đè nhầm điểm của bài khác đã công bố trước đó.
+    const baiSel = host.querySelector(`[data-cham-ai-bai="${id}"]`);
+    const baiChon = danhSachBaiTapHienTai().find(b=> b.id === (baiSel ? baiSel.value : '')) || danhSachBaiTapHienTai()[0];
+    const baiId = baiChon.id;
     const khoa = chamAiKhoaTen(hoTen, x.uid) + '|' + baiId;
     try{
       await chamBaiAIRef.child('daDuyet').child(khoa).set({
         hoTen, diem: Math.round(diem*10)/10,
         nhanXet: (nhanXetInput ? nhanXetInput.value.trim() : (x.nhanXet||'')),
         nguon: x.nguon, anhId: x.anhId || '', anhLink: x.anhLink || '', uid: x.uid || '',
-        baiId, tenBai: x.tenBai || '', ngayDuyet: Date.now()
+        baiId, tenBai: baiChon.ten, ngayDuyet: Date.now()
       });
       await chamBaiAIRef.child('choDuyet').child(id).remove();
       delete chamAiChoDuyet[id];
@@ -8853,7 +8892,12 @@ function renderChamAiChoDuyet(){
             <div class="field"><label>Điểm (0–10)</label><input type="number" min="0" max="10" step="0.1" value="${x.diem!=null?x.diem:''}" data-cham-ai-diem="${x.id}"></div>
             <div class="field"><label>Nguồn</label><input type="text" value="${x.nguon==='nopweb'?'Nộp qua web':(x.nguon==='link'?'Link ảnh':'Google Photos')}" readonly></div>
           </div>
-          <p class="section-note" style="margin:-4px 0 8px;"><b>📚 ${esc(x.tenBai || (danhSachBaiTapHienTai().find(b=> b.id === (x.baiId||'bai1'))||{}).ten || 'Bài 1')}</b></p>
+          <div class="field">
+            <label>📚 Bài (kiểm tra lại trước khi duyệt — nguồn Google Photos/link không tự biết đúng bài)</label>
+            <select data-cham-ai-bai="${x.id}">
+              ${danhSachBaiTapHienTai().map(b=> `<option value="${esc(b.id)}">${esc(b.ten)}</option>`).join('')}
+            </select>
+          </div>
           <div class="field"><label>Nhận xét của AI</label><textarea data-cham-ai-nhanxet="${x.id}" style="min-height:70px;">${esc(x.nhanXet||'')}</textarea></div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="btn btn-blue btn-sm" data-cham-ai-duyet="${x.id}">✅ Duyệt &amp; công bố</button>
@@ -8872,6 +8916,13 @@ function renderChamAiChoDuyet(){
     const goiY = timGanDungTrongRoster(x.hoTenDocDuoc || '');
     if(goiY) sel.value = goiY.hs.name;
   });
+  // Ô "Bài" mặc định chọn đúng baiId đã gắn sẵn từ lúc đưa vào hàng chờ (nếu có) — Thầy vẫn có
+  // thể đổi lại tay trước khi bấm Duyệt, phòng trường hợp chọn nhầm bài lúc đưa vào hàng chờ.
+  items.forEach(x=>{
+    const sel = host.querySelector(`[data-cham-ai-bai="${x.id}"]`);
+    if(!sel) return;
+    if(danhSachBaiTapHienTai().some(b=> b.id === x.baiId)) sel.value = x.baiId;
+  });
 
   host.querySelectorAll('[data-cham-ai-duyet]').forEach(btn=> btn.onclick = async ()=>{
     const id = btn.getAttribute('data-cham-ai-duyet');
@@ -8887,13 +8938,17 @@ function renderChamAiChoDuyet(){
     const nhanXetInput = host.querySelector(`[data-cham-ai-nhanxet="${id}"]`);
     const diem = Math.max(0, Math.min(10, parseFloat(diemInput.value)));
     if(isNaN(diem)){ alert('Vui lòng nhập điểm hợp lệ (0–10).'); return; }
-    const baiId = x.baiId || 'bai1'; // bài nộp cũ (trước khi có Bài 1..10) mặc định tính là "bai1"
+    // Lấy đúng bài theo ô "Bài" Thầy đã chọn/xác nhận ngay trên thẻ này (không mặc định "bai1"
+    // nữa) — tránh ghi đè nhầm điểm của bài khác đã công bố trước đó cho cùng học sinh.
+    const baiSel = host.querySelector(`[data-cham-ai-bai="${id}"]`);
+    const baiChon = danhSachBaiTapHienTai().find(b=> b.id === (baiSel ? baiSel.value : '')) || danhSachBaiTapHienTai()[0];
+    const baiId = baiChon.id;
     const khoa = chamAiKhoaTen(hoTen, x.uid) + '|' + baiId;
     try{
       await chamBaiAIRef.child('daDuyet').child(khoa).set({
         hoTen, diem: Math.round(diem*10)/10, nhanXet: nhanXetInput.value.trim(),
         nguon: x.nguon, anhId: x.anhId || '', anhLink: x.anhLink || '', uid: x.uid || '',
-        baiId, tenBai: x.tenBai || '', ngayDuyet: Date.now()
+        baiId, tenBai: baiChon.ten, ngayDuyet: Date.now()
       });
       await chamBaiAIRef.child('choDuyet').child(id).remove();
       delete chamAiChoDuyet[id];
