@@ -1252,6 +1252,8 @@
         </div>
       </details>
 
+      <div id="chamAiDaDuyetTabs" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;"></div>
+
       <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
         <button type="button" id="chamAiDaDuyetXuatBtn" class="btn btn-ghost btn-sm">⬇️ Xuất danh sách điểm (Excel)</button>
       </div>
@@ -8918,7 +8920,8 @@ async function napChamAiDaDuyet(){
   renderChamAiDaDuyet();
   renderChamAiKetQuaCuaToi();
 }
-let chamAiDaDuyetDsHienThi = []; // cache danh sách đã tính sẵn tenBaiHienThi, dùng chung cho bảng + form xuất Excel
+let chamAiDaDuyetDsHienThi = []; // cache TOÀN BỘ danh sách (chưa lọc theo bài) đã tính sẵn tenBaiHienThi, dùng chung cho bảng + form xuất Excel
+let chamAiDaDuyetBaiLoc = '';    // '' = "Tất cả các bài" | ngược lại là baiId (vd. "bai1") đang được chọn ở menu tab bên dưới
 function renderChamAiDaDuyet(){
   const bang = $('chamAiDaDuyetTable');
   if(!bang) return;
@@ -8929,13 +8932,19 @@ function renderChamAiDaDuyet(){
   // luôn cả baiId) rồi tra tên hiện tại trong danh mục bài tập, thay vì hiện dấu gạch ngang.
   ds.forEach(x=>{
     const baiIdSuyRa = x.baiId || (x.khoa && x.khoa.indexOf('|') !== -1 ? x.khoa.split('|')[1] : '') || 'bai1';
+    x._baiId = baiIdSuyRa;
     x._tenBaiHienThi = x.tenBai || (danhSachBaiTapHienTai().find(b=> b.id === baiIdSuyRa) || {}).ten || baiIdSuyRa;
   });
   chamAiDaDuyetDsHienThi = ds;
   capNhatChamAiXuatBaiSelect(ds);
+  renderChamAiDaDuyetTabs(ds);
+
+  const dsLocTheoTab = chamAiDaDuyetBaiLoc ? ds.filter(x=> x._baiId === chamAiDaDuyetBaiLoc) : ds;
   let h = `<tr><th>STT</th><th>Họ và tên</th><th>Bài</th><th>Điểm</th><th>Nhận xét</th><th>Nguồn</th><th>Ngày duyệt</th></tr>`;
-  if(!ds.length){ h += `<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);">Chưa công bố điểm nào.</td></tr>`; }
-  else ds.forEach((x,i)=>{
+  if(!dsLocTheoTab.length){
+    h += `<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);">${ds.length ? 'Chưa có điểm nào công bố cho bài này.' : 'Chưa công bố điểm nào.'}</td></tr>`;
+  }
+  else dsLocTheoTab.forEach((x,i)=>{
     h += `<tr>
       <td>${i+1}</td><td>${esc(x.hoTen||'')}</td><td>${esc(x._tenBaiHienThi)}</td><td><b>${x.diem!=null?x.diem:''}</b>/10</td>
       <td>${esc(x.nhanXet||'')}</td><td>${x.nguon==='nopweb'?'Nộp web':(x.nguon==='link'?'Link ảnh':'Google Photos')}</td>
@@ -8943,6 +8952,43 @@ function renderChamAiDaDuyet(){
     </tr>`;
   });
   bang.innerHTML = h;
+}
+
+// Menu "Tất cả | Bài 1 | Bài 2 | ... | Bài 10" (theo đúng danh mục bài tập đang cấu hình, có thể
+// khác 10 nếu Thầy đã đổi ở mục "Quản lý danh sách bài tập") — chọn bài nào thì bảng điểm phía
+// dưới CHỈ hiện điểm của đúng bài đó, và ô "Chỉ xuất 1 bài" trong phần tùy chỉnh Excel cũng tự
+// đổi theo, để bấm "Xuất danh sách điểm (Excel)" là xuất đúng bài đang xem, không cần chọn lại.
+function renderChamAiDaDuyetTabs(ds){
+  const wrap = $('chamAiDaDuyetTabs');
+  if(!wrap) return;
+  const dsBai = danhSachBaiTapHienTai();
+  // Chỉ giữ lại nếu chamAiDaDuyetBaiLoc đang trỏ tới 1 bài không còn tồn tại nữa (vd. đã xóa ở
+  // mục Quản lý danh sách bài tập) thì tự về lại "Tất cả" để tránh bảng bị trống oan.
+  if(chamAiDaDuyetBaiLoc && !dsBai.some(b=> b.id === chamAiDaDuyetBaiLoc)) chamAiDaDuyetBaiLoc = '';
+
+  const demTheoBai = {};
+  ds.forEach(x=>{ demTheoBai[x._baiId] = (demTheoBai[x._baiId]||0) + 1; });
+
+  const nutHtml = (id, ten, soLuong)=>{
+    const dangChon = chamAiDaDuyetBaiLoc === id;
+    const lop = dangChon ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+    return `<button type="button" class="${lop}" data-bai-id="${esc(id)}">${esc(ten)}${soLuong ? ` (${soLuong})` : ''}</button>`;
+  };
+  const tongSo = ds.length;
+  wrap.innerHTML = nutHtml('', 'Tất cả', tongSo) + dsBai.map(b=> nutHtml(b.id, b.ten, demTheoBai[b.id]||0)).join('');
+  wrap.querySelectorAll('button[data-bai-id]').forEach(btn=>{
+    btn.onclick = ()=>{
+      chamAiDaDuyetBaiLoc = btn.getAttribute('data-bai-id');
+      // Đồng bộ với ô "Chỉ xuất 1 bài" trong phần tùy chỉnh Excel — chọn tab nào thì khi xuất
+      // Excel cũng tự lọc đúng bài đó, không cần chọn lại thủ công.
+      const sel = $('chamAiXuatBai');
+      if(sel){
+        const baiDangChon = danhSachBaiTapHienTai().find(b=> b.id === chamAiDaDuyetBaiLoc);
+        sel.value = baiDangChon ? baiDangChon.ten : '';
+      }
+      renderChamAiDaDuyet();
+    };
+  });
 }
 
 // Đổ danh sách "Bài" (duy nhất, theo đúng thứ tự xuất hiện) vào ô chọn của form xuất
