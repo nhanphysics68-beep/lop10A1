@@ -8832,10 +8832,12 @@ $('chamAiDuyetTatCaBtn') && ($('chamAiDuyetTatCaBtn').onclick = async ()=>{
     const nhanXetInput = host.querySelector(`[data-cham-ai-nhanxet="${id}"]`);
     const diem = Math.max(0, Math.min(10, parseFloat(diemInput ? diemInput.value : x.diem)));
     if(!hoTen || isNaN(diem)){ soBoQua++; continue; } // thiếu tên hoặc điểm không hợp lệ -> bỏ qua, duyệt tay riêng
-    // Lấy đúng bài theo ô "Bài" đang hiển thị trên thẻ (không mặc định "bai1" nữa) — như ở nút
-    // duyệt từng bài riêng lẻ, tránh ghi đè nhầm điểm của bài khác đã công bố trước đó.
+    // Lấy đúng bài theo ô "Bài" đang hiển thị trên thẻ — BẮT BUỘC đã được xác định hoặc Thầy đã
+    // tự chọn tay (không mặc định "bai1" nữa); ô nào còn để trống (chưa xác định được bài) thì
+    // BỎ QUA, không duyệt liều, để tránh lặp lại đúng lỗi ghi đè nhầm điểm bài khác.
     const baiSel = host.querySelector(`[data-cham-ai-bai="${id}"]`);
-    const baiChon = danhSachBaiTapHienTai().find(b=> b.id === (baiSel ? baiSel.value : '')) || danhSachBaiTapHienTai()[0];
+    const baiChon = danhSachBaiTapHienTai().find(b=> b.id === (baiSel ? baiSel.value : ''));
+    if(!baiChon){ soBoQua++; continue; }
     const baiId = baiChon.id;
     const khoa = chamAiKhoaTen(hoTen, x.uid) + '|' + baiId;
     try{
@@ -8852,7 +8854,7 @@ $('chamAiDuyetTatCaBtn') && ($('chamAiDuyetTatCaBtn').onclick = async ()=>{
   }
   renderChamAiChoDuyet();
   await napChamAiDaDuyet();
-  const ghiChuBoQua = soBoQua ? ` — đã bỏ qua ${soBoQua} bài (chưa xác định được tên học sinh hoặc điểm không hợp lệ), Thầy duyệt tay riêng các bài đó.` : '';
+  const ghiChuBoQua = soBoQua ? ` — đã bỏ qua ${soBoQua} bài (chưa xác định được tên học sinh, chưa chọn "Bài" hoặc điểm không hợp lệ), Thầy duyệt tay riêng các bài đó.` : '';
   showMsg($('chamAiNopWebMsg'), `✅ Đã duyệt & công bố hàng loạt ${soThanhCong} bài${ghiChuBoQua}`, 'ok');
   nut.disabled = false;
 });
@@ -8895,8 +8897,12 @@ function renderChamAiChoDuyet(){
           <div class="field">
             <label>📚 Bài (kiểm tra lại trước khi duyệt — nguồn Google Photos/link không tự biết đúng bài)</label>
             <select data-cham-ai-bai="${x.id}">
+              <option value="">-- Chưa xác định, phải tự chọn --</option>
               ${danhSachBaiTapHienTai().map(b=> `<option value="${esc(b.id)}">${esc(b.ten)}</option>`).join('')}
             </select>
+            <div data-cham-ai-bai-canhbao="${x.id}" style="display:none; color:#b45309; font-size:12px; margin-top:3px;">
+              ⚠️ Bài này chưa được hệ thống tự xác định đúng bài — Thầy PHẢI tự chọn lại ở ô trên trước khi duyệt, nếu không điểm sẽ không hiện đúng bài (hoặc ghi đè nhầm điểm bài khác của học sinh này).
+            </div>
           </div>
           <div class="field"><label>Nhận xét của AI</label><textarea data-cham-ai-nhanxet="${x.id}" style="min-height:70px;">${esc(x.nhanXet||'')}</textarea></div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -8918,10 +8924,19 @@ function renderChamAiChoDuyet(){
   });
   // Ô "Bài" mặc định chọn đúng baiId đã gắn sẵn từ lúc đưa vào hàng chờ (nếu có) — Thầy vẫn có
   // thể đổi lại tay trước khi bấm Duyệt, phòng trường hợp chọn nhầm bài lúc đưa vào hàng chờ.
+  // QUAN TRỌNG: nếu KHÔNG có baiId hợp lệ (vd. mục "Chấm bài qua Gemini" ở Apps Script đang chạy
+  // bản CŨ, chưa gửi kèm baiId/tenBai khi chuyển từ hàng chờ sang chờ duyệt) thì để trống + hiện
+  // cảnh báo — TUYỆT ĐỐI không tự chọn "Bài 1" mặc định như trước nữa (đây chính là nguyên nhân
+  // làm ghi đè nhầm điểm Bài 1 bằng điểm Bài 2 trong các lần duyệt trước khi có bản sửa này).
   items.forEach(x=>{
     const sel = host.querySelector(`[data-cham-ai-bai="${x.id}"]`);
+    const canhBao = host.querySelector(`[data-cham-ai-bai-canhbao="${x.id}"]`);
     if(!sel) return;
-    if(danhSachBaiTapHienTai().some(b=> b.id === x.baiId)) sel.value = x.baiId;
+    if(danhSachBaiTapHienTai().some(b=> b.id === x.baiId)){
+      sel.value = x.baiId;
+    } else if(canhBao){
+      canhBao.style.display = 'block';
+    }
   });
 
   host.querySelectorAll('[data-cham-ai-duyet]').forEach(btn=> btn.onclick = async ()=>{
@@ -8938,10 +8953,12 @@ function renderChamAiChoDuyet(){
     const nhanXetInput = host.querySelector(`[data-cham-ai-nhanxet="${id}"]`);
     const diem = Math.max(0, Math.min(10, parseFloat(diemInput.value)));
     if(isNaN(diem)){ alert('Vui lòng nhập điểm hợp lệ (0–10).'); return; }
-    // Lấy đúng bài theo ô "Bài" Thầy đã chọn/xác nhận ngay trên thẻ này (không mặc định "bai1"
-    // nữa) — tránh ghi đè nhầm điểm của bài khác đã công bố trước đó cho cùng học sinh.
+    // Lấy đúng bài theo ô "Bài" Thầy đã chọn/xác nhận ngay trên thẻ này — BẮT BUỘC phải chọn
+    // tường minh (không tự động mặc định "Bài 1" nữa), vì đó chính là nguyên nhân từng làm ghi
+    // đè nhầm điểm Bài 1 bằng điểm Bài 2 trong các lần duyệt trước khi có bản sửa này.
     const baiSel = host.querySelector(`[data-cham-ai-bai="${id}"]`);
-    const baiChon = danhSachBaiTapHienTai().find(b=> b.id === (baiSel ? baiSel.value : '')) || danhSachBaiTapHienTai()[0];
+    const baiChon = danhSachBaiTapHienTai().find(b=> b.id === (baiSel ? baiSel.value : ''));
+    if(!baiChon){ alert('Vui lòng chọn đúng "Bài" (Bài 1, Bài 2...) trước khi duyệt.'); return; }
     const baiId = baiChon.id;
     const khoa = chamAiKhoaTen(hoTen, x.uid) + '|' + baiId;
     try{
