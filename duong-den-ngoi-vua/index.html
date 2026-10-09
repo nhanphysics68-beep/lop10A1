@@ -3872,6 +3872,31 @@
         ];
         function saveLevels(){ localStorage.setItem('levels', JSON.stringify(levels)); }
 
+        // 🔄 Migration: đảm bảo LUÔN có tầng "Vô Danh Tiểu Tốt" thấp hơn tầng thấp
+        // nhất hiện có, kể cả khi `levels` đã được lưu từ TRƯỚC (trong localStorage
+        // hoặc Firebase) nên mảng mặc định phía trên không có tác dụng gì với dữ
+        // liệu cũ đó — nếu không "vá" ở đây, tầng mới thêm sẽ không bao giờ xuất
+        // hiện trên các máy/lớp đã từng lưu dữ liệu trước khi có tầng này.
+        (function __ddnvDamBaoVoDanhTieuTot(){
+            try{
+                if(!Array.isArray(levels) || levels.length === 0) return;
+                const daCoVoDanh = levels.some(l => l && l.name === 'Vô Danh Tiểu Tốt');
+                if(daCoVoDanh) return;
+                const nguongVoDanh = 0;
+                const tangThapNhatHienTai = levels[0];
+                // Nếu tầng đang thấp nhất có ngưỡng <= 0 (vd Thầy tự chỉnh về 0),
+                // đẩy ngưỡng đó lên 1 để "Vô Danh Tiểu Tốt" thật sự là 1 mốc riêng,
+                // thấp hơn nó — nếu không, học sinh 0 điểm sẽ không bao giờ rơi vào
+                // "Vô Danh Tiểu Tốt" được.
+                if(tangThapNhatHienTai && tangThapNhatHienTai.points <= nguongVoDanh){
+                    tangThapNhatHienTai.points = nguongVoDanh + 1;
+                }
+                levels.unshift({ name: 'Vô Danh Tiểu Tốt', points: nguongVoDanh, icon: '🌫️', color: '#B0BEC5', multiplier: 1 });
+                saveLevels();
+                console.log('✅ Đã tự thêm tầng "Vô Danh Tiểu Tốt" (thấp hơn tầng trước đó là thấp nhất).');
+            }catch(e){}
+        })();
+
         // Vật phẩm đổi quà - CẤU TRÚC MỚI: Mỗi cấp bậc có thể có NHIỀU món quà
         let rewardItems = JSON.parse(localStorage.getItem('rewardItems')) || [
             { level: 'Vô Danh Tiểu Tốt', items: [] },
@@ -3945,7 +3970,19 @@
                 console.log('✅ Đã cập nhật cấu trúc dữ liệu vật phẩm');
             }
         })();
-        
+
+        // 🔄 Migration: đảm bảo có mục quà (dù rỗng) cho tầng "Vô Danh Tiểu Tốt" mới
+        // thêm, để trình soạn quà tặng (buildRewardItemsEditor) không bị lệch hàng
+        // với mảng `levels` khi dữ liệu rewardItems đã lưu từ trước.
+        (function __ddnvDamBaoQuaVoDanhTieuTot(){
+            try{
+                if(!Array.isArray(rewardItems)) return;
+                if(rewardItems.some(r => r && r.level === 'Vô Danh Tiểu Tốt')) return;
+                rewardItems.unshift({ level: 'Vô Danh Tiểu Tốt', items: [] });
+                localStorage.setItem('rewardItems', JSON.stringify(rewardItems));
+            }catch(e){}
+        })();
+
         function saveRewardItems(){ localStorage.setItem('rewardItems', JSON.stringify(rewardItems)); }
 
         // Lưu theo tuần
