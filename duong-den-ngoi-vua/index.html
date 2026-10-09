@@ -3801,7 +3801,8 @@
         
         // Cấp độ và điểm cần thiết (có hệ số thưởng) + lưu chỉnh sửa
         let levels = JSON.parse(localStorage.getItem('levels')) || [
-            { name: 'Dân thường', points: 0, icon: '👤', color: '#FFCA28', multiplier: 1 },
+            { name: 'Vô Danh Tiểu Tốt', points: 0, icon: '🌫️', color: '#B0BEC5', multiplier: 1 },
+            { name: 'Dân thường', points: 5, icon: '👤', color: '#FFCA28', multiplier: 1 },
             { name: 'Lính', points: 10, icon: '⚔️', color: '#FFE082', multiplier: 1.25 },
             { name: 'Quan', points: 25, icon: '📜', color: '#ffd93d', multiplier: 2 },
             { name: 'Tể tướng', points: 40, icon: '🎩', color: '#6bcf7f', multiplier: 3 },
@@ -3811,6 +3812,7 @@
 
         // Vật phẩm đổi quà - CẤU TRÚC MỚI: Mỗi cấp bậc có thể có NHIỀU món quà
         let rewardItems = JSON.parse(localStorage.getItem('rewardItems')) || [
+            { level: 'Vô Danh Tiểu Tốt', items: [] },
             { level: 'Dân thường', items: [
                 { id: 'dt1', itemName: 'Túi gạo', itemImage: 'https://cdn-icons-png.flaticon.com/512/2771/2771432.png', description: 'Túi gạo 5kg', exchangePoints: 0 }
             ]},
