@@ -1271,6 +1271,7 @@
         <button class="btn btn-ghost btn-sm" id="btvlMoKhoaTatCaBtn">🔓 Mở khóa tất cả</button>
       </div>
       <div id="btvlKhoaMsg" class="msg"></div>
+      <div id="btvlDanhSachTabs" style="display:flex; flex-wrap:wrap; gap:6px; margin:10px 0;"></div>
       <div class="scroll-x"><table id="btvlDanhSachTable"></table></div>
     </div>
 
@@ -1910,6 +1911,55 @@
           if(dangFullscreen === el){
             el.style.display = 'flex';
             el.style.alignItems = 'stretch';
+            frame.style.height = '100vh';
+            frame.style.minHeight = '100vh';
+            frame.style.borderRadius = '0';
+          } else {
+            frame.style.height = '';
+            frame.style.minHeight = '80vh';
+            frame.style.borderRadius = '10px';
+          }
+        }
+        document.addEventListener('fullscreenchange', capNhatKichThuoc);
+        document.addEventListener('webkitfullscreenchange', capNhatKichThuoc);
+      })();
+    </script>
+  </div>
+
+  <!-- ============ CÔNG CỤ: TRÒ CHƠI "ĐẬP MUỖI" (GỌI TÊN HỌC SINH NGẪU NHIÊN) ============ -->
+  <div class="panel" id="panel-dapmuoi" data-group="games">
+    <div class="card">
+      <h2>🦟 Đập muỗi</h2>
+      <p class="section-note">Mỗi "con muỗi" bay trên màn hình mang tên 1 học sinh — đập trúng con nào thì gọi tên bạn đó. Danh sách học sinh tự lấy theo đúng danh sách lớp 10A1 (mục Sơ đồ lớp/Danh sách học sinh) và tự cập nhật ngay khi danh sách lớp thay đổi, không cần dán tay. Thầy vẫn có thể bấm nút quản lý trong game để tự dán 1 danh sách khác (ví dụ chỉ chọn 1 tổ) khi cần.</p>
+      <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
+        <button type="button" id="dmFullscreenBtn" class="btn" onclick="dmBatToanManHinh()">⛶ Toàn màn hình</button>
+      </div>
+      <div class="scroll-x" id="dmWrap" style="background:#0f172a;">
+        <iframe id="dmIframe" src="dap-muoi/index.html" title="Đập muỗi"
+          style="width:100%; min-height:80vh; border:1px solid var(--line, #ddd); border-radius:10px;"
+          loading="lazy"></iframe>
+      </div>
+    </div>
+    <script>
+      function dmBatToanManHinh(){
+        var el = document.getElementById('dmWrap');
+        if(!el) return;
+        var dangFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+        if(!dangFullscreen){
+          var yeuCau = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+          if(yeuCau) yeuCau.call(el);
+        } else {
+          var thoat = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+          if(thoat) thoat.call(document);
+        }
+      }
+      (function(){
+        function capNhatKichThuoc(){
+          var el = document.getElementById('dmWrap');
+          var frame = document.getElementById('dmIframe');
+          if(!el || !frame) return;
+          var dangFullscreen = document.fullscreenElement || document.webkitFullscreenElement;
+          if(dangFullscreen === el){
             frame.style.height = '100vh';
             frame.style.minHeight = '100vh';
             frame.style.borderRadius = '0';
@@ -2684,13 +2734,14 @@ const SUBTAB_DINH_NGHIA = {
   dodoon:    {icon:'🔊', ten:'Đo độ ồn'},
   ndkm:      {icon:'📷', ten:'Camera nhận diện học sinh'},
   duongdenngoivua: {icon:'👑', ten:'Đường đến ngôi vua'},
+  dapmuoi:   {icon:'🦟', ten:'Đập muỗi'},
 };
 const NHOM_TAB = {
   thongtin: ['sodo', 'danhsachhs', 'vitri', 'thanhvien', 'hoso', 'bancansu', 'caulacbo', 'khoanthu'],
   hoatdong: ['laodong', 'phongtrao', 'khaigiang', 'hotro'],
   hoatdongto: ['tongketTuan'],
   nhiemvu:  ['baitapvatly10'],
-  games:    ['quayten', 'dodoon', 'ndkm', 'duongdenngoivua'],
+  games:    ['quayten', 'dodoon', 'ndkm', 'duongdenngoivua', 'dapmuoi'],
 };
 /* Map link cũ (trước khi gộp nhóm) -> đúng nhóm mới, để link/bookmark cũ vẫn mở đúng chỗ */
 const TAB_CU_SANG_NHOM = {};
@@ -8474,6 +8525,7 @@ napBaiTapDanhSach();
    (thay vì 1 dòng/học sinh với 1 ô "Đính kèm" duy nhất như trước — cách cũ chỉ đọc được
    anhId/anhLink cấp ngoài nên chỉ hiện đúng bài nộp kiểu CŨ, còn Bài 2..10 kiểu mới không
    hiện ra được gì). Mỗi dòng có nút khóa/mở riêng cho đúng bài đó của đúng học sinh đó. */
+let btvlDanhSachBaiLoc = ''; // '' = "Tất cả các bài" | ngược lại là baiId (vd. "bai1") đang chọn ở menu tab
 function renderBtvlAdmin(){
   const card = $('btvlDanhSachCard');
   if(!card) return;
@@ -8492,11 +8544,14 @@ function renderBtvlAdmin(){
     });
   });
 
+  renderBtvlDanhSachTabs(dong, dsBai);
+  const dongLocTheoTab = btvlDanhSachBaiLoc ? dong.filter(d=> d.baiId === btvlDanhSachBaiLoc) : dong;
+
   let h = `<tr><th>STT</th><th>Họ và tên</th><th>Bài</th><th>Đính kèm</th><th>Xem lại</th><th>Trạng thái</th><th>Khóa/Mở</th><th></th></tr>`;
-  if(!dong.length){
-    h += `<tr><td colspan="8" style="text-align:center;color:var(--ink-soft);">Chưa có học sinh nào nộp bài.</td></tr>`;
+  if(!dongLocTheoTab.length){
+    h += `<tr><td colspan="8" style="text-align:center;color:var(--ink-soft);">${dong.length ? 'Chưa có bài nộp nào cho bài này.' : 'Chưa có học sinh nào nộp bài.'}</td></tr>`;
   } else {
-    dong.forEach((d,i)=>{
+    dongLocTheoTab.forEach((d,i)=>{
       const khoa = !!d.dl.khoa;
       h += `<tr>
         <td>${i+1}</td>
@@ -8518,6 +8573,35 @@ function renderBtvlAdmin(){
   });
 }
 
+// Menu "Tất cả | Bài 1 | Bài 2 | ..." cho bảng "Danh sách đã nộp" — bấm bài nào thì bảng CHỈ
+// hiện đúng bài đó, tránh liệt kê chung TẤT CẢ các bài của TẤT CẢ học sinh (rất dài, chiếm
+// nhiều chỗ khi lớp đông và đã nộp nhiều bài).
+function renderBtvlDanhSachTabs(dong, dsBai){
+  const wrap = $('btvlDanhSachTabs');
+  if(!wrap) return;
+  // Nếu bài đang lọc không còn tồn tại nữa (vd. đã xóa ở mục Quản lý danh sách bài tập) thì
+  // tự về lại "Tất cả" để tránh bảng bị trống oan.
+  if(btvlDanhSachBaiLoc && !dsBai.some(b=> b.id === btvlDanhSachBaiLoc)) btvlDanhSachBaiLoc = '';
+
+  const demTheoBai = {};
+  dong.forEach(d=>{ demTheoBai[d.baiId] = (demTheoBai[d.baiId]||0) + 1; });
+
+  const nutHtml = (id, ten, soLuong)=>{
+    const dangChon = btvlDanhSachBaiLoc === id;
+    const lop = dangChon ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+    return `<button type="button" class="${lop}" data-btvl-bai-id="${esc(id)}">${esc(ten)}${soLuong ? ` (${soLuong})` : ''}</button>`;
+  };
+  wrap.innerHTML = nutHtml('', 'Tất cả', dong.length) + dsBai.map(b=> nutHtml(b.id, b.ten, demTheoBai[b.id]||0)).join('');
+  wrap.querySelectorAll('button[data-btvl-bai-id]').forEach(btn=>{
+    btn.onclick = ()=>{
+      btvlDanhSachBaiLoc = btn.getAttribute('data-btvl-bai-id');
+      renderBtvlAdmin();
+    };
+  });
+  // Đổi nhãn + hành động của 2 nút khóa/mở hàng loạt theo đúng tab bài đang chọn ở trên.
+  capNhatNutBtvlKhoaHangLoat();
+}
+
 /* Đặt trạng thái khóa cho đúng 1 bài của đúng 1 học sinh — dùng .update() để không đụng tới
    các trường khác (anhId/anhLink/thuMucId/luc) của đúng bài đó, và không đụng tới các bài khác. */
 async function btvlDatKhoaMotBai(uid, baiId, khoaMoi){
@@ -8527,11 +8611,13 @@ async function btvlDatKhoaMotBai(uid, baiId, khoaMoi){
   }catch(e){ showMsg($('btvlKhoaMsg'), baoLoi(e), 'err'); }
 }
 
-/* Khóa/mở HÀNG LOẠT tất cả các bài ĐÃ NỘP của TẤT CẢ học sinh — dùng 1 lệnh .update() nhiều
-   đường dẫn cùng lúc (giống tính năng khóa hàng loạt vị trí học sinh), tránh phải bấm khóa
-   từng dòng một khi cả lớp đã nộp xong hết. */
-async function btvlKhoaHangLoat(khoaMoi){
-  const dsBai = danhSachBaiTapHienTai();
+/* Khóa/mở HÀNG LOẠT các bài ĐÃ NỘP — dùng 1 lệnh .update() nhiều đường dẫn cùng lúc (giống
+   tính năng khóa hàng loạt vị trí học sinh), tránh phải bấm khóa từng dòng một khi cả lớp đã
+   nộp xong hết. Nếu truyền baiIdLoc (vd. "bai2") thì CHỈ khóa/mở đúng bài đó — dùng khi Thầy
+   đang xem 1 tab bài cụ thể ở bảng "Danh sách đã nộp"; để trống/'' thì áp dụng cho TẤT CẢ các
+   bài, như trước đây. */
+async function btvlKhoaHangLoat(khoaMoi, baiIdLoc){
+  const dsBai = danhSachBaiTapHienTai().filter(b=> !baiIdLoc || b.id === baiIdLoc);
   const capNhat = {};
   Object.keys(baiTapVatLy10TatCa).forEach(uid=>{
     const hs = baiTapVatLy10TatCa[uid];
@@ -8544,15 +8630,34 @@ async function btvlKhoaHangLoat(khoaMoi){
   try{
     await baiTapVatLy10Ref.update(capNhat);
     await napBaiTapVatLy10TatCa();
-    showMsg($('btvlKhoaMsg'), khoaMoi ? '✅ Đã khóa tất cả bài đã nộp.' : '✅ Đã mở khóa tất cả.', 'ok');
+    const tenBaiLoc = baiIdLoc ? (dsBai[0] && dsBai[0].ten) || baiIdLoc : '';
+    const moTa = tenBaiLoc ? `tất cả bài đã nộp của ${tenBaiLoc}` : 'tất cả bài đã nộp';
+    showMsg($('btvlKhoaMsg'), khoaMoi ? `✅ Đã khóa ${moTa}.` : `✅ Đã mở khóa ${moTa}.`, 'ok');
   }catch(e){ showMsg($('btvlKhoaMsg'), baoLoi(e), 'err'); }
 }
-$('btvlKhoaTatCaBtn') && ($('btvlKhoaTatCaBtn').onclick = ()=>{
-  if(confirm('Khóa TẤT CẢ các bài đã nộp của cả lớp? Học sinh sẽ không thể nộp lại bất kỳ bài nào cho đến khi được mở khóa.')) btvlKhoaHangLoat(true);
-});
-$('btvlMoKhoaTatCaBtn') && ($('btvlMoKhoaTatCaBtn').onclick = ()=>{
-  if(confirm('Mở khóa TẤT CẢ các bài đã nộp của cả lớp?')) btvlKhoaHangLoat(false);
-});
+// Nhãn + xác nhận của 2 nút khóa/mở hàng loạt tự đổi theo tab bài đang chọn ở bảng "Danh sách
+// đã nộp" (btvlDanhSachBaiLoc) — đang xem "Tất cả" thì khóa/mở CẢ LỚP như trước; đang xem 1
+// bài cụ thể thì chỉ khóa/mở đúng bài đang xem, tránh khóa nhầm các bài khác.
+function capNhatNutBtvlKhoaHangLoat(){
+  const nutKhoa = $('btvlKhoaTatCaBtn'), nutMo = $('btvlMoKhoaTatCaBtn');
+  if(!nutKhoa || !nutMo) return;
+  const dsBai = danhSachBaiTapHienTai();
+  const baiDangChon = btvlDanhSachBaiLoc ? dsBai.find(b=> b.id === btvlDanhSachBaiLoc) : null;
+  const tenBai = baiDangChon ? baiDangChon.ten : '';
+  nutKhoa.textContent = tenBai ? `🔒 Khóa tất cả ${tenBai} đã nộp` : '🔒 Khóa tất cả bài đã nộp';
+  nutMo.textContent = tenBai ? `🔓 Mở khóa tất cả ${tenBai}` : '🔓 Mở khóa tất cả';
+  nutKhoa.onclick = ()=>{
+    const loiXacNhan = tenBai
+      ? `Khóa TẤT CẢ bài "${tenBai}" đã nộp của cả lớp? Học sinh sẽ không thể nộp lại ${tenBai} cho đến khi được mở khóa (các bài khác không bị ảnh hưởng).`
+      : 'Khóa TẤT CẢ các bài đã nộp của cả lớp? Học sinh sẽ không thể nộp lại bất kỳ bài nào cho đến khi được mở khóa.';
+    if(confirm(loiXacNhan)) btvlKhoaHangLoat(true, btvlDanhSachBaiLoc);
+  };
+  nutMo.onclick = ()=>{
+    const loiXacNhan = tenBai ? `Mở khóa TẤT CẢ bài "${tenBai}" đã nộp của cả lớp?` : 'Mở khóa TẤT CẢ các bài đã nộp của cả lớp?';
+    if(confirm(loiXacNhan)) btvlKhoaHangLoat(false, btvlDanhSachBaiLoc);
+  };
+}
+capNhatNutBtvlKhoaHangLoat();
 
 // Cho phép giáo viên sửa lại họ tên khi học sinh gõ sai chính tả (không đối chiếu được với
 // danh sách lớp) — sửa xong sẽ tự lấy lại Ngày sinh/Giới tính/Dân tộc theo tên mới.
