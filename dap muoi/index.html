@@ -146,6 +146,13 @@
                     <span id="text-speed">Tốc độ: Vừa</span>
                 </button>
 
+                <!-- Số con muỗi bắt được mỗi lần đập (1 -> 9) -->
+                <button onclick="cycleCatchCount()" id="btn-catchcount" title="Chọn số con muỗi bắt được mỗi lần đập (1-9 con)"
+                    class="px-3.5 py-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-white border border-white/15 text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-lg transition-all">
+                    <i class="fa-solid fa-mosquito-net text-rose-300"></i>
+                    <span id="text-catchcount">Đập: 1 con</span>
+                </button>
+
                 <!-- Bật / Tắt âm thanh (Tiếng vo ve & Tiếng đập Bốp) -->
                 <button onclick="toggleSound()" id="btn-sound" title="Bật/Tắt hiệu ứng âm thanh"
                     class="px-3.5 py-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-white border border-white/15 text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-lg transition-all">
@@ -245,6 +252,7 @@
                     <i class="fa-solid fa-hands-clapping text-amber-300"></i>
                     <span>BỐP!! THẦY NHÂN ĐÃ CHỘP TRÚNG!</span>
                 </div>
+                <div id="winner-count-badge" class="text-xs font-bold text-rose-300 -mt-1 mb-1"></div>
 
                 <!-- Minh họa SVG Con Muỗi Bị Choáng Hài Hước -->
                 <div class="w-28 h-28 mx-auto my-2 bg-slate-800/90 rounded-3xl border-2 border-amber-400/50 flex items-center justify-center shadow-inner relative">
@@ -276,7 +284,7 @@
                     </span>
                 </div>
 
-                <p class="text-slate-400 text-xs sm:text-sm font-medium mt-3">
+                <p id="winner-invite-text" class="text-slate-400 text-xs sm:text-sm font-medium mt-3">
                     Xin mời học sinh có tên trên chú muỗi này đứng dậy trả lời câu hỏi của Thầy Nhân:
                 </p>
 
@@ -328,6 +336,22 @@
             </div>
 
             <div class="p-6 overflow-y-auto space-y-4 flex-1">
+                <!-- Chọn LỚP đang dùng (Lớp 10A1 tự động, hoặc các lớp/nhóm tự thêm) -->
+                <div class="p-3 rounded-2xl bg-slate-800/60 border border-white/10 space-y-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Đang quản lý danh sách của lớp:</span>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <select id="dm-chon-lop" onchange="chuyenLop(this.value)"
+                            class="flex-1 min-w-[180px] px-3 py-2 rounded-xl bg-slate-950/90 border border-white/15 text-sm text-slate-100 font-medium outline-none focus:border-amber-400">
+                        </select>
+                        <button type="button" onclick="themLopMoi()" class="px-3 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/30 text-sky-300 text-xs font-bold transition-all whitespace-nowrap">
+                            <i class="fa-solid fa-plus"></i> Thêm lớp
+                        </button>
+                        <button type="button" onclick="xoaLopHienTai()" id="btn-xoa-lop" class="px-3 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/30 text-rose-300 text-xs font-bold transition-all whitespace-nowrap">
+                            <i class="fa-solid fa-trash"></i> Xóa lớp này
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Chọn nhanh bộ danh sách mẫu -->
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Nạp nhanh danh sách mẫu:</span>
@@ -581,13 +605,21 @@
             // Mục tiêu đập
             clapTargetX: 0,
             clapTargetY: 0,
-            targetMosquito: null
+            targetMosquito: null,    // con muỗi "chính" (dùng để canh vị trí lúc lấy đà WINDUP)
+            targetMosquitoes: []     // TOÀN BỘ các con muỗi bị chộp trúng trong lần đập này (1..9 con)
         };
 
         // Hiệu ứng sóng xung kích & chữ truyện tranh "BỐP!!"
         let shockwaves = [];
         let floatingPopups = [];
-        let lastPendingWinner = null;
+        let lastPendingWinners = []; // mảng các con muỗi đang chờ xác nhận ở bảng vinh danh
+
+        // Số con muỗi bắt được MỖI LẦN đập (1 → 9) — chọn trong HUD, nhớ lại giữa các lần mở trang.
+        let soMuoiMoiLanDap = 1;
+        try {
+            const daLuuSoMuoi = parseInt(localStorage.getItem("DAP_MUOI_SOLUONG_MOI_LAN_V1"), 10);
+            if (daLuuSoMuoi >= 1 && daLuuSoMuoi <= 9) soMuoiMoiLanDap = daLuuSoMuoi;
+        } catch (e) {}
 
         /**
          * KHỞI TẠO KÍCH THƯỚC CANVAS & VỊ TRÍ ÔNG THẦY
@@ -696,17 +728,99 @@
             if (daLuu === "0") dongBoLopBat = false;
         } catch (e) {}
 
+        /**
+         * NHIỀU LỚP / NHÓM — ngoài "Lớp 10A1 (tự động)" (đồng bộ Firebase ở trên), Thầy có thể tự
+         * thêm các lớp/nhóm KHÁC (lớp đang dạy thêm, nhóm bồi dưỡng, đội tuyển...) với danh sách
+         * học sinh RIÊNG, lưu trên trình duyệt này. lopDangChon = '' nghĩa là đang dùng "Lớp 10A1
+         * (tự động)"; khác '' là TÊN 1 lớp tự thêm trong dsLop.
+         */
+        let dsLop = [];
+        let lopDangChon = '';
+        try {
+            const dsLopDaLuu = JSON.parse(localStorage.getItem("DAP_MUOI_DSLOP_V1") || "[]");
+            if (Array.isArray(dsLopDaLuu)) dsLop = dsLopDaLuu.filter(t => typeof t === "string" && t.trim());
+            lopDangChon = localStorage.getItem("DAP_MUOI_LOPDANGCHON_V1") || '';
+            if (lopDangChon && !dsLop.includes(lopDangChon)) lopDangChon = ''; // lớp đã lưu không còn tồn tại nữa
+        } catch (e) {}
+
+        function dmKhoaHocSinhLop(tenLop) { return "DAP_MUOI_HOCSINH_LOP__" + tenLop; }
+        function saveDsLop() { try { localStorage.setItem("DAP_MUOI_DSLOP_V1", JSON.stringify(dsLop)); } catch (e) {} }
+        function saveLopDangChon() { try { localStorage.setItem("DAP_MUOI_LOPDANGCHON_V1", lopDangChon); } catch (e) {} }
+
+        function renderDsLop() {
+            const sel = document.getElementById("dm-chon-lop");
+            if (!sel) return;
+            const optLive = `<option value="">📡 Lớp 10A1 (tự động)</option>`;
+            const optKhac = dsLop.map(ten => `<option value="${esc(ten)}">${esc(ten)}</option>`).join("");
+            sel.innerHTML = optLive + optKhac;
+            sel.value = dsLop.includes(lopDangChon) ? lopDangChon : '';
+            const btnXoa = document.getElementById("btn-xoa-lop");
+            if (btnXoa) btnXoa.style.display = lopDangChon ? 'inline-flex' : 'none'; // không cho xóa "Lớp 10A1 (tự động)"
+        }
+
+        // Chuyển sang xem/dùng 1 lớp khác (hoặc quay lại "Lớp 10A1 (tự động)" khi truyền '')
+        function chuyenLop(ten) {
+            lopDangChon = ten && dsLop.includes(ten) ? ten : '';
+            saveLopDangChon();
+            if (!lopDangChon) {
+                // Quay lại đồng bộ tự động theo lớp 10A1
+                dongBoLopBat = true;
+                try { localStorage.setItem("DAP_MUOI_DONGBO_LOP_V1", "1"); } catch (e) {}
+                allStudents = rosterNamesHienTai.length ? rosterNamesHienTai.slice() : allStudents;
+            } else {
+                // Lớp tự thêm: KHÔNG đồng bộ Firebase, dùng đúng danh sách đã lưu riêng cho lớp đó
+                dongBoLopBat = false;
+                let ds = [];
+                try { ds = JSON.parse(localStorage.getItem(dmKhoaHocSinhLop(lopDangChon)) || "[]"); } catch (e) {}
+                allStudents = Array.isArray(ds) ? ds : [];
+            }
+            saveStudentsToStorage();
+            rebuildMosquitoSwarm();
+            renderDsLop();
+            capNhatBaoDongBo();
+            // Nếu hộp thoại quản lý danh sách đang mở, cập nhật luôn ô nhập cho khớp lớp vừa chuyển
+            const textarea = document.getElementById("student-textarea");
+            if (textarea) { textarea.value = allStudents.join("\n"); updateTextareaCount(); }
+        }
+
+        function themLopMoi() {
+            const ten = (prompt("Tên lớp/nhóm mới (vd: Lớp 10A2, Đội tuyển Vật lý...):", "") || "").trim();
+            if (!ten) return;
+            if (ten === "Lớp 10A1 (tự động)" || dsLop.some(t => t.toLowerCase() === ten.toLowerCase())) {
+                alert("Tên lớp này đã có rồi, Thầy chọn 1 tên khác nhé.");
+                return;
+            }
+            dsLop.push(ten);
+            saveDsLop();
+            try { localStorage.setItem(dmKhoaHocSinhLop(ten), "[]"); } catch (e) {}
+            chuyenLop(ten);
+            // Mở sẵn hộp thoại để Thầy dán danh sách học sinh cho lớp vừa thêm
+            openStudentListModal();
+        }
+
+        function xoaLopHienTai() {
+            if (!lopDangChon) return; // không xóa được "Lớp 10A1 (tự động)"
+            if (!confirm(`Xóa lớp/nhóm "${lopDangChon}" (và danh sách học sinh đã lưu của lớp này) khỏi máy này?`)) return;
+            try { localStorage.removeItem(dmKhoaHocSinhLop(lopDangChon)); } catch (e) {}
+            dsLop = dsLop.filter(t => t !== lopDangChon);
+            saveDsLop();
+            chuyenLop(''); // quay lại Lớp 10A1 (tự động)
+        }
+
         function capNhatBaoDongBo() {
             const el = document.getElementById("modal-sync-status");
             if (!el) return;
-            if (dongBoLopBat) {
+            if (lopDangChon) {
+                el.className = "text-xs mt-0.5 text-sky-300";
+                el.innerHTML = `<i class="fa-solid fa-chalkboard-user"></i> Đang dùng danh sách riêng của lớp "${esc(lopDangChon)}" (${allStudents.length} học sinh) — không theo lớp 10A1 live.`;
+            } else if (dongBoLopBat) {
                 el.className = "text-xs mt-0.5 text-emerald-400";
                 el.innerHTML = rosterNamesHienTai.length
                     ? `<i class="fa-solid fa-tower-broadcast"></i> Đang tự động theo danh sách lớp 10A1 (${rosterNamesHienTai.length} học sinh) — tự cập nhật ngay khi lớp đổi danh sách.`
                     : `<i class="fa-solid fa-tower-broadcast"></i> Đang chờ tải danh sách lớp 10A1 từ máy chủ...`;
             } else {
                 el.className = "text-xs mt-0.5 text-amber-400";
-                el.innerHTML = `<i class="fa-solid fa-hand"></i> Đang dùng danh sách TÙY CHỈNH — bấm "📡 Danh sách lớp 10A1 (tự động)" rồi Lưu để đồng bộ lại.`;
+                el.innerHTML = `<i class="fa-solid fa-hand"></i> Đang dùng danh sách TÙY CHỈNH (chưa lưu thành 1 lớp riêng) — bấm "📡 Danh sách lớp 10A1 (tự động)" rồi Lưu để đồng bộ lại, hoặc bấm "+ Thêm lớp" để lưu lại danh sách này thành 1 lớp riêng.`;
             }
         }
 
@@ -908,10 +1022,12 @@
                     teacher.state = "CLAPPING";
                     teacher.stateTimer = 0;
                     if (teacher.targetMosquito) {
-                        teacher.targetMosquito.isPinned = true;
                         teacher.clapTargetX = teacher.targetMosquito.x;
                         teacher.clapTargetY = teacher.targetMosquito.y;
                     }
+                    // Ghim TẤT CẢ các con muỗi bị chộp lần này (1..9 con) — mỗi con sẽ tự trôi về
+                    // đúng điểm đập (xem updateGame: m.isPinned thì x/y = clapTargetX/Y mỗi khung hình).
+                    teacher.targetMosquitoes.forEach(m => { m.isPinned = true; });
                 }
             } 
             else if (teacher.state === "CLAPPING") {
@@ -954,13 +1070,13 @@
                 // Bước 3: Giữ 2 tay ép chặt một nhịp ngắn rồi mở bảng vinh danh học sinh
                 teacher.stateTimer++;
                 if (teacher.stateTimer === 24) {
-                    if (teacher.targetMosquito) {
-                        showWinnerModal(teacher.targetMosquito);
+                    if (teacher.targetMosquitoes.length) {
+                        showWinnerModal(teacher.targetMosquitoes);
                     }
                     teacher.state = "RETURNING";
                     teacher.stateTimer = 0;
                 }
-            } 
+            }
             else if (teacher.state === "RETURNING") {
                 // Bước 4: Đưa hai tay thầy trở về vị trí nghỉ
                 teacher.stateTimer++;
@@ -972,6 +1088,7 @@
                 if (teacher.stateTimer >= 18) {
                     teacher.state = "IDLE";
                     teacher.targetMosquito = null;
+                    teacher.targetMosquitoes = [];
                 }
             }
         }
@@ -986,6 +1103,21 @@
         /**
          * KÍCH HOẠT THAO TÁC ĐẬP MUỖI (NGẪU NHIÊN HOẶC CLICK CHUỘT)
          */
+        // Bốc ngẫu nhiên tối đa "soLuong" con muỗi KHÁC NHAU từ đàn, ưu tiên luôn có "uuTien"
+        // (con gần điểm click/đã chọn) đứng đầu danh sách — dùng chung cho cả 2 cách đập.
+        function chonNgauNhienNhieuMuoi(soLuong, uuTien) {
+            const con = Math.max(1, Math.min(9, soLuong | 0));
+            const conLai = activeMosquitoes.filter(m => !uuTien || m.id !== uuTien.id);
+            // Xáo trộn kiểu Fisher–Yates rồi lấy đủ số lượng cần thêm (ngoài con ưu tiên)
+            for (let i = conLai.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [conLai[i], conLai[j]] = [conLai[j], conLai[i]];
+            }
+            const ket = uuTien ? [uuTien] : [];
+            conLai.forEach(m => { if (ket.length < con) ket.push(m); });
+            return ket.slice(0, con);
+        }
+
         function triggerRandomSlap() {
             // Không đập khi đang trong chu trình đập hoặc đang mở Modal
             const winnerModal = document.getElementById("winner-modal");
@@ -996,24 +1128,28 @@
                 return;
             }
 
-            // Chọn ngẫu nhiên công bằng 1 con muỗi trong đàn
-            const randomIndex = Math.floor(Math.random() * activeMosquitoes.length);
-            const chosenMosquito = activeMosquitoes[randomIndex];
-            startClapOnMosquito(chosenMosquito);
+            // Chọn ngẫu nhiên công bằng "soMuoiMoiLanDap" con muỗi trong đàn (mặc định 1 con)
+            const chonDuoc = chonNgauNhienNhieuMuoi(soMuoiMoiLanDap, null);
+            startClapOnMosquitoes(chonDuoc);
         }
 
-        function startClapOnMosquito(chosenMosquito) {
+        function startClapOnMosquitoes(chonDuoc) {
+            if (!chonDuoc || !chonDuoc.length) return;
             playMosquitoBuzzShort();
             setTimeout(() => playSwooshSound(), 90);
 
-            teacher.targetMosquito = chosenMosquito;
-            teacher.clapTargetX = chosenMosquito.x;
-            teacher.clapTargetY = chosenMosquito.y;
+            // Con đầu tiên dùng để canh vị trí lấy đà (WINDUP) — các con còn lại sẽ tự trôi về
+            // đúng điểm đập cùng lúc (xem updateGame: m.isPinned → x/y = clapTargetX/Y).
+            teacher.targetMosquito = chonDuoc[0];
+            teacher.targetMosquitoes = chonDuoc;
+            teacher.clapTargetX = chonDuoc[0].x;
+            teacher.clapTargetY = chonDuoc[0].y;
             teacher.state = "WINDUP";
             teacher.stateTimer = 0;
         }
 
         // Cho phép giáo viên click trực tiếp vào màn hình để đập con muỗi gần điểm click nhất
+        // (và thêm ngẫu nhiên các con khác nếu "soMuoiMoiLanDap" > 1)
         canvas.addEventListener("pointerdown", (e) => {
             if (teacher.state !== "IDLE") return;
             if (activeMosquitoes.length === 0) return;
@@ -1033,7 +1169,8 @@
                 }
             });
 
-            startClapOnMosquito(closest);
+            const chonDuoc = chonNgauNhienNhieuMuoi(soMuoiMoiLanDap, closest);
+            startClapOnMosquitoes(chonDuoc);
         });
 
         /**
@@ -1530,26 +1667,46 @@
         /**
          * HIỂN THỊ MODAL CÔNG BỐ TÊN HỌC SINH BỊ ĐẬP TRÚNG
          */
-        function showWinnerModal(mosquito) {
-            lastPendingWinner = mosquito;
+        // "danhSachMuoi" là MẢNG 1..9 con muỗi bị chộp trúng cùng lúc.
+        function showWinnerModal(danhSachMuoi) {
+            const ds = Array.isArray(danhSachMuoi) ? danhSachMuoi : [danhSachMuoi];
+            if (!ds.length) return;
+            lastPendingWinners = ds;
             playWinnerFanfare();
 
-            // Pháo giấy chúc mừng
+            // Pháo giấy chúc mừng — bắt được càng nhiều con thì pháo giấy càng nhiều
             if (typeof confetti === "function") {
                 confetti({
-                    particleCount: 95,
+                    particleCount: Math.min(95 + (ds.length - 1) * 25, 300),
                     spread: 80,
                     origin: { y: 0.55 }
                 });
             }
 
-            document.getElementById("winner-name").textContent = mosquito.name;
+            const hopTen = document.getElementById("winner-name");
+            if (ds.length === 1) {
+                hopTen.className = "font-game font-extrabold text-3xl sm:text-5xl text-amber-300 tracking-wide break-words drop-shadow";
+                hopTen.textContent = ds[0].name;
+            } else {
+                // Nhiều con cùng lúc: hiện dạng danh sách "viên thuốc" cho dễ đọc thay vì chữ to 1 dòng
+                hopTen.className = "flex flex-wrap items-center justify-center gap-2";
+                hopTen.innerHTML = ds.map(m => `<span class="px-3.5 py-1.5 rounded-xl bg-amber-400/20 border border-amber-400/50 text-amber-200 font-game font-bold text-base sm:text-xl">${esc(m.name)}</span>`).join("");
+            }
+
+            const badge = document.getElementById("winner-count-badge");
+            if (badge) badge.textContent = ds.length > 1 ? `Trúng cùng lúc ${ds.length} con!` : '';
+
+            const loiMoi = document.getElementById("winner-invite-text");
+            if (loiMoi) loiMoi.textContent = ds.length === 1
+                ? "Xin mời học sinh có tên trên chú muỗi này đứng dậy trả lời câu hỏi của Thầy Nhân:"
+                : `Xin mời ${ds.length} học sinh có tên trên các chú muỗi này đứng dậy trả lời câu hỏi của Thầy Nhân:`;
+
             const quote = FUNNY_QUOTES[Math.floor(Math.random() * FUNNY_QUOTES.length)];
             document.getElementById("winner-funny-quote").textContent = quote;
 
-            // Lưu vào lịch sử đã gọi
+            // Lưu vào lịch sử đã gọi (mỗi con 1 dòng)
             const nowStr = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-            caughtHistory.unshift({ name: mosquito.name, time: nowStr });
+            ds.forEach(m => caughtHistory.unshift({ name: m.name, time: nowStr }));
             renderHistoryList();
             updateHUDCounters();
 
@@ -1558,14 +1715,20 @@
             modal.classList.add("flex");
         }
 
+        // Thoát HTML tối thiểu cho tên học sinh khi chèn qua innerHTML (phòng tên có ký tự đặc biệt)
+        function esc(s) {
+            return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+        }
+
         function confirmWinnerAction(removeFromSwarm) {
-            if (lastPendingWinner) {
+            if (lastPendingWinners.length) {
+                const idsVuaChop = new Set(lastPendingWinners.map(m => m.id));
                 if (removeFromSwarm) {
-                    activeMosquitoes = activeMosquitoes.filter(m => m.id !== lastPendingWinner.id);
+                    activeMosquitoes = activeMosquitoes.filter(m => !idsVuaChop.has(m.id));
                 } else {
-                    lastPendingWinner.isPinned = false;
+                    lastPendingWinners.forEach(m => { m.isPinned = false; });
                 }
-                lastPendingWinner = null;
+                lastPendingWinners = [];
             }
             updateHUDCounters();
 
@@ -1620,6 +1783,7 @@
             const textarea = document.getElementById("student-textarea");
             textarea.value = allStudents.join("\n");
             updateTextareaCount();
+            renderDsLop();
             capNhatBaoDongBo();
 
             const modal = document.getElementById("student-modal");
@@ -1656,12 +1820,18 @@
 
             if (lines.length === 0) return;
 
-            // Nếu danh sách vừa lưu đúng y hệt danh sách lớp 10A1 đang có (vd. Thầy vừa bấm "📡
-            // Danh sách lớp 10A1 (tự động)" rồi Lưu luôn, không chỉnh gì thêm) thì BẬT LẠI đồng
-            // bộ tự động; còn nếu Thầy có chỉnh (xóa bớt/thêm tên khác) thì chuyển sang tùy chỉnh
-            // và NGỪNG tự ghi đè theo lớp 10A1 cho đến khi bấm đồng bộ lại.
-            dongBoLopBat = rosterNamesHienTai.length > 0 && JSON.stringify(lines) === JSON.stringify(rosterNamesHienTai);
-            try { localStorage.setItem("DAP_MUOI_DONGBO_LOP_V1", dongBoLopBat ? "1" : "0"); } catch (e) {}
+            if (lopDangChon) {
+                // Đang quản lý 1 lớp/nhóm riêng (không phải lớp 10A1 live) -> lưu danh sách
+                // này vào đúng ô nhớ riêng của lớp đó, không đụng tới cờ đồng bộ lớp 10A1.
+                try { localStorage.setItem(dmKhoaHocSinhLop(lopDangChon), JSON.stringify(lines)); } catch (e) {}
+            } else {
+                // Nếu danh sách vừa lưu đúng y hệt danh sách lớp 10A1 đang có (vd. Thầy vừa bấm "📡
+                // Danh sách lớp 10A1 (tự động)" rồi Lưu luôn, không chỉnh gì thêm) thì BẬT LẠI đồng
+                // bộ tự động; còn nếu Thầy có chỉnh (xóa bớt/thêm tên khác) thì chuyển sang tùy chỉnh
+                // và NGỪNG tự ghi đè theo lớp 10A1 cho đến khi bấm đồng bộ lại.
+                dongBoLopBat = rosterNamesHienTai.length > 0 && JSON.stringify(lines) === JSON.stringify(rosterNamesHienTai);
+                try { localStorage.setItem("DAP_MUOI_DONGBO_LOP_V1", dongBoLopBat ? "1" : "0"); } catch (e) {}
+            }
             capNhatBaoDongBo();
 
             allStudents = lines;
@@ -1689,6 +1859,17 @@
         function cycleSpeed() {
             currentSpeedIdx = (currentSpeedIdx + 1) % speedLevels.length;
             document.getElementById("text-speed").textContent = `Tốc độ: ${speedLevels[currentSpeedIdx].label}`;
+        }
+
+        // Bấm để đổi số con muỗi bắt được mỗi lần đập: 1 -> 2 -> ... -> 9 -> 1
+        function cycleCatchCount() {
+            soMuoiMoiLanDap = soMuoiMoiLanDap >= 9 ? 1 : soMuoiMoiLanDap + 1;
+            try { localStorage.setItem("DAP_MUOI_SOLUONG_MOI_LAN_V1", String(soMuoiMoiLanDap)); } catch (e) {}
+            capNhatNhanSoMuoi();
+        }
+        function capNhatNhanSoMuoi() {
+            const el = document.getElementById("text-catchcount");
+            if (el) el.textContent = soMuoiMoiLanDap === 1 ? "Đập: 1 con" : `Đập: ${soMuoiMoiLanDap} con/lần`;
         }
 
         function toggleSound() {
@@ -1748,6 +1929,8 @@
             resizeCanvas();
             loadSavedStudents();
             renderHistoryList();
+            capNhatNhanSoMuoi();
+            renderDsLop();
             requestAnimationFrame(gameLoop);
         };
     </script>
