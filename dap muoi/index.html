@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THẦY NHÂN VÀ BẦY MUỖI - Game Gọi Tên Học Sinh Ngẫu Nhiên</title>
+    <!-- Tích hợp Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tích hợp Google Fonts: Baloo 2 & Be Vietnam Pro -->
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tích hợp FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tích hợp Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Firebase (chỉ dùng để ĐỌC danh sách lớp 10A1 theo thời gian thực — nhánh lop10a1/roster
+         công khai cho xem, cùng dự án Firebase với trang chính của lớp) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['"Baloo 2"', 'cursive', 'sans-serif'],
+                        sans: ['"Be Vietnam Pro"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            overflow: hidden;
+            background-color: #0f172a;
+        }
+        .font-game {
+            font-family: 'Baloo 2', cursive, sans-serif;
+        }
+        /* Hiệu ứng rung màn hình khi thầy đập hai tay vào nhau */
+        .screen-shake {
+            animation: shakeAnim 0.42s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes shakeAnim {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            15% { transform: translate(-12px, -8px) rotate(-1.5deg); }
+            30% { transform: translate(12px, 6px) rotate(1.5deg); }
+            45% { transform: translate(-8px, 10px) rotate(-1deg); }
+            60% { transform: translate(8px, -6px) rotate(1deg); }
+            75% { transform: translate(-4px, 4px) rotate(-0.5deg); }
+        }
+        /* Nút bấm hoạt hình 3D */
+        .btn-3d-amber {
+            background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+            box-shadow: 0 6px 0 #b45309, 0 12px 20px rgba(245, 158, 11, 0.4);
+            transition: all 0.12s ease;
+        }
+        .btn-3d-amber:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 0 #b45309, 0 15px 25px rgba(245, 158, 11, 0.5);
+        }
+        .btn-3d-amber:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #b45309, 0 5px 10px rgba(245, 158, 11, 0.3);
+        }
+        /* Hiệu ứng xuất hiện Modal kết quả */
+        .modal-pop {
+            animation: modalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        @keyframes modalPop {
+            0% { opacity: 0; transform: scale(0.6) translateY(30px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        /* Con trỏ tâm ngắm khi rê chuột vào vùng bảng lớp */
+        #game-canvas {
+            cursor: crosshair;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen relative select-none overflow-hidden">
+
+    <!-- ==========================================
+         KHUNG CANVAS TRÒ CHƠI CHÍNH (FULL SCREEN)
+         ========================================== -->
+    <div id="game-wrapper" class="relative w-full h-full">
+        <canvas id="game-canvas" class="block w-full h-full"></canvas>
+
+        <!-- ==========================================
+             THANH ĐIỀU KHIỂN PHÍA TRÊN (TOP HUD)
+             ========================================== -->
+        <header class="absolute top-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+            <!-- Cụm Logo & Thống kê đàn muỗi -->
+            <div class="flex items-center gap-3 pointer-events-auto bg-slate-900/90 backdrop-blur-md border border-white/15 px-4 py-2.5 rounded-2xl shadow-xl text-white">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 to-rose-500 flex items-center justify-center text-slate-950 shadow-md shrink-0">
+                    <i class="fa-solid fa-hands-clapping text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-game font-extrabold text-lg sm:text-2xl leading-none text-amber-400 tracking-wide">
+                        THẦY NHÂN VÀ BẦY MUỖI
+                    </h1>
+                    <div class="flex items-center gap-3 text-xs sm:text-sm text-slate-300 mt-1">
+                        <span class="flex items-center gap-1.5">
+                            <i class="fa-solid fa-mosquito text-rose-400"></i>
+                            Đang bay: <strong id="hud-active-count" class="text-emerald-400 font-bold">30</strong>
+                        </span>
+                        <span class="text-slate-500">•</span>
+                        <span class="flex items-center gap-1.5">
+                            <i class="fa-solid fa-bullseye text-amber-400"></i>
+                            Đã bắt: <strong id="hud-caught-count" class="text-amber-300 font-bold">0</strong>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cụm nút công cụ nhanh bên phải -->
+            <div class="flex flex-wrap items-center gap-2 pointer-events-auto">
+                <!-- Ẩn / Hiện tên trên muỗi -->
+                <button onclick="toggleMysteryMode()" id="btn-mystery" title="Ẩn/Hiện tên học sinh khi muỗi đang bay"
+                    class="px-3.5 py-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-white border border-white/15 text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-lg transition-all">
+                    <i id="icon-mystery" class="fa-solid fa-eye text-sky-400"></i>
+                    <span id="text-mystery" class="hidden md:inline">Hiện tên</span>
+                </button>
+
+                <!-- Tốc độ bay của muỗi -->
+                <button onclick="cycleSpeed()" id="btn-speed" title="Đổi tốc độ bay của đàn muỗi"
+                    class="px-3.5 py-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-white border border-white/15 text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-lg transition-all">
+                    <i class="fa-solid fa-gauge-high text-emerald-400"></i>
+                    <span id="text-speed">Tốc độ: Vừa</span>
+                </button>
+
+                <!-- Bật / Tắt âm thanh (Tiếng vo ve & Tiếng đập Bốp) -->
+                <button onclick="toggleSound()" id="btn-sound" title="Bật/Tắt hiệu ứng âm thanh"
+                    class="px-3.5 py-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-white border border-white/15 text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-lg transition-all">
+                    <i id="icon-sound" class="fa-solid fa-volume-high text-amber-400"></i>
+                    <span id="text-sound" class="hidden sm:inline">Âm thanh: Bật</span>
+                </button>
+
+                <!-- Mở danh sách lớp -->
+                <button onclick="openStudentListModal()"
+                    class="px-3.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-400/40 text-xs sm:text-sm font-bold flex items-center gap-2 shadow-lg transition-all">
+                    <i class="fa-solid fa-users-gear"></i>
+                    <span>Danh sách lớp</span>
+                </button>
+
+                <!-- Mở lịch sử đã gọi -->
+                <button onclick="toggleHistoryDrawer()"
+                    class="px-3.5 py-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-white border border-white/15 text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-lg transition-all relative">
+                    <i class="fa-solid fa-clock-rotate-left text-amber-300"></i>
+                    <span class="hidden sm:inline">Đã gọi</span>
+                    <span id="badge-history" class="px-1.5 py-0.2 bg-rose-500 text-white rounded-full text-[10px] font-bold">0</span>
+                </button>
+
+                <!-- Toàn màn hình -->
+                <button onclick="toggleFullScreen()" title="Toàn màn hình (Tivi / Máy chiếu)"
+                    class="p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-white border border-white/15 text-sm shadow-lg transition-all">
+                    <i id="icon-fullscreen" class="fa-solid fa-expand"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- ==========================================
+             BẢNG ĐIỀU KHIỂN ĐẬP MUỖI Ở ĐÁY MÀN HÌNH (BOTTOM CONTROLS)
+             ========================================== -->
+        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2 w-full max-w-xl px-4 pointer-events-none">
+            <!-- Gợi ý tương tác -->
+            <div id="hint-banner" class="px-4 py-1 rounded-full bg-slate-900/75 backdrop-blur-md border border-white/10 text-amber-200 text-xs font-medium shadow flex items-center gap-2">
+                <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i>
+                <span>Bấm nút bên dưới, nhấn phím <strong>SPACE</strong>, hoặc <strong>Click trực tiếp lên màn hình</strong> để Thầy Nhân đập muỗi!</span>
+            </div>
+
+            <!-- Nút hành động chính -->
+            <div class="flex items-center gap-3 pointer-events-auto">
+                <button id="btn-slap-random" onclick="triggerRandomSlap()"
+                    class="btn-3d-amber px-7 sm:px-10 py-3.5 sm:py-4 rounded-2xl text-slate-950 font-game font-extrabold text-lg sm:text-2xl tracking-wide flex items-center gap-3">
+                    <span class="text-2xl sm:text-3xl">👏</span>
+                    <span>ĐẬP MUỖI NGẪU NHIÊN! (SPACE)</span>
+                </button>
+
+                <button onclick="restoreAllMosquitoes()" title="Khôi phục toàn bộ học sinh vào bầy muỗi"
+                    class="px-4 py-3.5 sm:py-4 rounded-2xl bg-slate-900/85 hover:bg-slate-800 text-white border border-white/20 font-bold text-xs sm:text-sm shadow-lg transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-rotate-right text-emerald-400"></i>
+                    <span class="hidden sm:inline">Thả lại bầy muỗi</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             NGĂN KÉO LỊCH SỬ CÁC "CHÚ MUỖI" ĐÃ BỊ BẮT
+             ========================================== -->
+        <aside id="history-drawer" class="fixed top-16 right-3 bottom-20 w-72 sm:w-80 bg-slate-900/95 backdrop-blur-xl border border-white/15 rounded-3xl shadow-2xl z-30 transform translate-x-[115%] transition-transform duration-300 flex flex-col overflow-hidden text-white">
+            <div class="p-4 border-b border-white/10 flex items-center justify-between bg-slate-800/60">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-trophy text-amber-400"></i>
+                    <h3 class="font-game font-bold text-lg text-amber-300">Danh Sách Đã Bị Đập Trúng</h3>
+                </div>
+                <button onclick="toggleHistoryDrawer()" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div id="history-list" class="flex-1 overflow-y-auto p-3 space-y-2">
+                <!-- Được render bằng JS -->
+            </div>
+
+            <div class="p-3 border-t border-white/10 bg-slate-800/40 flex items-center justify-between gap-2">
+                <button onclick="clearCaughtHistory()" class="flex-1 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs font-bold transition-colors">
+                    <i class="fa-solid fa-trash-can mr-1"></i> Xóa lịch sử
+                </button>
+                <button onclick="restoreAllMosquitoes()" class="flex-1 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-colors">
+                    <i class="fa-solid fa-rotate-left mr-1"></i> Thả lại tất cả
+                </button>
+            </div>
+        </aside>
+    </div>
+
+    <!-- ==========================================
+         MODAL 1: CÔNG BỐ TÊN HỌC SINH BỊ ĐẬP TRÚNG!
+         ========================================== -->
+    <div id="winner-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-40 hidden items-center justify-center p-4">
+        <div class="modal-pop bg-gradient-to-b from-amber-400 via-orange-500 to-rose-600 p-1.5 rounded-[2rem] max-w-lg w-full shadow-2xl">
+            <div class="bg-slate-900 rounded-[1.8rem] p-6 sm:p-8 text-center text-white relative overflow-hidden">
+                <!-- Tia sáng nền -->
+                <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-72 h-72 bg-amber-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+                <!-- Huy hiệu BỐP! -->
+                <div class="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-rose-500/20 border border-rose-400/40 text-rose-300 font-game font-bold text-sm uppercase tracking-wider mb-3">
+                    <i class="fa-solid fa-hands-clapping text-amber-300"></i>
+                    <span>BỐP!! THẦY NHÂN ĐÃ CHỘP TRÚNG!</span>
+                </div>
+
+                <!-- Minh họa SVG Con Muỗi Bị Choáng Hài Hước -->
+                <div class="w-28 h-28 mx-auto my-2 bg-slate-800/90 rounded-3xl border-2 border-amber-400/50 flex items-center justify-center shadow-inner relative">
+                    <svg class="w-20 h-20" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Đôi cánh rũ xuống -->
+                        <ellipse cx="30" cy="40" rx="18" ry="9" transform="rotate(-25 30 40)" fill="rgba(186,230,253,0.7)" stroke="#38bdf8" stroke-width="2"/>
+                        <ellipse cx="70" cy="40" rx="18" ry="9" transform="rotate(25 70 40)" fill="rgba(186,230,253,0.7)" stroke="#38bdf8" stroke-width="2"/>
+                        <!-- Thân muỗi -->
+                        <ellipse cx="50" cy="56" rx="16" ry="20" fill="#475569" stroke="#f8fafc" stroke-width="2.5"/>
+                        <!-- Vằn bụng -->
+                        <path d="M36 54 Q50 58 64 54" stroke="#fbbf24" stroke-width="3" stroke-linecap="round"/>
+                        <path d="M38 62 Q50 66 62 62" stroke="#fbbf24" stroke-width="3" stroke-linecap="round"/>
+                        <!-- Đầu muỗi -->
+                        <circle cx="50" cy="34" r="14" fill="#334155" stroke="#f8fafc" stroke-width="2.5"/>
+                        <!-- Mắt xoáy ốc bị choáng -->
+                        <circle cx="43" cy="33" r="6" fill="white"/>
+                        <circle cx="57" cy="33" r="6" fill="white"/>
+                        <path d="M41 33 L45 33 M43 31 L43 35" stroke="#e11d48" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M55 33 L59 33 M57 31 L57 35" stroke="#e11d48" stroke-width="2" stroke-linecap="round"/>
+                        <!-- Vòi muỗi cong queo -->
+                        <path d="M50 42 Q45 50 53 53 Q48 58 50 64" stroke="#f43f5e" stroke-width="3" stroke-linecap="round" fill="none"/>
+                        <!-- Ngôi sao choáng váng trên đầu -->
+                        <circle cx="32" cy="14" r="3" fill="#fbbf24"/>
+                        <circle cx="50" cy="10" r="4" fill="#fbbf24"/>
+                        <circle cx="68" cy="14" r="3" fill="#fbbf24"/>
+                    </svg>
+                    <span class="absolute -bottom-2 -right-2 px-2 py-0.5 rounded-lg bg-amber-400 text-slate-950 font-game font-extrabold text-xs shadow">
+                        Ái chà!
+                    </span>
+                </div>
+
+                <p class="text-slate-400 text-xs sm:text-sm font-medium mt-3">
+                    Xin mời học sinh có tên trên chú muỗi này đứng dậy trả lời câu hỏi của Thầy Nhân:
+                </p>
+
+                <!-- TÊN HỌC SINH NỔI BẬT -->
+                <div class="my-4 py-4 px-5 rounded-2xl bg-gradient-to-r from-amber-500/20 via-amber-400/30 to-amber-500/20 border-2 border-amber-400/60 shadow-inner">
+                    <div id="winner-name" class="font-game font-extrabold text-3xl sm:text-5xl text-amber-300 tracking-wide break-words drop-shadow">
+                        Nguyễn Minh Khôi
+                    </div>
+                </div>
+
+                <!-- Câu nói hài hước ngẫu nhiên -->
+                <p id="winner-funny-quote" class="text-xs sm:text-sm italic text-sky-300 mb-6">
+                    "Bay lượn vòng vòng quanh trán Thầy Nhân nãy giờ, cuối cùng cũng bị thầy chộp trúng nhé!"
+                </p>
+
+                <!-- 2 Lựa chọn sau khi gọi tên -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button onclick="confirmWinnerAction(true)"
+                        class="py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg shadow-emerald-900/40 transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-check-circle"></i>
+                        <span>Đã gọi (Cho nghỉ bay)</span>
+                    </button>
+                    <button onclick="confirmWinnerAction(false)"
+                        class="py-3.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/15 font-bold text-sm transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-rotate"></i>
+                        <span>Giữ lại trong bầy muỗi</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         MODAL 2: QUẢN LÝ DANH SÁCH LỚP HỌC
+         ========================================== -->
+    <div id="student-modal" class="fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-40 hidden items-center justify-center p-4">
+        <div class="bg-slate-900 border border-white/15 rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl text-white overflow-hidden modal-pop">
+            <div class="px-6 py-4 bg-slate-800/80 border-b border-white/10 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <i class="fa-solid fa-users-viewfinder text-amber-400 text-xl"></i>
+                    <div>
+                        <h3 class="font-game font-bold text-xl text-white leading-none">Quản Lý Danh Sách Bầy Muỗi (Lớp Của Thầy Nhân)</h3>
+                        <p id="modal-sync-status" class="text-xs mt-0.5">—</p>
+                    </div>
+                </div>
+                <button onclick="closeStudentListModal()" class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-6 overflow-y-auto space-y-4 flex-1">
+                <!-- Chọn nhanh bộ danh sách mẫu -->
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Nạp nhanh danh sách mẫu:</span>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" onclick="dungDanhSachLopLive()" id="btn-dung-lop-live" class="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/30 text-emerald-300 text-xs font-bold transition-all">
+                            📡 Danh sách lớp 10A1 (tự động)
+                        </button>
+                        <button type="button" onclick="loadSamplePreset('class30')" class="px-3 py-1.5 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-400/30 text-indigo-300 text-xs font-bold transition-all">
+                            Lớp mẫu 30 HS
+                        </button>
+                        <button type="button" onclick="loadSamplePreset('class15')" class="px-3 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/30 text-sky-300 text-xs font-bold transition-all">
+                            Nhóm 15 HS
+                        </button>
+                        <button type="button" onclick="loadSamplePreset('numbers40')" class="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/30 text-amber-300 text-xs font-bold transition-all">
+                            Số thứ tự (Số 01 &rarr; 40)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Ô nhập danh sách -->
+                <div>
+                    <div class="flex justify-between text-xs text-slate-400 mb-1.5">
+                        <span>Dán danh sách học sinh từ Excel / Word vào đây (mỗi dòng 1 tên):</span>
+                        <span id="modal-line-count" class="font-bold text-amber-400">30 học sinh</span>
+                    </div>
+                    <textarea id="student-textarea" rows="10" oninput="updateTextareaCount()"
+                        placeholder="Nhập tên mỗi học sinh trên 1 dòng..."
+                        class="w-full p-4 rounded-2xl bg-slate-950/90 border border-white/15 focus:border-amber-400 outline-none text-sm text-slate-100 font-medium leading-relaxed"></textarea>
+                </div>
+            </div>
+
+            <div class="px-6 py-4 bg-slate-800/80 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+                <span class="text-xs text-slate-400">
+                    <i class="fa-solid fa-circle-info text-sky-400 mr-1"></i> Bấm "Lưu & Cập nhật đàn muỗi" để áp dụng ngay.
+                </span>
+                <div class="flex items-center gap-2.5">
+                    <button onclick="closeStudentListModal()" class="px-4 py-2.5 rounded-xl border border-white/15 hover:bg-white/10 text-xs sm:text-sm font-bold text-slate-300">
+                        Đóng
+                    </button>
+                    <button onclick="saveStudentListFromModal()" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs sm:text-sm font-extrabold shadow-lg">
+                        <i class="fa-solid fa-floppy-disk mr-1.5"></i> Lưu & Cập nhật đàn muỗi
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         JAVASCRIPT ENGINE: ĐỒ HỌA HOẠT HÌNH, VẬT LÝ MUỖI BAY & ÂM THANH
+         ========================================== -->
+    <script>
+        /**
+         * DANH SÁCH MẪU MẶC ĐỊNH
+         */
+        const SAMPLE_PRESETS = {
+            class30: [
+                "Nguyễn Minh An", "Trần Bảo Anh", "Lê Hoàng Bách", "Phạm Ngọc Bích", "Võ Quốc Bảo",
+                "Đặng Tuấn Cường", "Bùi Khánh Duy", "Hoàng Thùy Dương", "Ngô Hải Đăng", "Đỗ Gia Hân",
+                "Hồ Quang Hiếu", "Phan Thanh Huyền", "Vũ Minh Khang", "Lý Bảo Khánh", "Trương Minh Khôi",
+                "Nguyễn Phương Linh", "Trần Nhật Minh", "Lê Trà My", "Phạm Hoàng Nam", "Võ Bảo Ngọc",
+                "Đặng Khôi Nguyên", "Bùi Thảo Nhi", "Hoàng Minh Nhật", "Ngô Thiên Phúc", "Đỗ Minh Quân",
+                "Hồ Như Quỳnh", "Phan Thanh Sơn", "Vũ Anh Thư", "Lý Quốc Trung", "Trương Khánh Vy"
+            ],
+            class15: [
+                "Minh An", "Bảo Anh", "Hoàng Bách", "Quốc Bảo", "Khánh Duy",
+                "Hải Đăng", "Gia Hân", "Minh Khang", "Minh Khôi", "Phương Linh",
+                "Nhật Minh", "Hoàng Nam", "Bảo Ngọc", "Minh Quân", "Khánh Vy"
+            ],
+            numbers40: Array.from({ length: 40 }, (_, i) => `Số thứ tự ${String(i + 1).padStart(2, '0')}`)
+        };
+
+        const FUNNY_QUOTES = [
+            "\"Bay vo ve sát tai Thầy Nhân nãy giờ, cuối cùng cũng bị hai tay thầy chộp gọn nhé!\"",
+            "\"Chúc mừng em đã được Thầy Nhân gọi tên trả lời câu hỏi! Xin mời em tỏa sáng!\"",
+            "\"Một pha vung 2 tay tốc độ ánh sáng của Thầy Nhân! Mời em trả lời câu hỏi nhé!\"",
+            "\"Chú muỗi bay lượn nghệ thuật nhất trong bầy muỗi hôm nay đã thuộc về em!\"",
+            "\"BỐP! Không trượt phát nào! Cả lớp cho bạn một tràng pháo tay khích lệ nào!\""
+        ];
+
+        /**
+         * HỆ THỐNG ÂM THANH TỔNG HỢP (WEB AUDIO API - KHÔNG CẦN FILE NGOÀI)
+         */
+        let audioCtx = null;
+        let soundEnabled = true;
+        let buzzOsc = null;
+        let buzzGain = null;
+
+        function initAudioContext() {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) {
+                    audioCtx = new AudioContextClass();
+                }
+            }
+            if (audioCtx && audioCtx.state === "suspended") {
+                audioCtx.resume();
+            }
+        }
+
+        // Tiếng vung tay vút gió (Swoosh)
+        function playSwooshSound() {
+            if (!soundEnabled) return;
+            initAudioContext();
+            if (!audioCtx) return;
+
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(220, now);
+            osc.frequency.exponentialRampToValueAtTime(65, now + 0.22);
+
+            gain.gain.setValueAtTime(0.01, now);
+            gain.gain.linearRampToValueAtTime(0.22, now + 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.23);
+        }
+
+        // Tiếng ĐẬP HAI TAY VÀO NHAU ("BỐP / CHÁT!")
+        function playClapSlapSound() {
+            if (!soundEnabled) return;
+            initAudioContext();
+            if (!audioCtx) return;
+
+            const now = audioCtx.currentTime;
+
+            // Tạo White Noise cho tiếng vỗ tay đanh gọn
+            const bufferSize = audioCtx.sampleRate * 0.18;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.035));
+            }
+
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = "bandpass";
+            filter.frequency.setValueAtTime(1100, now);
+            filter.Q.setValueAtTime(1.2, now);
+
+            const noiseGain = audioCtx.createGain();
+            noiseGain.gain.setValueAtTime(0.95, now);
+            noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.17);
+
+            noise.connect(filter);
+            filter.connect(noiseGain);
+            noiseGain.connect(audioCtx.destination);
+            noise.start(now);
+
+            // Thêm âm trầm "BỐP"
+            const punchOsc = audioCtx.createOscillator();
+            const punchGain = audioCtx.createGain();
+            punchOsc.type = "triangle";
+            punchOsc.frequency.setValueAtTime(160, now);
+            punchOsc.frequency.exponentialRampToValueAtTime(38, now + 0.14);
+
+            punchGain.gain.setValueAtTime(0.6, now);
+            punchGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+            punchOsc.connect(punchGain);
+            punchGain.connect(audioCtx.destination);
+            punchOsc.start(now);
+            punchOsc.stop(now + 0.15);
+        }
+
+        // Nhạc hiệu Fanfare khi hiện bảng tên học sinh
+        function playWinnerFanfare() {
+            if (!soundEnabled) return;
+            initAudioContext();
+            if (!audioCtx) return;
+
+            const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+            notes.forEach((freq, idx) => {
+                const now = audioCtx.currentTime + idx * 0.09;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = "triangle";
+                osc.frequency.setValueAtTime(freq, now);
+
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.36);
+            });
+        }
+
+        // Tiếng muỗi vo ve ngắn khi bắt đầu rình đập
+        function playMosquitoBuzzShort() {
+            if (!soundEnabled) return;
+            initAudioContext();
+            if (!audioCtx) return;
+
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = "sawtooth";
+            osc.frequency.setValueAtTime(440, now);
+            osc.frequency.linearRampToValueAtTime(510, now + 0.12);
+            osc.frequency.linearRampToValueAtTime(460, now + 0.25);
+
+            gain.gain.setValueAtTime(0.04, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.27);
+        }
+
+        /**
+         * TRẠNG THÁI TRÒ CHƠI & DANH SÁCH HỌC SINH
+         */
+        const canvas = document.getElementById("game-canvas");
+        const ctx = canvas.getContext("2d");
+
+        let allStudents = [];       // Toàn bộ danh sách lớp
+        let activeMosquitoes = [];  // Các con muỗi đang bay trên màn hình
+        let caughtHistory = [];     // Danh sách học sinh đã bị đập trúng
+
+        let mysteryMode = false;    // true = Ẩn tên trên muỗi (chỉ hiện ?)
+        let speedLevels = [
+            { label: "Chậm", mult: 0.6 },
+            { label: "Vừa", mult: 1.0 },
+            { label: "Nhanh", mult: 1.65 },
+            { label: "Siêu tốc", mult: 2.4 }
+        ];
+        let currentSpeedIdx = 1;
+
+        // Trạng thái Ông Thầy & Cú Đập 2 Tay (Clap State Machine)
+        // state: 'IDLE' | 'WINDUP' | 'CLAPPING' | 'HOLD_CLAP' | 'RETURNING'
+        let teacher = {
+            x: 0,
+            y: 0,
+            state: "IDLE",
+            stateTimer: 0,
+            eyeTargetX: 0,
+            eyeTargetY: 0,
+            sweatDropY: 0,
+            // Tọa độ hai bàn tay của thầy
+            leftHand: { x: 0, y: 0, homeX: 0, homeY: 0, angle: -0.25 },
+            rightHand: { x: 0, y: 0, homeX: 0, homeY: 0, angle: 0.25 },
+            // Mục tiêu đập
+            clapTargetX: 0,
+            clapTargetY: 0,
+            targetMosquito: null
+        };
+
+        // Hiệu ứng sóng xung kích & chữ truyện tranh "BỐP!!"
+        let shockwaves = [];
+        let floatingPopups = [];
+        let lastPendingWinner = null;
+
+        /**
+         * KHỞI TẠO KÍCH THƯỚC CANVAS & VỊ TRÍ ÔNG THẦY
+         */
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            // Ông thầy đứng ở trung tâm phía dưới màn hình
+            teacher.x = canvas.width * 0.5;
+            teacher.y = canvas.height * 0.62;
+
+            teacher.leftHand.homeX = teacher.x - 165;
+            teacher.leftHand.homeY = teacher.y + 10;
+            teacher.rightHand.homeX = teacher.x + 165;
+            teacher.rightHand.homeY = teacher.y + 10;
+
+            if (teacher.state === "IDLE") {
+                teacher.leftHand.x = teacher.leftHand.homeX;
+                teacher.leftHand.y = teacher.leftHand.homeY;
+                teacher.rightHand.x = teacher.rightHand.homeX;
+                teacher.rightHand.y = teacher.rightHand.homeY;
+            }
+        }
+
+        window.addEventListener("resize", resizeCanvas);
+
+        /**
+         * TẠO ĐỐI TƯỢNG CON MUỖI HỌC SINH
+         */
+        const MOSQUITO_COLORS = [
+            "#38bdf8", "#fbbf24", "#f472b6", "#34d399", "#a78bfa", "#fb923c", "#2dd4bf"
+        ];
+
+        function createMosquito(studentName, index) {
+            const marginX = 90;
+            const marginTop = 85;
+            const marginBottom = 140;
+            const w = Math.max(400, canvas.width);
+            const h = Math.max(400, canvas.height);
+
+            const angle = Math.random() * Math.PI * 2;
+            const baseSpeed = 1.6 + Math.random() * 1.4;
+
+            return {
+                id: "m_" + Date.now() + "_" + index + "_" + Math.random(),
+                name: studentName,
+                x: marginX + Math.random() * (w - marginX * 2),
+                y: marginTop + Math.random() * (h - marginTop - marginBottom),
+                vx: Math.cos(angle) * baseSpeed,
+                vy: Math.sin(angle) * baseSpeed,
+                wingPhase: Math.random() * Math.PI * 2,
+                bobPhase: Math.random() * Math.PI * 2,
+                color: MOSQUITO_COLORS[index % MOSQUITO_COLORS.length],
+                facingRight: Math.cos(angle) >= 0,
+                isPinned: false,
+                dizzyAngle: 0
+            };
+        }
+
+        /**
+         * LƯU & TẢI DANH SÁCH HỌC SINH TỪ LOCALSTORAGE
+         */
+        function loadSavedStudents() {
+            try {
+                const saved = localStorage.getItem("DAP_MUOI_STUDENTS_V1");
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        allStudents = parsed;
+                        rebuildMosquitoSwarm();
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.warn("Không thể đọc LocalStorage:", e);
+            }
+            allStudents = [...SAMPLE_PRESETS.class30];
+            rebuildMosquitoSwarm();
+        }
+
+        function saveStudentsToStorage() {
+            try {
+                localStorage.setItem("DAP_MUOI_STUDENTS_V1", JSON.stringify(allStudents));
+            } catch (e) {
+                console.warn("Không thể lưu LocalStorage:", e);
+            }
+        }
+
+        /**
+         * ĐỒNG BỘ DANH SÁCH LỚP 10A1 THEO THỜI GIAN THỰC (FIREBASE — lop10a1/roster)
+         * Nhánh này công khai cho XEM (không cần đăng nhập), dùng CHUNG với Sơ đồ lớp/Ban cán
+         * sự/... ở trang chính — sửa danh sách lớp ở đâu cũng tự phản ánh đúng ở đây, không cần
+         * dán tay lại mỗi lần mở game. Thầy vẫn có thể tự dán 1 danh sách khác (nhóm nhỏ, lớp
+         * khác...) — lúc đó game sẽ NGỪNG tự theo lớp 10A1 cho đến khi bấm lại nút "📡 Danh sách
+         * lớp 10A1 (tự động)" trong hộp thoại, để tránh đang chọn giữa chừng bị đổi danh sách bất
+         * ngờ khi có ai đó sửa danh sách lớp.
+         */
+        let dongBoLopBat = true;       // true = đang tự động theo danh sách lớp 10A1 (Firebase)
+        let rosterNamesHienTai = [];   // cache tên học sinh mới nhất đọc được từ Firebase
+        let daCoRosterLanDau = false;
+        try {
+            // Nhớ lại lựa chọn (tự động / tùy chỉnh) của lần mở gần nhất, để F5 lại trang giữa
+            // lúc đang dùng danh sách tùy chỉnh (nhóm nhỏ...) không bị snap về cả lớp bất ngờ.
+            const daLuu = localStorage.getItem("DAP_MUOI_DONGBO_LOP_V1");
+            if (daLuu === "0") dongBoLopBat = false;
+        } catch (e) {}
+
+        function capNhatBaoDongBo() {
+            const el = document.getElementById("modal-sync-status");
+            if (!el) return;
+            if (dongBoLopBat) {
+                el.className = "text-xs mt-0.5 text-emerald-400";
+                el.innerHTML = rosterNamesHienTai.length
+                    ? `<i class="fa-solid fa-tower-broadcast"></i> Đang tự động theo danh sách lớp 10A1 (${rosterNamesHienTai.length} học sinh) — tự cập nhật ngay khi lớp đổi danh sách.`
+                    : `<i class="fa-solid fa-tower-broadcast"></i> Đang chờ tải danh sách lớp 10A1 từ máy chủ...`;
+            } else {
+                el.className = "text-xs mt-0.5 text-amber-400";
+                el.innerHTML = `<i class="fa-solid fa-hand"></i> Đang dùng danh sách TÙY CHỈNH — bấm "📡 Danh sách lớp 10A1 (tự động)" rồi Lưu để đồng bộ lại.`;
+            }
+        }
+
+        function dungDanhSachLopLive() {
+            const textarea = document.getElementById("student-textarea");
+            textarea.value = rosterNamesHienTai.join("\n");
+            updateTextareaCount();
+        }
+
+        (function khoiTaoDongBoLopHocFirebase() {
+            try {
+                const firebaseConfig = {
+                    apiKey: "AIzaSyA-SI1MkDOCCEFSyvUU2McqtZGSd5CEbkw",
+                    authDomain: "sodolop10a1.firebaseapp.com",
+                    databaseURL: "https://sodolop10a1-default-rtdb.asia-southeast1.firebasedatabase.app",
+                    projectId: "sodolop10a1",
+                    storageBucket: "sodolop10a1.firebasestorage.app",
+                    messagingSenderId: "920106392128",
+                    appId: "1:920106392128:web:4739789c3705a57d9b9da5"
+                };
+                firebase.initializeApp(firebaseConfig);
+                const rosterRefDapMuoi = firebase.database().ref('lop10a1/roster');
+                rosterRefDapMuoi.on('value', function (snap) {
+                    const v = snap.val();
+                    const ds = !v ? [] : (Array.isArray(v) ? v.filter(Boolean) : Object.values(v));
+                    rosterNamesHienTai = ds.map(function (hs) { return (hs && hs.name) ? String(hs.name).trim() : ''; }).filter(Boolean);
+                    if (dongBoLopBat && rosterNamesHienTai.length) {
+                        allStudents = rosterNamesHienTai.slice();
+                        saveStudentsToStorage();
+                        rebuildMosquitoSwarm();
+                    }
+                    daCoRosterLanDau = true;
+                    capNhatBaoDongBo();
+                }, function (err) {
+                    console.warn("Không đọc được danh sách lớp 10A1 (lop10a1/roster):", err);
+                });
+            } catch (e) {
+                console.warn("Không khởi tạo được Firebase cho Đập muỗi:", e);
+            }
+        })();
+
+        function rebuildMosquitoSwarm() {
+            activeMosquitoes = allStudents.map((name, idx) => createMosquito(name, idx));
+            updateHUDCounters();
+        }
+
+        function restoreAllMosquitoes() {
+            rebuildMosquitoSwarm();
+            floatingPopups.push({
+                x: canvas.width / 2,
+                y: canvas.height * 0.25,
+                text: "ĐÃ THẢ LẠI CẢ BẦY MUỖI!",
+                color: "#34d399",
+                alpha: 1,
+                scale: 1
+            });
+        }
+
+        function updateHUDCounters() {
+            document.getElementById("hud-active-count").textContent = activeMosquitoes.length;
+            document.getElementById("hud-caught-count").textContent = caughtHistory.length;
+            document.getElementById("badge-history").textContent = caughtHistory.length;
+        }
+
+        /**
+         * CẬP NHẬT CHUYỂN ĐỘNG CỦA ĐÀN MUỖI & ÔNG THẦY
+         */
+        function updateGame(dt) {
+            const speedMult = speedLevels[currentSpeedIdx].mult;
+            const leftBound = 70;
+            const rightBound = canvas.width - 70;
+            const topBound = 85;
+            const bottomBound = canvas.height - 135;
+
+            // 1. Cập nhật từng con muỗi trong đàn
+            activeMosquitoes.forEach(m => {
+                if (m.isPinned) {
+                    // Con muỗi đang bị 2 tay thầy kẹp trúng
+                    m.x = teacher.clapTargetX;
+                    m.y = teacher.clapTargetY;
+                    m.dizzyAngle += 0.25;
+                    return;
+                }
+
+                m.wingPhase += 0.85;
+                m.bobPhase += 0.08;
+
+                // Thêm nhiễu lượn sóng tự nhiên kiểu muỗi bay
+                m.vx += (Math.random() - 0.5) * 0.22;
+                m.vy += (Math.random() - 0.5) * 0.22;
+
+                // Giới hạn tốc độ tối đa/tối thiểu
+                const currentSpd = Math.hypot(m.vx, m.vy) || 1;
+                const maxSpd = 2.6;
+                const minSpd = 1.1;
+                if (currentSpd > maxSpd) {
+                    m.vx = (m.vx / currentSpd) * maxSpd;
+                    m.vy = (m.vy / currentSpd) * maxSpd;
+                } else if (currentSpd < minSpd) {
+                    m.vx = (m.vx / currentSpd) * minSpd;
+                    m.vy = (m.vy / currentSpd) * minSpd;
+                }
+
+                m.x += m.vx * speedMult;
+                m.y += m.vy * speedMult + Math.sin(m.bobPhase) * 0.65;
+
+                // Phản xạ khi chạm mép màn hình
+                if (m.x < leftBound) { m.x = leftBound; m.vx = Math.abs(m.vx); }
+                if (m.x > rightBound) { m.x = rightBound; m.vx = -Math.abs(m.vx); }
+                if (m.y < topBound) { m.y = topBound; m.vy = Math.abs(m.vy); }
+                if (m.y > bottomBound) { m.y = bottomBound; m.vy = -Math.abs(m.vy); }
+
+                m.facingRight = m.vx >= 0;
+            });
+
+            // 2. Mắt ông thầy liếc nhìn theo con muỗi gần đầu thầy nhất
+            if (teacher.state === "IDLE" && activeMosquitoes.length > 0) {
+                let nearest = activeMosquitoes[0];
+                let minDist = Infinity;
+                const headY = teacher.y - 95;
+                activeMosquitoes.forEach(m => {
+                    const d = Math.hypot(m.x - teacher.x, m.y - headY);
+                    if (d < minDist) {
+                        minDist = d;
+                        nearest = m;
+                    }
+                });
+                teacher.eyeTargetX += (nearest.x - teacher.eyeTargetX) * 0.12;
+                teacher.eyeTargetY += (nearest.y - teacher.eyeTargetY) * 0.12;
+            } else if (teacher.state !== "IDLE") {
+                teacher.eyeTargetX += (teacher.clapTargetX - teacher.eyeTargetX) * 0.3;
+                teacher.eyeTargetY += (teacher.clapTargetY - teacher.eyeTargetY) * 0.3;
+            }
+
+            // Giọt mồ hôi trên trán thầy
+            teacher.sweatDropY = (teacher.sweatDropY + 0.15) % 12;
+
+            // 3. Xử lý hoạt cảnh 2 bàn tay thầy ĐẬP VÀO NHAU
+            updateTeacherHandsAnimation();
+
+            // 4. Cập nhật hiệu ứng Shockwave & Chữ nổi "BỐP!!"
+            for (let i = shockwaves.length - 1; i >= 0; i--) {
+                const sw = shockwaves[i];
+                sw.radius += 7.5;
+                sw.alpha -= 0.045;
+                if (sw.alpha <= 0) shockwaves.splice(i, 1);
+            }
+
+            for (let i = floatingPopups.length - 1; i >= 0; i--) {
+                const fp = floatingPopups[i];
+                fp.y -= 1.2;
+                fp.alpha -= 0.022;
+                if (fp.alpha <= 0) floatingPopups.splice(i, 1);
+            }
+        }
+
+        /**
+         * MÁY TRẠNG THÁI HOẠT HÌNH 2 BÀN TAY THẦY ĐẬP MUỖI
+         */
+        function updateTeacherHandsAnimation() {
+            const lh = teacher.leftHand;
+            const rh = teacher.rightHand;
+            const time = performance.now() * 0.004;
+
+            if (teacher.state === "IDLE") {
+                // Hai tay thầy đung đưa nhẹ ở tư thế chuẩn bị
+                const bobL = Math.sin(time) * 8;
+                const bobR = Math.cos(time) * 8;
+                lh.x += (lh.homeX - lh.x) * 0.15;
+                lh.y += (lh.homeY + bobL - lh.y) * 0.15;
+                rh.x += (rh.homeX - rh.x) * 0.15;
+                rh.y += (rh.homeY + bobR - rh.y) * 0.15;
+                lh.angle = -0.25 + Math.sin(time) * 0.06;
+                rh.angle = 0.25 - Math.sin(time) * 0.06;
+            } 
+            else if (teacher.state === "WINDUP") {
+                // Bước 1: Hai bàn tay dang rộng sang hai bên con muỗi mục tiêu để lấy đà
+                teacher.stateTimer++;
+                const spreadOffset = 145;
+                const targetLX = teacher.clapTargetX - spreadOffset;
+                const targetLY = teacher.clapTargetY;
+                const targetRX = teacher.clapTargetX + spreadOffset;
+                const targetRY = teacher.clapTargetY;
+
+                lh.x += (targetLX - lh.x) * 0.32;
+                lh.y += (targetLY - lh.y) * 0.32;
+                rh.x += (targetRX - rh.x) * 0.32;
+                rh.y += (targetRY - rh.y) * 0.32;
+                lh.angle = -0.55;
+                rh.angle = 0.55;
+
+                // Giữ con muỗi mục tiêu bay chậm lại quanh điểm ngắm để đập bách phát bách trúng
+                if (teacher.targetMosquito) {
+                    teacher.clapTargetX = teacher.targetMosquito.x;
+                    teacher.clapTargetY = teacher.targetMosquito.y;
+                }
+
+                if (teacher.stateTimer >= 14) {
+                    teacher.state = "CLAPPING";
+                    teacher.stateTimer = 0;
+                    if (teacher.targetMosquito) {
+                        teacher.targetMosquito.isPinned = true;
+                        teacher.clapTargetX = teacher.targetMosquito.x;
+                        teacher.clapTargetY = teacher.targetMosquito.y;
+                    }
+                }
+            } 
+            else if (teacher.state === "CLAPPING") {
+                // Bước 2: Hai bàn tay lao cực nhanh chập sát vào nhau tại đúng vị trí con muỗi!
+                teacher.stateTimer++;
+                const targetLX = teacher.clapTargetX - 14;
+                const targetRX = teacher.clapTargetX + 14;
+
+                lh.x += (targetLX - lh.x) * 0.55;
+                lh.y += (teacher.clapTargetY - lh.y) * 0.55;
+                rh.x += (targetRX - rh.x) * 0.55;
+                rh.y += (teacher.clapTargetY - rh.y) * 0.55;
+                lh.angle = -0.08;
+                rh.angle = 0.08;
+
+                if (teacher.stateTimer >= 6) {
+                    // KÍCH HOẠT HIỆU ỨNG VA CHẠM "BỐP!!"
+                    teacher.state = "HOLD_CLAP";
+                    teacher.stateTimer = 0;
+                    playClapSlapSound();
+                    triggerScreenShake();
+
+                    shockwaves.push({
+                        x: teacher.clapTargetX,
+                        y: teacher.clapTargetY,
+                        radius: 15,
+                        alpha: 1.0
+                    });
+
+                    floatingPopups.push({
+                        x: teacher.clapTargetX,
+                        y: teacher.clapTargetY - 45,
+                        text: "BỐP!! TRÚNG RỒI!",
+                        color: "#fbbf24",
+                        alpha: 1.0
+                    });
+                }
+            } 
+            else if (teacher.state === "HOLD_CLAP") {
+                // Bước 3: Giữ 2 tay ép chặt một nhịp ngắn rồi mở bảng vinh danh học sinh
+                teacher.stateTimer++;
+                if (teacher.stateTimer === 24) {
+                    if (teacher.targetMosquito) {
+                        showWinnerModal(teacher.targetMosquito);
+                    }
+                    teacher.state = "RETURNING";
+                    teacher.stateTimer = 0;
+                }
+            } 
+            else if (teacher.state === "RETURNING") {
+                // Bước 4: Đưa hai tay thầy trở về vị trí nghỉ
+                teacher.stateTimer++;
+                lh.x += (lh.homeX - lh.x) * 0.18;
+                lh.y += (lh.homeY - lh.y) * 0.18;
+                rh.x += (rh.homeX - rh.x) * 0.18;
+                rh.y += (rh.homeY - rh.y) * 0.18;
+
+                if (teacher.stateTimer >= 18) {
+                    teacher.state = "IDLE";
+                    teacher.targetMosquito = null;
+                }
+            }
+        }
+
+        function triggerScreenShake() {
+            const wrapper = document.getElementById("game-wrapper");
+            wrapper.classList.remove("screen-shake");
+            void wrapper.offsetWidth;
+            wrapper.classList.add("screen-shake");
+        }
+
+        /**
+         * KÍCH HOẠT THAO TÁC ĐẬP MUỖI (NGẪU NHIÊN HOẶC CLICK CHUỘT)
+         */
+        function triggerRandomSlap() {
+            // Không đập khi đang trong chu trình đập hoặc đang mở Modal
+            const winnerModal = document.getElementById("winner-modal");
+            if (teacher.state !== "IDLE" || !winnerModal.classList.contains("hidden")) return;
+
+            if (activeMosquitoes.length === 0) {
+                restoreAllMosquitoes();
+                return;
+            }
+
+            // Chọn ngẫu nhiên công bằng 1 con muỗi trong đàn
+            const randomIndex = Math.floor(Math.random() * activeMosquitoes.length);
+            const chosenMosquito = activeMosquitoes[randomIndex];
+            startClapOnMosquito(chosenMosquito);
+        }
+
+        function startClapOnMosquito(chosenMosquito) {
+            playMosquitoBuzzShort();
+            setTimeout(() => playSwooshSound(), 90);
+
+            teacher.targetMosquito = chosenMosquito;
+            teacher.clapTargetX = chosenMosquito.x;
+            teacher.clapTargetY = chosenMosquito.y;
+            teacher.state = "WINDUP";
+            teacher.stateTimer = 0;
+        }
+
+        // Cho phép giáo viên click trực tiếp vào màn hình để đập con muỗi gần điểm click nhất
+        canvas.addEventListener("pointerdown", (e) => {
+            if (teacher.state !== "IDLE") return;
+            if (activeMosquitoes.length === 0) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            // Tìm con muỗi gần vị trí click nhất
+            let closest = activeMosquitoes[0];
+            let minDist = Infinity;
+            activeMosquitoes.forEach(m => {
+                const d = Math.hypot(m.x - clickX, m.y - clickY);
+                if (d < minDist) {
+                    minDist = d;
+                    closest = m;
+                }
+            });
+
+            startClapOnMosquito(closest);
+        });
+
+        /**
+         * VẼ TOÀN BỘ KHUNG CẢNH LỚP HỌC, ÔNG THẦY, ĐÀN MUỖI & ĐÔI BÀN TAY
+         */
+        function renderGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Vẽ nền phòng học & Bảng phấn xanh
+            drawClassroomBackground();
+
+            // 2. Vẽ nhân vật Ông Thầy Giáo ở trung tâm
+            drawTeacherCharacter();
+
+            // 3. Vẽ đàn muỗi đang bay xung quanh
+            activeMosquitoes.forEach(m => {
+                drawMosquito(m);
+            });
+
+            // 4. Vẽ cánh tay và 2 bàn tay lớn của Ông Thầy (nằm lớp trên để kẹp con muỗi)
+            drawTeacherArmsAndHands();
+
+            // 5. Vẽ hiệu ứng sóng xung kích (Shockwave) & Chữ truyện tranh "BỐP!!"
+            drawImpactEffects();
+        }
+
+        function drawClassroomBackground() {
+            const w = canvas.width;
+            const h = canvas.height;
+
+            // Tường lớp học ấm áp hiện đại
+            const wallGrad = ctx.createLinearGradient(0, 0, 0, h);
+            wallGrad.addColorStop(0, "#1e293b");
+            wallGrad.addColorStop(0.75, "#334155");
+            wallGrad.addColorStop(1, "#0f172a");
+            ctx.fillStyle = wallGrad;
+            ctx.fillRect(0, 0, w, h);
+
+            // Bảng phấn xanh lớn phía sau lưng thầy
+            const boardW = Math.min(w * 0.84, 1050);
+            const boardH = Math.min(h * 0.56, 430);
+            const boardX = (w - boardW) / 2;
+            const boardY = Math.max(72, h * 0.11);
+
+            // Viền gỗ của bảng
+            ctx.fillStyle = "#b45309";
+            ctx.beginPath();
+            ctx.roundRect(boardX - 12, boardY - 12, boardW + 24, boardH + 24, 18);
+            ctx.fill();
+
+            // Mặt bảng xanh rêu
+            const boardGrad = ctx.createRadialGradient(w / 2, boardY + boardH / 2, 30, w / 2, boardY + boardH / 2, boardW * 0.7);
+            boardGrad.addColorStop(0, "#065f46");
+            boardGrad.addColorStop(1, "#064e3b");
+            ctx.fillStyle = boardGrad;
+            ctx.beginPath();
+            ctx.roundRect(boardX, boardY, boardW, boardH, 10);
+            ctx.fill();
+
+            // Chữ viết phấn nổi bật trên bảng xanh phía sau Thầy Nhân
+            ctx.save();
+            ctx.textAlign = "center";
+            ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
+            ctx.font = "800 32px 'Baloo 2', sans-serif";
+            ctx.fillText("THẦY NHÂN VÀ BẦY MUỖI", w / 2, boardY + 48);
+
+            ctx.textAlign = "left";
+            ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
+            ctx.font = "bold 16px 'Be Vietnam Pro', sans-serif";
+            ctx.fillText("Lớp học Vật lí - KHTN", boardX + 26, boardY + 38);
+
+            ctx.textAlign = "right";
+            ctx.fillText("W = Wđ + Wt   •   A = F.s   •   I = U / R", boardX + boardW - 26, boardY + 38);
+            ctx.restore();
+
+            // Mặt bàn giáo viên phía dưới
+            const deskY = teacher.y + 115;
+            ctx.fillStyle = "#78350f";
+            ctx.fillRect(0, deskY, w, h - deskY);
+            ctx.fillStyle = "#92400e";
+            ctx.fillRect(0, deskY, w, 16);
+        }
+
+        /**
+         * VẼ NHÂN VẬT ÔNG THẦY GIÁO (BIỂU CẢM THEO TRẠNG THÁI ĐẬP MUỖI)
+         */
+        function drawTeacherCharacter() {
+            const tx = teacher.x;
+            const ty = teacher.y;
+            const isAction = teacher.state !== "IDLE";
+
+            ctx.save();
+
+            // 1. Thân áo sơ mi xanh nhạt lịch sự của Thầy Nhân
+            ctx.fillStyle = "#bae6fd";
+            ctx.beginPath();
+            ctx.roundRect(tx - 95, ty - 20, 190, 145, [45, 45, 10, 10]);
+            ctx.fill();
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = "#0f172a";
+            ctx.stroke();
+
+            // Cổ áo sơ mi trắng chữ V
+            ctx.fillStyle = "#f8fafc";
+            ctx.beginPath();
+            ctx.moveTo(tx - 38, ty - 20);
+            ctx.lineTo(tx + 38, ty - 20);
+            ctx.lineTo(tx, ty + 48);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Cà vạt đỏ nổi bật của Thầy Nhân
+            ctx.fillStyle = "#e11d48";
+            ctx.beginPath();
+            ctx.moveTo(tx - 10, ty - 12);
+            ctx.lineTo(tx + 10, ty - 12);
+            ctx.lineTo(tx + 15, ty + 68);
+            ctx.lineTo(tx, ty + 84);
+            ctx.lineTo(tx - 15, ty + 68);
+            ctx.closePath();
+            ctx.fill();
+
+            // Bảng tên nhỏ "Thầy Nhân" cài trên ngực áo
+            ctx.fillStyle = "#fef08a";
+            ctx.strokeStyle = "#b45309";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(tx + 24, ty + 20, 58, 22, 6);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = "#0f172a";
+            ctx.font = "bold 10px 'Be Vietnam Pro', sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("Thầy Nhân", tx + 53, ty + 31);
+
+            // 2. Cổ và Đầu Ông Thầy
+            ctx.fillStyle = "#fed7aa";
+            ctx.fillRect(tx - 22, ty - 45, 44, 32);
+
+            const headY = ty - 95;
+            // Hai tai
+            ctx.fillStyle = "#fdba74";
+            ctx.beginPath();
+            ctx.arc(tx - 68, headY + 4, 14, 0, Math.PI * 2);
+            ctx.arc(tx + 68, headY + 4, 14, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Khuôn mặt tròn phúc hậu
+            ctx.fillStyle = "#ffedd5";
+            ctx.beginPath();
+            ctx.arc(tx, headY, 68, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = "#1e293b";
+            ctx.stroke();
+
+            // Mái tóc thầy giáo (có chỏm tóc vui nhộn)
+            ctx.fillStyle = "#1e293b";
+            ctx.beginPath();
+            ctx.arc(tx, headY - 12, 69, Math.PI * 1.08, Math.PI * 1.92);
+            ctx.fill();
+            // Chỏm tóc dựng lên vì bị muỗi trêu
+            ctx.beginPath();
+            ctx.moveTo(tx - 10, headY - 78);
+            ctx.quadraticCurveTo(tx + 5, headY - 105, tx + 22, headY - 82);
+            ctx.lineWidth = 6;
+            ctx.strokeStyle = "#1e293b";
+            ctx.lineCap = "round";
+            ctx.stroke();
+
+            // 3. Kính cận & Đôi mắt liếc nhìn theo đàn muỗi
+            const eyeOffsetX = 25;
+            const eyeY = headY - 4;
+
+            // Tính góc liếc của con ngươi mắt hướng về con muỗi
+            const angleL = Math.atan2(teacher.eyeTargetY - eyeY, teacher.eyeTargetX - (tx - eyeOffsetX));
+            const angleR = Math.atan2(teacher.eyeTargetY - eyeY, teacher.eyeTargetX - (tx + eyeOffsetX));
+            const pupilDist = 6.5;
+
+            // Tròng trắng mắt
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.arc(tx - eyeOffsetX, eyeY, 16, 0, Math.PI * 2);
+            ctx.arc(tx + eyeOffsetX, eyeY, 16, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = "#0f172a";
+            ctx.stroke();
+
+            // Con ngươi mắt
+            ctx.fillStyle = "#0f172a";
+            ctx.beginPath();
+            ctx.arc(tx - eyeOffsetX + Math.cos(angleL) * pupilDist, eyeY + Math.sin(angleL) * pupilDist, 6.5, 0, Math.PI * 2);
+            ctx.arc(tx + eyeOffsetX + Math.cos(angleR) * pupilDist, eyeY + Math.sin(angleR) * pupilDist, 6.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Đốm sáng trong mắt
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.arc(tx - eyeOffsetX + Math.cos(angleL) * pupilDist - 2, eyeY + Math.sin(angleL) * pupilDist - 2, 2.2, 0, Math.PI * 2);
+            ctx.arc(tx + eyeOffsetX + Math.cos(angleR) * pupilDist - 2, eyeY + Math.sin(angleR) * pupilDist - 2, 2.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Gọng kính thầy giáo
+            ctx.strokeStyle = "#d97706";
+            ctx.lineWidth = 3.5;
+            ctx.beginPath();
+            ctx.moveTo(tx - 9, eyeY);
+            ctx.lineTo(tx + 9, eyeY);
+            ctx.stroke();
+
+            // 4. Lông mày & Biểu cảm miệng của thầy
+            ctx.strokeStyle = "#1e293b";
+            ctx.lineWidth = 5;
+            ctx.lineCap = "round";
+            if (isAction) {
+                // Lông mày nhíu lại đầy quyết tâm khi đập muỗi!
+                ctx.beginPath();
+                ctx.moveTo(tx - 42, eyeY - 26);
+                ctx.lineTo(tx - 12, eyeY - 18);
+                ctx.moveTo(tx + 42, eyeY - 26);
+                ctx.lineTo(tx + 12, eyeY - 18);
+                ctx.stroke();
+
+                // Miệng cười lớn chiến thắng hoặc hô "BỐP!"
+                ctx.fillStyle = "#991b1b";
+                ctx.beginPath();
+                ctx.arc(tx, headY + 28, 18, 0, Math.PI);
+                ctx.fill();
+                ctx.stroke();
+            } else {
+                // Lông mày hơi nhăn hài hước vì đàn muỗi bay vo ve quanh đầu
+                ctx.beginPath();
+                ctx.moveTo(tx - 40, eyeY - 22);
+                ctx.lineTo(tx - 14, eyeY - 26);
+                ctx.moveTo(tx + 40, eyeY - 22);
+                ctx.lineTo(tx + 14, eyeY - 26);
+                ctx.stroke();
+
+                // Miệng mím lại rình đập muỗi
+                ctx.beginPath();
+                ctx.moveTo(tx - 16, headY + 32);
+                ctx.quadraticCurveTo(tx, headY + 24, tx + 16, headY + 32);
+                ctx.stroke();
+
+                // Giọt mồ hôi hoạt hình trên trán thầy
+                ctx.fillStyle = "#38bdf8";
+                ctx.beginPath();
+                const dropX = tx + 46;
+                const dropY = headY - 34 + teacher.sweatDropY;
+                ctx.arc(dropX, dropY, 5.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        /**
+         * VẼ CÁNH TAY & HAI BÀN TAY CỦA ÔNG THẦY (KẸP CHẬP VÀO NHAU KHI ĐẬP)
+         */
+        function drawTeacherArmsAndHands() {
+            const leftShoulderX = teacher.x - 80;
+            const leftShoulderY = teacher.y + 10;
+            const rightShoulderX = teacher.x + 80;
+            const rightShoulderY = teacher.y + 10;
+
+            const lh = teacher.leftHand;
+            const rh = teacher.rightHand;
+
+            ctx.save();
+            // Vẽ ống tay áo sơ mi xanh nhạt nối từ vai Thầy Nhân tới 2 bàn tay
+            ctx.strokeStyle = "#7dd3fc";
+            ctx.lineWidth = 24;
+            ctx.lineCap = "round";
+
+            // Cánh tay trái
+            ctx.beginPath();
+            ctx.moveTo(leftShoulderX, leftShoulderY);
+            ctx.quadraticCurveTo((leftShoulderX + lh.x) / 2 - 30, (leftShoulderY + lh.y) / 2 + 30, lh.x, lh.y);
+            ctx.stroke();
+
+            // Cánh tay phải
+            ctx.beginPath();
+            ctx.moveTo(rightShoulderX, rightShoulderY);
+            ctx.quadraticCurveTo((rightShoulderX + rh.x) / 2 + 30, (rightShoulderY + rh.y) / 2 + 30, rh.x, rh.y);
+            ctx.stroke();
+
+            // Vẽ Bàn Tay Trái & Bàn Tay Phải
+            drawSinglePalm(lh.x, lh.y, lh.angle, true);
+            drawSinglePalm(rh.x, rh.y, rh.angle, false);
+            ctx.restore();
+        }
+
+        function drawSinglePalm(x, y, angle, isLeft) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            if (!isLeft) ctx.scale(-1, 1);
+
+            // Cổ tay áo sơ mi trắng
+            ctx.fillStyle = "#f8fafc";
+            ctx.strokeStyle = "#0f172a";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.roundRect(-22, 16, 44, 16, 6);
+            ctx.fill();
+            ctx.stroke();
+
+            // Lòng bàn tay mở rộng sẵn sàng đập muỗi
+            ctx.fillStyle = "#fed7aa";
+            ctx.strokeStyle = "#1e293b";
+            ctx.lineWidth = 3.5;
+
+            ctx.beginPath();
+            ctx.arc(0, 0, 26, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // 4 ngón tay xòe lên
+            const fingerAngles = [-0.45, -0.15, 0.15, 0.42];
+            fingerAngles.forEach(fa => {
+                ctx.save();
+                ctx.rotate(fa);
+                ctx.beginPath();
+                ctx.roundRect(-6, -44, 12, 26, 6);
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            });
+
+            // Ngón cái
+            ctx.save();
+            ctx.rotate(0.85);
+            ctx.beginPath();
+            ctx.roundRect(10, -18, 12, 22, 6);
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.restore();
+        }
+
+        /**
+         * VẼ CON MUỖI HỌC SINH DỄ THƯƠNG KÈM NHÃN TÊN (NAME TAG)
+         */
+        function drawMosquito(m) {
+            ctx.save();
+            ctx.translate(m.x, m.y);
+
+            const dir = m.facingRight ? 1 : -1;
+            const wingFlap = Math.sin(m.wingPhase) * 14;
+
+            // 1. Đôi cánh mỏng vỗ liên tục
+            ctx.fillStyle = "rgba(224, 242, 254, 0.78)";
+            ctx.strokeStyle = "#38bdf8";
+            ctx.lineWidth = 1.5;
+
+            // Cánh trái & phải
+            ctx.beginPath();
+            ctx.ellipse(-8, -14 + wingFlap * 0.4, 15, 7, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.ellipse(8, -14 - wingFlap * 0.4, 15, 7, 0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // 2. Chân muỗi lòng thòng phía dưới
+            ctx.strokeStyle = "#1e293b";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-6, 8); ctx.lineTo(-14, 18);
+            ctx.moveTo(0, 10); ctx.lineTo(0, 20);
+            ctx.moveTo(6, 8); ctx.lineTo(14, 18);
+            ctx.stroke();
+
+            // 3. Bụng & Thân muỗi có vằn màu sắc
+            ctx.fillStyle = m.color;
+            ctx.strokeStyle = "#0f172a";
+            ctx.lineWidth = 2.2;
+            ctx.beginPath();
+            ctx.ellipse(0, 2, 13, 9, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // 4. Đầu muỗi & Vòi nhọn
+            const headX = dir * 12;
+            const headY = -3;
+
+            // Vòi muỗi (Kim chích)
+            ctx.strokeStyle = "#e11d48";
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(headX + dir * 6, headY + 2);
+            ctx.lineTo(headX + dir * 20, headY + 5);
+            ctx.stroke();
+
+            // Đầu tròn
+            ctx.fillStyle = "#334155";
+            ctx.beginPath();
+            ctx.arc(headX, headY, 8.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#0f172a";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Mắt to hài hước
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.arc(headX + dir * 3, headY - 2, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = "#0f172a";
+            ctx.beginPath();
+            ctx.arc(headX + dir * 4, headY - 2, 2.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 5. Nhãn tên học sinh (Name Tag) treo ngay dưới con muỗi
+            const displayLabel = mysteryMode ? "🦟 ???" : m.name;
+            ctx.font = "700 13px 'Be Vietnam Pro', sans-serif";
+            const textMetrics = ctx.measureText(displayLabel);
+            const pillW = textMetrics.width + 18;
+            const pillH = 24;
+            const pillX = -pillW / 2;
+            const pillY = 20;
+
+            // Nền thẻ tên
+            ctx.fillStyle = "rgba(15, 23, 42, 0.88)";
+            ctx.strokeStyle = m.color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(pillX, pillY, pillW, pillH, 8);
+            ctx.fill();
+            ctx.stroke();
+
+            // Chữ tên học sinh
+            ctx.fillStyle = "#f8fafc";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(displayLabel, 0, pillY + pillH / 2 + 0.5);
+
+            ctx.restore();
+        }
+
+        /**
+         * VẼ SÓNG XUNG KÍCH & CHỮ "BỐP!!" KHI 2 TAY ĐẬP TRÚNG MUỖI
+         */
+        function drawImpactEffects() {
+            // Vòng tròn xung kích
+            shockwaves.forEach(sw => {
+                ctx.save();
+                ctx.strokeStyle = `rgba(251, 191, 36, ${sw.alpha})`;
+                ctx.lineWidth = 6;
+                ctx.beginPath();
+                ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Ngôi sao tia chớp truyện tranh
+                ctx.fillStyle = `rgba(244, 63, 94, ${sw.alpha * 0.85})`;
+                ctx.beginPath();
+                const spikes = 10;
+                for (let i = 0; i < spikes * 2; i++) {
+                    const r = i % 2 === 0 ? sw.radius * 0.85 : sw.radius * 0.45;
+                    const a = (i * Math.PI) / spikes;
+                    const px = sw.x + Math.cos(a) * r;
+                    const py = sw.y + Math.sin(a) * r;
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // Chữ bay lên
+            floatingPopups.forEach(fp => {
+                ctx.save();
+                ctx.font = "900 28px 'Baloo 2', cursive";
+                ctx.textAlign = "center";
+                ctx.lineWidth = 5;
+                ctx.strokeStyle = `rgba(15, 23, 42, ${fp.alpha})`;
+                ctx.fillStyle = fp.color;
+                ctx.globalAlpha = Math.max(0, fp.alpha);
+                ctx.strokeText(fp.text, fp.x, fp.y);
+                ctx.fillText(fp.text, fp.x, fp.y);
+                ctx.restore();
+            });
+        }
+
+        /**
+         * HIỂN THỊ MODAL CÔNG BỐ TÊN HỌC SINH BỊ ĐẬP TRÚNG
+         */
+        function showWinnerModal(mosquito) {
+            lastPendingWinner = mosquito;
+            playWinnerFanfare();
+
+            // Pháo giấy chúc mừng
+            if (typeof confetti === "function") {
+                confetti({
+                    particleCount: 95,
+                    spread: 80,
+                    origin: { y: 0.55 }
+                });
+            }
+
+            document.getElementById("winner-name").textContent = mosquito.name;
+            const quote = FUNNY_QUOTES[Math.floor(Math.random() * FUNNY_QUOTES.length)];
+            document.getElementById("winner-funny-quote").textContent = quote;
+
+            // Lưu vào lịch sử đã gọi
+            const nowStr = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+            caughtHistory.unshift({ name: mosquito.name, time: nowStr });
+            renderHistoryList();
+            updateHUDCounters();
+
+            const modal = document.getElementById("winner-modal");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        }
+
+        function confirmWinnerAction(removeFromSwarm) {
+            if (lastPendingWinner) {
+                if (removeFromSwarm) {
+                    activeMosquitoes = activeMosquitoes.filter(m => m.id !== lastPendingWinner.id);
+                } else {
+                    lastPendingWinner.isPinned = false;
+                }
+                lastPendingWinner = null;
+            }
+            updateHUDCounters();
+
+            const modal = document.getElementById("winner-modal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+
+        /**
+         * QUẢN LÝ LỊCH SỬ ĐÃ GỌI TÊN
+         */
+        function toggleHistoryDrawer() {
+            const drawer = document.getElementById("history-drawer");
+            drawer.classList.toggle("translate-x-[115%]");
+        }
+
+        function renderHistoryList() {
+            const listEl = document.getElementById("history-list");
+            if (caughtHistory.length === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center py-10 text-slate-500 text-xs">
+                        <i class="fa-solid fa-mosquito text-2xl mb-2 block opacity-40"></i>
+                        Chưa có chú muỗi nào bị đập trúng!
+                    </div>
+                `;
+                return;
+            }
+
+            listEl.innerHTML = caughtHistory.map((item, idx) => `
+                <div class="p-3 rounded-2xl bg-slate-800/80 border border-white/10 flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-300 font-bold text-xs flex items-center justify-center">
+                            ${caughtHistory.length - idx}
+                        </span>
+                        <span class="font-bold text-sm text-white">${item.name}</span>
+                    </div>
+                    <span class="text-[11px] text-slate-400 font-mono">${item.time}</span>
+                </div>
+            `).join("");
+        }
+
+        function clearCaughtHistory() {
+            caughtHistory = [];
+            renderHistoryList();
+            updateHUDCounters();
+        }
+
+        /**
+         * QUẢN LÝ DANH SÁCH LỚP (MODAL)
+         */
+        function openStudentListModal() {
+            const textarea = document.getElementById("student-textarea");
+            textarea.value = allStudents.join("\n");
+            updateTextareaCount();
+            capNhatBaoDongBo();
+
+            const modal = document.getElementById("student-modal");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        }
+
+        function closeStudentListModal() {
+            const modal = document.getElementById("student-modal");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        }
+
+        function updateTextareaCount() {
+            const lines = document.getElementById("student-textarea").value
+                .split("\n")
+                .map(s => s.trim())
+                .filter(Boolean);
+            document.getElementById("modal-line-count").textContent = `${lines.length} học sinh`;
+        }
+
+        function loadSamplePreset(presetKey) {
+            if (SAMPLE_PRESETS[presetKey]) {
+                document.getElementById("student-textarea").value = SAMPLE_PRESETS[presetKey].join("\n");
+                updateTextareaCount();
+            }
+        }
+
+        function saveStudentListFromModal() {
+            const lines = document.getElementById("student-textarea").value
+                .split("\n")
+                .map(s => s.trim())
+                .filter(Boolean);
+
+            if (lines.length === 0) return;
+
+            // Nếu danh sách vừa lưu đúng y hệt danh sách lớp 10A1 đang có (vd. Thầy vừa bấm "📡
+            // Danh sách lớp 10A1 (tự động)" rồi Lưu luôn, không chỉnh gì thêm) thì BẬT LẠI đồng
+            // bộ tự động; còn nếu Thầy có chỉnh (xóa bớt/thêm tên khác) thì chuyển sang tùy chỉnh
+            // và NGỪNG tự ghi đè theo lớp 10A1 cho đến khi bấm đồng bộ lại.
+            dongBoLopBat = rosterNamesHienTai.length > 0 && JSON.stringify(lines) === JSON.stringify(rosterNamesHienTai);
+            try { localStorage.setItem("DAP_MUOI_DONGBO_LOP_V1", dongBoLopBat ? "1" : "0"); } catch (e) {}
+            capNhatBaoDongBo();
+
+            allStudents = lines;
+            saveStudentsToStorage();
+            rebuildMosquitoSwarm();
+            closeStudentListModal();
+        }
+
+        /**
+         * CÁC NÚT TÙY CHỈNH NHANH TRÊN THANH CÔNG CỤ
+         */
+        function toggleMysteryMode() {
+            mysteryMode = !mysteryMode;
+            const icon = document.getElementById("icon-mystery");
+            const text = document.getElementById("text-mystery");
+            if (mysteryMode) {
+                icon.className = "fa-solid fa-eye-slash text-rose-400";
+                text.textContent = "Ẩn tên (Bí ẩn)";
+            } else {
+                icon.className = "fa-solid fa-eye text-sky-400";
+                text.textContent = "Hiện tên";
+            }
+        }
+
+        function cycleSpeed() {
+            currentSpeedIdx = (currentSpeedIdx + 1) % speedLevels.length;
+            document.getElementById("text-speed").textContent = `Tốc độ: ${speedLevels[currentSpeedIdx].label}`;
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById("icon-sound");
+            const text = document.getElementById("text-sound");
+            if (soundEnabled) {
+                icon.className = "fa-solid fa-volume-high text-amber-400";
+                text.textContent = "Âm thanh: Bật";
+            } else {
+                icon.className = "fa-solid fa-volume-xmark text-slate-400";
+                text.textContent = "Âm thanh: Tắt";
+            }
+        }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+                document.getElementById("icon-fullscreen").className = "fa-solid fa-compress";
+            } else {
+                document.exitFullscreen().catch(() => {});
+                document.getElementById("icon-fullscreen").className = "fa-solid fa-expand";
+            }
+        }
+
+        // Hỗ trợ nhấn phím SPACE để đập muỗi hoặc đóng Modal nhanh
+        document.addEventListener("keydown", (e) => {
+            const studentModal = document.getElementById("student-modal");
+            if (!studentModal.classList.contains("hidden")) return; // Đang gõ tên học sinh thì không bắt phím Space
+
+            if (e.code === "Space") {
+                e.preventDefault();
+                const winnerModal = document.getElementById("winner-modal");
+                if (!winnerModal.classList.contains("hidden")) {
+                    // Nếu đang mở bảng tên, nhấn Space sẽ xác nhận "Đã gọi (Cho nghỉ bay)"
+                    confirmWinnerAction(true);
+                } else {
+                    triggerRandomSlap();
+                }
+            }
+        });
+
+        /**
+         * VÒNG LẶP HOẠT HÌNH CHÍNH (60 FPS)
+         */
+        let lastTime = performance.now();
+        function gameLoop(now) {
+            const dt = now - lastTime;
+            lastTime = now;
+
+            updateGame(dt);
+            renderGame();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = function () {
+            resizeCanvas();
+            loadSavedStudents();
+            renderHistoryList();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
