@@ -16,6 +16,137 @@
          công khai cho xem, cùng dự án Firebase với trang chính của lớp) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script>
+    /* ================================================================
+       ĐỒNG BỘ TOÀN BỘ DỮ LIỆU "ĐẬP MUỖI" (danh sách lớp/nhóm tự thêm,
+       lớp đang chọn, số muỗi đập mỗi lần...) QUA FIREBASE — cùng dự án
+       Firebase với trang chính của lớp, lưu ở nhánh riêng
+       "dapMuoi2026/luuTru" (giống cách game "Đường đến ngôi vua" đã
+       làm), để mở game ở MÁY KHÁC (hoặc trình duyệt khác) cũng thấy
+       đúng danh sách lớp/nhóm mới nhất, không bị kẹt lại trên 1 máy.
+       Cách làm: TRƯỚC khi code game gốc chạy, tải dữ liệu đã lưu trên
+       Firebase (nếu có) ghi đè vào localStorage máy này; SAU ĐÓ mỗi khi
+       game lưu gì vào localStorage, dữ liệu đó cũng được đẩy lên
+       Firebase (trễ 700ms để tránh ghi liên tục khi thao tác nhanh).
+       Chỉ tài khoản ADMIN (đã đăng nhập ở trang chính, cùng nguồn gốc
+       nên phiên đăng nhập được "thừa hưởng") mới ghi được lên Firebase;
+       máy khác mở game vẫn ĐỌC được danh sách nhưng không ghi được nếu
+       chưa đăng nhập admin — giữ đúng nguyên tắc phân quyền của trang.
+       ================================================================ */
+    (function () {
+        var firebaseConfigDapMuoi = {
+            apiKey: "AIzaSyA-SI1MkDOCCEFSyvUU2McqtZGSd5CEbkw",
+            authDomain: "sodolop10a1.firebaseapp.com",
+            databaseURL: "https://sodolop10a1-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "sodolop10a1",
+            storageBucket: "sodolop10a1.firebasestorage.app",
+            messagingSenderId: "920106392128",
+            appId: "1:920106392128:web:4739789c3705a57d9b9da5"
+        };
+        try { if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(firebaseConfigDapMuoi); } catch (e) {}
+        var dmSyncRef = firebase.database().ref('dapMuoi2026/luuTru');
+
+        var __dmAuthSan = false;
+        function __dmChoAuth(xongThi) {
+            if (__dmAuthSan) { xongThi(); return; }
+            var xong = false;
+            function hoanTat() { if (xong) return; xong = true; __dmAuthSan = true; xongThi(); }
+            try {
+                firebase.auth().onAuthStateChanged(function () { hoanTat(); }, function () { hoanTat(); });
+            } catch (e) { hoanTat(); return; }
+            setTimeout(hoanTat, 2500);
+        }
+
+        var goc = {
+            setItem: Storage.prototype.setItem.bind(localStorage),
+            removeItem: Storage.prototype.removeItem.bind(localStorage),
+            clear: Storage.prototype.clear.bind(localStorage)
+        };
+
+        var __dmBaoLoi = null;
+        function __dmHienThiLoiDongBo(thongBao) {
+            try {
+                if (!document.body) { setTimeout(function () { __dmHienThiLoiDongBo(thongBao); }, 300); return; }
+                if (!__dmBaoLoi) {
+                    __dmBaoLoi = document.createElement('div');
+                    __dmBaoLoi.id = '__dmLoiDongBo';
+                    __dmBaoLoi.style.cssText = 'position:fixed; top:0; left:0; right:0; z-index:999999; background:#dc3545; color:#fff; font-family:Tahoma,Arial,sans-serif; font-size:13px; line-height:1.4; padding:8px 14px; text-align:center; box-shadow:0 2px 10px rgba(0,0,0,0.35); cursor:pointer;';
+                    __dmBaoLoi.title = 'Bấm để ẩn thông báo này';
+                    __dmBaoLoi.onclick = function () { __dmBaoLoi.style.display = 'none'; };
+                    document.body.appendChild(__dmBaoLoi);
+                }
+                __dmBaoLoi.textContent = thongBao + '  (bấm để ẩn)';
+                __dmBaoLoi.style.display = 'block';
+            } catch (e) {}
+        }
+        function __dmAnLoiDongBo() { try { if (__dmBaoLoi) __dmBaoLoi.style.display = 'none'; } catch (e) {} }
+
+        var dongBoTamNgung = false;
+        var henGio = null;
+        function dayLenFirebaseDapMuoi() {
+            if (dongBoTamNgung) return;
+            clearTimeout(henGio);
+            henGio = setTimeout(function () {
+                try {
+                    var goi = {};
+                    var coKhoaQuaLon = false;
+                    for (var i = 0; i < localStorage.length; i++) {
+                        var k = localStorage.key(i);
+                        var v = localStorage.getItem(k);
+                        if (typeof v === 'string' && v.length > 480000) { coKhoaQuaLon = true; continue; }
+                        goi[k] = v;
+                    }
+                    dmSyncRef.set(goi).then(function () {
+                        __dmAnLoiDongBo();
+                        if (coKhoaQuaLon) {
+                            __dmHienThiLoiDongBo('⚠️ Một phần dữ liệu (quá lớn) CHƯA đồng bộ lên máy chủ, chỉ lưu tạm trên máy này. Báo thầy/admin kiểm tra.');
+                        }
+                    }).catch(function (err) {
+                        try { console.error('[dap-muoi] Lỗi đồng bộ Firebase:', err); } catch (e) {}
+                        var ma = err && err.code ? String(err.code) : '';
+                        var lyDo = (ma.indexOf('PERMISSION_DENIED') !== -1 || ma.indexOf('permission') !== -1)
+                            ? 'Bạn chưa đăng nhập đúng tài khoản ADMIN (hoặc phiên đăng nhập đã hết hạn) nên danh sách lớp/nhóm KHÔNG được lưu lại lâu dài. Hãy mở lại trang chính của lớp, đăng nhập bằng tài khoản giáo viên, rồi quay lại game này.'
+                            : ('Lỗi: ' + (err && err.message ? err.message : String(err)));
+                        __dmHienThiLoiDongBo('❌ KHÔNG lưu được lên máy chủ! ' + lyDo);
+                    });
+                } catch (e) {
+                    try { console.error('[dap-muoi] Lỗi dayLenFirebaseDapMuoi:', e); } catch (e2) {}
+                }
+            }, 700);
+        }
+
+        var ADMIN_UID_DAPMUOI = '3eMkknzDuNVFyrpmB1ceIBViTDD2';
+        window.__dapMuoiSyncReady = new Promise(function (resolve) {
+            var xongRoi = false;
+            function hoanTat() { if (xongRoi) return; xongRoi = true; resolve(); }
+            setTimeout(hoanTat, 3000);
+            __dmChoAuth(function () {
+                try {
+                    var nguoiDung = firebase.auth().currentUser;
+                    if (!nguoiDung || nguoiDung.uid !== ADMIN_UID_DAPMUOI) {
+                        __dmHienThiLoiDongBo('⚠️ Bạn đang KHÔNG đăng nhập bằng tài khoản admin trong trình duyệt này — danh sách lớp/nhóm tự thêm sẽ chỉ lưu tạm trên máy này và MẤT khi tải lại trang hoặc mở ở máy khác. Hãy mở trang chính của lớp và đăng nhập bằng tài khoản giáo viên trước, rồi quay lại game.');
+                    }
+                } catch (e) {}
+                dmSyncRef.once('value').then(function (snap) {
+                    var du = snap.val();
+                    if (du && typeof du === 'object') {
+                        dongBoTamNgung = true;
+                        try {
+                            goc.clear();
+                            Object.keys(du).forEach(function (k) { goc.setItem(k, du[k]); });
+                        } finally { dongBoTamNgung = false; }
+                    }
+                    hoanTat();
+                }).catch(function () { hoanTat(); });
+            });
+        });
+
+        Storage.prototype.setItem = function (k, v) { goc.setItem(k, v); dayLenFirebaseDapMuoi(); };
+        Storage.prototype.removeItem = function (k) { goc.removeItem(k); dayLenFirebaseDapMuoi(); };
+        Storage.prototype.clear = function () { goc.clear(); dayLenFirebaseDapMuoi(); };
+    })();
+    </script>
 
     <script>
         tailwind.config = {
@@ -403,6 +534,12 @@
          JAVASCRIPT ENGINE: ĐỒ HỌA HOẠT HÌNH, VẬT LÝ MUỖI BAY & ÂM THANH
          ========================================== -->
     <script>
+    (async function () {
+        // Chờ dữ liệu lớp/nhóm (nếu có) tải xong từ Firebase trước khi đọc localStorage,
+        // để các biến khởi tạo dưới đây (dsLop, lopDangChon, allStudents...) luôn lấy
+        // đúng dữ liệu mới nhất, dù đang mở ở máy nào.
+        if (window.__dapMuoiSyncReady) { try { await window.__dapMuoiSyncReady; } catch (e) {} }
+
         /**
          * DANH SÁCH MẪU MẶC ĐỊNH
          */
@@ -841,7 +978,7 @@
                     messagingSenderId: "920106392128",
                     appId: "1:920106392128:web:4739789c3705a57d9b9da5"
                 };
-                firebase.initializeApp(firebaseConfig);
+                if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(firebaseConfig);
                 const rosterRefDapMuoi = firebase.database().ref('lop10a1/roster');
                 rosterRefDapMuoi.on('value', function (snap) {
                     const v = snap.val();
@@ -1925,14 +2062,46 @@
             requestAnimationFrame(gameLoop);
         }
 
-        window.onload = function () {
+        function __dapMuoiKhoiDongSauKhiTai() {
             resizeCanvas();
             loadSavedStudents();
             renderHistoryList();
             capNhatNhanSoMuoi();
             renderDsLop();
             requestAnimationFrame(gameLoop);
-        };
+        }
+        // Dùng readyState thay vì gán thẳng window.onload, vì lúc chạy tới đây có thể
+        // sự kiện "load" của trang đã xảy ra rồi (do phải chờ đồng bộ Firebase ở trên) —
+        // gán window.onload lúc đó sẽ KHÔNG bao giờ được gọi.
+        if (document.readyState === 'complete') {
+            __dapMuoiKhoiDongSauKhiTai();
+        } else {
+            window.addEventListener('load', __dapMuoiKhoiDongSauKhiTai);
+        }
+
+        // Xuất các hàm được gọi trực tiếp từ thuộc tính onclick/onchange/oninput trong HTML
+        // ra phạm vi toàn cục (window) — bắt buộc vì đoạn code này giờ nằm trong 1 hàm
+        // async riêng (để có thể "await" chờ đồng bộ Firebase xong trước khi chạy).
+        try { window.chuyenLop = chuyenLop; } catch (e) {}
+        try { window.clearCaughtHistory = clearCaughtHistory; } catch (e) {}
+        try { window.closeStudentListModal = closeStudentListModal; } catch (e) {}
+        try { window.confirmWinnerAction = confirmWinnerAction; } catch (e) {}
+        try { window.cycleCatchCount = cycleCatchCount; } catch (e) {}
+        try { window.cycleSpeed = cycleSpeed; } catch (e) {}
+        try { window.dungDanhSachLopLive = dungDanhSachLopLive; } catch (e) {}
+        try { window.loadSamplePreset = loadSamplePreset; } catch (e) {}
+        try { window.openStudentListModal = openStudentListModal; } catch (e) {}
+        try { window.restoreAllMosquitoes = restoreAllMosquitoes; } catch (e) {}
+        try { window.saveStudentListFromModal = saveStudentListFromModal; } catch (e) {}
+        try { window.themLopMoi = themLopMoi; } catch (e) {}
+        try { window.toggleFullScreen = toggleFullScreen; } catch (e) {}
+        try { window.toggleHistoryDrawer = toggleHistoryDrawer; } catch (e) {}
+        try { window.toggleMysteryMode = toggleMysteryMode; } catch (e) {}
+        try { window.toggleSound = toggleSound; } catch (e) {}
+        try { window.triggerRandomSlap = triggerRandomSlap; } catch (e) {}
+        try { window.xoaLopHienTai = xoaLopHienTai; } catch (e) {}
+        try { window.updateTextareaCount = updateTextareaCount; } catch (e) {}
+    })();
     </script>
 </body>
 </html>
